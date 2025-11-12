@@ -1,0 +1,180 @@
+'use client';
+
+import { useEffect } from 'react';
+import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useAuth } from '@/contexts/AuthContext';
+import { registerSchema, type RegisterFormData } from '@/lib/validations/auth';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
+import Logo from '@/components/Logo';
+import BackgroundVideo from '@/components/BackgroundVideo';
+import FormInput from '@/components/FormInput';
+
+export default function SignupPage() {
+  const { register: registerUser, isLoading, error, clearError } = useAuth();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+    mode: 'onBlur', // Validate on blur for better UX
+  });
+
+  // Clear errors when component unmounts
+  useEffect(() => {
+    return () => clearError();
+  }, [clearError]);
+
+  // Form submission handler
+  const onSubmit = async (data: RegisterFormData) => {
+    try {
+      // Extract only the fields needed for API (exclude confirmPassword)
+      const { name, email, password } = data;
+      await registerUser({ name, email, password });
+      // Navigation is handled by AuthContext
+    } catch (err) {
+      // Error is handled by AuthContext
+      console.error('Registration failed:', err);
+    }
+  };
+
+  return (
+    <div className="h-screen max-h-screen flex bg-white">
+      {/* Left side - Video Background */}
+      <div className="hidden lg:flex lg:flex-3 relative overflow-hidden">
+        {/* Logo */}
+        <Logo />
+        <BackgroundVideo src="/register_video.mp4" />
+      </div>
+
+      {/* Right side - Register Form */}
+      <div className="flex-2 flex items-center justify-center px-4 py-6 lg:px-8 relative bg-gray-50 overflow-y-auto">
+        <div className="w-full max-w-[420px]">
+          {/* Header */}
+          <div className="mb-6">
+            <p className="text-3xl font-bold text-gray-900 tracking-tight">
+              Create Account
+            </p>
+            <p className="text-gray-600 mt-2 text-sm">
+              Join Soul Paradise Travels today!
+            </p>
+          </div>
+
+          {/* Form Container */}
+          <div className="space-y-3.5">
+            {/* Google Register Button */}
+            <GoogleSignInButton disabled={isLoading || isSubmitting} />
+
+            {/* Divider */}
+            <div className="relative py-2">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="px-2 bg-gray-50 text-gray-500 font-medium">Or</span>
+              </div>
+            </div>
+
+            {/* Global Error Message from API */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
+            {/* Register Form */}
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
+              {/* Full Name Field */}
+              <FormInput
+                id="name"
+                label="Full Name"
+                type="text"
+                placeholder="Enter Your Full Name"
+                autoComplete="name"
+                register={register('name')}
+                error={errors.name?.message}
+                disabled={isLoading || isSubmitting}
+              />
+
+              {/* Email Field */}
+              <FormInput
+                id="email"
+                label="Email"
+                type="email"
+                placeholder="Enter Your Email Address"
+                autoComplete="email"
+                register={register('email')}
+                error={errors.email?.message}
+                disabled={isLoading || isSubmitting}
+              />
+
+              {/* Password Field */}
+              <FormInput
+                id="password"
+                label="Password"
+                type="password"
+                placeholder="Create Your Password"
+                autoComplete="new-password"
+                register={register('password')}
+                error={errors.password?.message}
+                disabled={isLoading || isSubmitting}
+                helperText="Min 8 chars, uppercase, lowercase, number/special character"
+              />
+
+              {/* Confirm Password Field */}
+              <FormInput
+                id="confirmPassword"
+                label="Confirm Password"
+                type="password"
+                placeholder="Confirm Your Password"
+                autoComplete="new-password"
+                register={register('confirmPassword')}
+                error={errors.confirmPassword?.message}
+                disabled={isLoading || isSubmitting}
+              />
+
+              {/* Terms and Conditions */}
+              <div className="flex items-start">
+                <input
+                  id="terms"
+                  type="checkbox"
+                  required
+                  disabled={isLoading || isSubmitting}
+                  className="h-3.5 w-3.5 mt-0.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:cursor-not-allowed"
+                />
+                <label htmlFor="terms" className="ml-2 block text-xs text-gray-700">
+                  I agree to the{' '}
+                  <Link href="/terms" className="text-[#1F7AC4] hover:text-[#1F7AF9] font-medium transition-colors duration-200">
+                    Terms and Conditions
+                  </Link>
+                </label>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isLoading || isSubmitting}
+                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-black hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 transition-all duration-200 mt-4 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {isLoading || isSubmitting ? 'Creating Account...' : 'Create Account'}
+              </button>
+            </form>
+
+            {/* Login Link */}
+            <div className="text-center pt-2">
+              <p className="text-sm">
+                Already have an account?{' '}
+                <Link href="/login" className="text-[#1F7AC4] hover:text-[#1F7AF9] font-semibold transition-colors duration-200">
+                  Sign in
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
