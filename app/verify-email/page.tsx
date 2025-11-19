@@ -51,22 +51,22 @@ function VerifyEmailContent() {
   }, [token, router]);
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gray-50">
+    <div className="h-screen flex items-center justify-center bg-(--color-background)">
       <div className="absolute top-3 left-3 sm:top-4 sm:left-4 lg:top-6 lg:left-6 z-20">
         <Logo />
       </div>
 
       <div className="w-full max-w-md px-6">
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        <div className="bg-(--color-peace) rounded-lg shadow-lg p-8">
           {status === 'verifying' && (
             <div className="text-center">
               <div className="mb-6">
-                <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+                <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-(--color-links)"></div>
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl font-bold text-(--color-foreground) mb-2">
                 Verifying Your Email
               </h1>
-              <p className="text-gray-600">
+              <p className="text-(--color-foreground)">
                 Please wait while we verify your email address...
               </p>
             </div>
@@ -75,9 +75,9 @@ function VerifyEmailContent() {
           {status === 'success' && (
             <div className="text-center">
               <div className="mb-6">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-(--color-success) bg-opacity-20">
                   <svg
-                    className="w-10 h-10 text-green-600"
+                    className="w-10 h-10 text-(--color-success)"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -91,18 +91,18 @@ function VerifyEmailContent() {
                   </svg>
                 </div>
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl font-bold text-(--color-foreground) mb-2">
                 Email Verified Successfully!
               </h1>
-              <p className="text-gray-600 mb-6">
+              <p className="text-(--color-foreground) mb-6">
                 Your email has been verified. You can now log in to your account.
               </p>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-(--color-foreground) opacity-70 mb-4">
                 Redirecting to login page in 3 seconds...
               </p>
               <Link
                 href="/login"
-                className="inline-block bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-900 transition-colors"
+                className="inline-block bg-(--color-primary-button) text-(--color-peace) px-6 py-3 rounded-lg font-semibold hover:bg-(--color-secondary-button) transition-colors"
               >
                 Go to Login Now
               </Link>
@@ -112,9 +112,9 @@ function VerifyEmailContent() {
           {status === 'error' && (
             <div className="text-center">
               <div className="mb-6">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-(--color-danger) bg-opacity-20">
                   <svg
-                    className="w-10 h-10 text-red-600"
+                    className="w-10 h-10 text-(--color-danger)"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -128,22 +128,22 @@ function VerifyEmailContent() {
                   </svg>
                 </div>
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl font-bold text-(--color-foreground) mb-2">
                 Verification Failed
               </h1>
-              <p className="text-gray-600 mb-6">
+              <p className="text-(--color-foreground) mb-6">
                 {errorMessage || 'We couldn\'t verify your email address.'}
               </p>
               <div className="space-y-3">
                 <Link
                   href="/verification-pending"
-                  className="block bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-900 transition-colors"
+                  className="block bg-(--color-primary-button) text-(--color-peace) px-6 py-3 rounded-lg font-semibold hover:bg-(--color-secondary-button) transition-colors"
                 >
                   Resend Verification Email
                 </Link>
                 <Link
                   href="/login"
-                  className="block text-gray-600 hover:text-gray-900 transition-colors"
+                  className="block text-(--color-links) hover:opacity-80 transition-colors"
                 >
                   Back to Login
                 </Link>
@@ -158,7 +158,7 @@ function VerifyEmailContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense fallback={<div className="h-screen flex items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<div className="h-screen flex items-center justify-center bg-(--color-background) text-(--color-foreground)">Loading...</div>}>
       <VerifyEmailContent />
     </Suspense>
   );

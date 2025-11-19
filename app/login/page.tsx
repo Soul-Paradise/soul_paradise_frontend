@@ -78,19 +78,19 @@ function LoginForm() {
   };
 
   return (
-    <div className="h-screen max-h-screen flex bg-white">
+    <div className="h-screen max-h-screen flex bg-(--color-peace)">
       {/* Left side - Login Form */}
-      <div className="flex-2 flex items-center justify-center px-4 py-6 lg:px-8 relative bg-gray-50 overflow-y-auto">
+      <div className="flex-2 flex items-center justify-center px-4 py-6 lg:px-8 relative bg-(--color-background) overflow-y-auto">
         {/* Logo */}
         <Logo />
 
         <div className="w-full max-w-[420px]">
           {/* Header */}
           <div className="mb-6">
-            <p className="text-3xl font-bold text-gray-900 tracking-tight">
+            <p className="text-3xl font-bold tracking-tight font-[sans-serif] text-(--color-foreground)">
               Welcome Back!
             </p>
-            <p className="text-gray-600 mt-2 text-sm">
+            <p className="mt-2 text-sm text-(--color-foreground)">
               Let's get you signed in securely.
             </p>
           </div>
@@ -103,27 +103,27 @@ function LoginForm() {
             {/* Divider */}
             <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
+                <div className="w-full border-t border-(--color-tertiary-button)" />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="px-2 bg-gray-50 text-gray-500 font-medium">Or</span>
+                <span className="px-2 bg-(--color-background) text-(--color-foreground) font-medium">Or</span>
               </div>
             </div>
 
             {/* Registration Success & Verification Message */}
             {showVerificationMessage && userEmail && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-(--color-links) bg-opacity-10 border border-(--color-links) rounded-lg p-4">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-5 w-5 text-(--color-links)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                   </div>
                   <div className="ml-3 flex-1">
-                    <h3 className="text-sm font-semibold text-blue-800">
+                    <h3 className="text-sm font-semibold text-(--color-foreground)">
                       {registered ? 'Registration Successful!' : 'Email Verification Required'}
                     </h3>
-                    <div className="mt-2 text-sm text-blue-700">
+                    <div className="mt-2 text-sm text-(--color-foreground)">
                       <p>
                         We've sent a verification email to <strong>{userEmail}</strong>.
                         Please check your inbox and click the verification link before logging in.
@@ -132,14 +132,14 @@ function LoginForm() {
 
                     {/* Resend Success Message */}
                     {resendSuccess && (
-                      <div className="mt-3 text-sm text-green-700 font-medium">
+                      <div className="mt-3 text-sm text-(--color-success) font-medium">
                         ✓ Verification email resent successfully!
                       </div>
                     )}
 
                     {/* Resend Error Message */}
                     {resendError && (
-                      <div className="mt-3 text-sm text-red-700">
+                      <div className="mt-3 text-sm text-(--color-danger)">
                         {resendError}
                       </div>
                     )}
@@ -150,7 +150,7 @@ function LoginForm() {
                         type="button"
                         onClick={handleResendVerification}
                         disabled={resendingEmail}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-700 underline disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="text-sm font-medium text-(--color-links) hover:opacity-80 underline disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {resendingEmail ? 'Sending...' : 'Resend verification email'}
                       </button>
@@ -159,7 +159,7 @@ function LoginForm() {
                   <button
                     type="button"
                     onClick={() => setShowVerificationMessage(false)}
-                    className="ml-3 flex-shrink-0 text-blue-400 hover:text-blue-600"
+                    className="ml-3 flex-shrink-0 text-(--color-links) hover:opacity-80"
                   >
                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -171,7 +171,7 @@ function LoginForm() {
 
             {/* Global Error Message from API */}
             {error && !error.includes('verify your email') && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-(--color-danger) text-(--color-peace) px-4 py-3 rounded-lg text-sm border border-(--color-danger)">
                 {error}
               </div>
             )}
@@ -203,7 +203,7 @@ function LoginForm() {
                   disabled={isLoading || isSubmitting}
                 />
                 <div className="mt-1.5 text-right">
-                  <Link href="/forgot-password" className="text-xs text-[#1F7AC4] hover:text-[#1F7AF9] font-medium transition-colors duration-200">
+                  <Link href="/forgot-password" className="text-xs text-(--color-links) hover:opacity-80 font-medium transition-colors duration-200">
                     Forgot Your Password?
                   </Link>
                 </div>
@@ -213,7 +213,7 @@ function LoginForm() {
               <button
                 type="submit"
                 disabled={isLoading || isSubmitting}
-                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-black hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 transition-all duration-200 mt-4 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold mt-4 disabled:cursor-not-allowed bg-(--color-primary-button) text-(--color-peace) hover:bg-(--color-secondary-button) disabled:bg-(--color-inactive)"
               >
                 {isLoading || isSubmitting ? 'Signing in...' : 'Log in with Email'}
               </button>
@@ -221,9 +221,9 @@ function LoginForm() {
 
             {/* Register Link */}
             <div className="text-center pt-2">
-              <p className="text-sm">
+              <p className="text-sm text-(--color-foreground)">
                 Still don't have an account?{' '}
-                <Link href="/register" className="text-[#1F7AC4] hover:text-[#1F7AF9] font-semibold transition-colors duration-200">
+                <Link href="/register" className="text-(--color-links) hover:opacity-80 font-semibold transition-colors duration-200">
                   Register Now
                 </Link>
               </p>
@@ -242,7 +242,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="h-screen flex items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<div className="h-screen flex items-center justify-center bg-(--color-background) text-(--color-foreground)">Loading...</div>}>
       <LoginForm />
     </Suspense>
   );

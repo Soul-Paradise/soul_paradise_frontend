@@ -1,26 +1,52 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
+/* :root {
+  --background: #313647;
   --foreground: #171717;
-}
+} */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
+/*
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #ededed;
     --foreground: #ededed;
   }
+} */
+
+/* @theme inline {
+  --color-background: [color.zinc.50];
+  --color-foreground: [#313647];
+  --font-sans: var(--font-nunito);
+  --font-mono: var(--font-geist-mono);
+  --font-nunito: var(--font-nunito);
+  --font-poppins: var(--font-poppins);
 }
+
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-nunito), sans-serif;
+} */
+
+@theme inline {
+  --color-background: #F9FAFC;
+  --color-foreground: #313647;
+  --color-primary-button: #313647;
+  --color-secondary-button: #435663;
+  --color-tertiary-button: #dce3e8;
+  --color-danger: #D34E4E;
+  --color-success: #84994F;
+  --color-warn: #CE7E5A;
+  --color-peace: #FFFFFF;
+  --color-death: #000000;
+  --color-active: #313647;
+  --color-inactive: #41474a;
+  --color-links: #1F7AC4;
+  --font-nunito: var(--font-nunito);
+}
+
+body {
+  @apply bg-background text-foreground font-nunito;
 }

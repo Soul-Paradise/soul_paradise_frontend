@@ -76,7 +76,6 @@ const InfoIcon = ({ className = '' }: IconProps) => (
 
 /**
  * Icon registry - maps icon names to components
- * This allows us to pass icon names as strings in config
  */
 export const ICONS = {
   home: HomeIcon,

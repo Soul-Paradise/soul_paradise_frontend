@@ -42,7 +42,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="h-screen max-h-screen flex bg-white">
+    <div className="h-screen max-h-screen flex bg-(--color-peace)">
       {/* Left side - Video Background */}
       <div className="hidden lg:flex lg:flex-3 relative overflow-hidden">
         {/* Logo */}
@@ -51,14 +51,14 @@ export default function SignupPage() {
       </div>
 
       {/* Right side - Register Form */}
-      <div className="flex-2 flex items-center justify-center px-4 py-6 lg:px-8 relative bg-gray-50 overflow-y-auto">
+      <div className="flex-2 flex items-center justify-center px-4 py-6 lg:px-8 relative overflow-y-auto bg-(--color-background)">
         <div className="w-full max-w-[420px]">
           {/* Header */}
           <div className="mb-6">
-            <p className="text-3xl font-bold text-gray-900 tracking-tight">
+            <p className="text-3xl font-bold tracking-tight font-[sans-serif] text-(--color-foreground)">
               Create Account
             </p>
-            <p className="text-gray-600 mt-2 text-sm">
+            <p className="mt-2 text-sm text-(--color-foreground)">
               Join Soul Paradise Travels today!
             </p>
           </div>
@@ -71,16 +71,16 @@ export default function SignupPage() {
             {/* Divider */}
             <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
+                <div className="w-full border-t border-(--color-tertiary-button)" />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="px-2 bg-gray-50 text-gray-500 font-medium">Or</span>
+                <span className="px-2 font-medium bg-(--color-background) text-(--color-foreground)">Or</span>
               </div>
             </div>
 
             {/* Global Error Message from API */}
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              <div className="px-4 py-3 rounded-lg text-sm bg-(--color-danger) text-(--color-peace) border border-(--color-danger)">
                 {error}
               </div>
             )}
@@ -143,11 +143,14 @@ export default function SignupPage() {
                   type="checkbox"
                   required
                   disabled={isLoading || isSubmitting}
-                  className="h-3.5 w-3.5 mt-0.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:cursor-not-allowed"
+                  className="h-3.5 w-3.5 mt-0.5 border border-(--color-tertiary-button) rounded disabled:cursor-not-allowed accent-(--color-primary-button)"
                 />
-                <label htmlFor="terms" className="ml-2 block text-xs text-gray-700">
+                <label htmlFor="terms" className="ml-2 block text-xs text-(--color-foreground)">
                   I agree to the{' '}
-                  <Link href="/terms" className="text-[#1F7AC4] hover:text-[#1F7AF9] font-medium transition-colors duration-200">
+                  <Link
+                    href="/terms"
+                    className="font-medium transition-colors duration-200 text-(--color-links) hover:opacity-80"
+                  >
                     Terms and Conditions
                   </Link>
                 </label>
@@ -157,7 +160,7 @@ export default function SignupPage() {
               <button
                 type="submit"
                 disabled={isLoading || isSubmitting}
-                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-black hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 transition-all duration-200 mt-4 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold transition-all duration-200 mt-4 disabled:cursor-not-allowed bg-(--color-primary-button) text-(--color-peace) hover:bg-(--color-secondary-button) disabled:bg-(--color-inactive)"
               >
                 {isLoading || isSubmitting ? 'Creating Account...' : 'Create Account'}
               </button>
@@ -165,9 +168,12 @@ export default function SignupPage() {
 
             {/* Login Link */}
             <div className="text-center pt-2">
-              <p className="text-sm">
+              <p className="text-sm text-(--color-foreground)">
                 Already have an account?{' '}
-                <Link href="/login" className="text-[#1F7AC4] hover:text-[#1F7AF9] font-semibold transition-colors duration-200">
+                <Link
+                  href="/login"
+                  className="font-semibold transition-colors duration-200 text-(--color-links) hover:opacity-80"
+                >
                   Sign in
                 </Link>
               </p>
