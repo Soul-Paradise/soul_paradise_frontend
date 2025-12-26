@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { BookingTabs } from '@/components/BookingTabs';
 
 export default function Home() {
   const { user, isLoading, logout } = useAuth();
@@ -15,69 +16,67 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50">
+      <div className="flex min-h-screen items-center justify-center bg-(--color-background)">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-(--color-primary-button)"></div>
+          <p className="mt-4 text-(--color-inactive)">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans">
-      <main className="text-center">
-        <h1 className="text-4xl font-bold mb-4">
-          Soul Paradise Travels
-        </h1>
+    <main className="min-h-screen bg-(--color-background)">
+      {/* Booking Tabs Section */}
+      <section className="bg-(--color-background) pt-24 pb-12 md:pt-28 md:pb-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <BookingTabs />
+        </div>
+      </section>
 
-        {user ? (
-          // Authenticated user view
-          <>
-            <p className="text-xl text-gray-700 mb-8">
-              Welcome, {user.name}!
-            </p>
-            <div className="space-y-4">
-              <div className="bg-white  p-6 rounded-lg shadow-md">
-                <h2 className="text-lg font-semibold mb-2">User Information</h2>
-                <div className="text-left space-y-2">
-                  <p><strong>Email:</strong> {user.email}</p>
-                  <p><strong>Name:</strong> {user.name}</p>
-                  <p><strong>Provider:</strong> {user.provider}</p>
-                  <p><strong>Email Verified:</strong> {user.emailVerified ? 'Yes' : 'No'}</p>
+      {/* User Dashboard Section (for authenticated users) */}
+      {user && (
+        <section className="bg-(--color-background) py-12 md:py-16">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="bg-(--color-peace) p-6 sm:p-8 rounded-lg shadow-lg">
+              <h2 className="text-2xl font-bold text-(--color-foreground) mb-6">
+                Your Account
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <p className="text-sm text-(--color-inactive) mb-1">Name</p>
+                  <p className="text-lg font-semibold text-(--color-foreground)">{user.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-(--color-inactive) mb-1">Email</p>
+                  <p className="text-lg font-semibold text-(--color-foreground)">{user.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-(--color-inactive) mb-1">Login Method</p>
+                  <p className="text-lg font-semibold text-(--color-foreground) capitalize">{user.provider}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-(--color-inactive) mb-1">Email Status</p>
+                  <p className="text-lg font-semibold">
+                    {user.emailVerified ? (
+                      <span className="text-(--color-success)">Verified</span>
+                    ) : (
+                      <span className="text-(--color-warn)">Not Verified</span>
+                    )}
+                  </p>
                 </div>
               </div>
               <button
                 onClick={handleLogout}
-                className="bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-900 transition-colors"
+                className="bg-(--color-danger) text-(--color-peace) px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity"
               >
                 Logout
               </button>
             </div>
-          </>
-        ) : (
-          // Unauthenticated user view
-          <>
-            <p className="text-xl text-gray-700  mb-8">
-              Your journey begins here
-            </p>
-            <div className="space-x-4">
-              <a
-                href="/login"
-                className="inline-block bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-900 transition-colors"
-              >
-                Login
-              </a>
-              <a
-                href="/register"
-                className="inline-block bg-white text-black border-2 border-black px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
-              >
-                Register
-              </a>
-            </div>
-          </>
-        )}
-      </main>
-    </div>
+          </div>
+        </section>
+      )}
+
+    </main>
   );
 }

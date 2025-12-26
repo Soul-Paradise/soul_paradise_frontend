@@ -322,7 +322,7 @@ export default function ContactPage() {
                 </div>
               </div>
 
-              <div className="mt-8 p-6 bg-(--color-peace) rounded-lg">
+              <div className="mt-8 p-6 bg-(--color-peace) rounded-lg shadow-xs">
                 <h3 className="text-lg font-bold text-(--color-foreground) mb-3">Need Urgent Assistance?</h3>
                 <p className="text-(--color-inactive) mb-4">
                   For urgent travel queries outside office hours, please contact us via WhatsApp or call our mobile number.
