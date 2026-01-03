@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,6 +24,22 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
   const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showCertificate, setShowCertificate] = useState(false);
+
+  /**
+   * Prevent body scroll when mobile menu is open
+   */
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen]);
 
   /**
    * Determines if a nav item is currently active
@@ -156,38 +172,12 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
             )}
 
             {/* IATA Accreditation Badge */}
-            <button
-              onClick={() => setShowCertificate(true)}
-              className="
-                ml-2 opacity-90 hover:opacity-100
-                transition-all duration-200
-                hover:scale-105
-                group relative
-                cursor-pointer
-              "
-              aria-label="View IATA Accreditation Certificate"
-            >
+            
               <img
                 src="/iata_logo.png"
                 alt="IATA Accredited"
-                className="h-10 w-auto"
+                className="ml-2 h-10 w-auto"
               />
-              {/* Tooltip */}
-              <div className="
-                absolute -bottom-12 right-0
-                hidden group-hover:block
-                px-3 py-2 rounded-lg
-                bg-(--color-primary-button) text-(--color-peace) text-xs font-medium
-                whitespace-nowrap
-                shadow-lg
-                after:content-[''] after:absolute after:-top-1.5 after:right-4
-                after:border-l-[6px] after:border-l-transparent
-                after:border-r-[6px] after:border-r-transparent
-                after:border-b-[6px] after:border-b-(--color-primary-button)
-              ">
-                Click to view certificate
-              </div>
-            </button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -216,87 +206,97 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu Backdrop & Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-(--color-tertiary-button) bg-(--color-peace)">
-          <div className="px-4 pt-2 pb-4 space-y-1">
-            {/* Mobile Navigation Links */}
-            {items.map((item) => {
-              const isActive = isActiveRoute(item.href);
-              return (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  onClick={handleNavClick}
-                  className={`
-                    flex items-center px-4 py-3 rounded-lg
-                    text-base transition-all duration-200
-                    ${
-                      isActive
-                        ? 'font-bold text-(--color-active)'
-                        : 'font-medium text-(--color-inactive) hover:bg-(--color-background) hover:text-(--color-active)'
-                    }
-                  `}
-                  aria-current={isActive ? 'page' : undefined}
-                >
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
+        <>
+          {/* Backdrop with blur effect - starts below navbar */}
+          <div
+            className="fixed top-16 left-0 right-0 bottom-0 bg-black/1 backdrop-blur-sm md:hidden z-40"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
 
-            {/* Mobile Auth Buttons */}
-            <div className="pt-4 border-t border-(--color-tertiary-button)">
-              {user ? (
-                <div className="space-y-2">
-                  <div className="px-4 py-2 text-sm text-(--color-foreground)">
-                    Hi, <span className="font-semibold">{user.name}</span>
+          {/* Mobile Menu */}
+          <div className="md:hidden fixed top-16 left-0 right-0 border-t border-(--color-tertiary-button) bg-(--color-peace) z-50 shadow-lg max-h-[calc(100vh-4rem)] overflow-y-auto">
+            <div className="px-4 pt-2 pb-4 space-y-1">
+              {/* Mobile Navigation Links */}
+              {items.map((item) => {
+                const isActive = isActiveRoute(item.href);
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    onClick={handleNavClick}
+                    className={`
+                      flex items-center px-4 py-3 rounded-lg
+                      text-base transition-all duration-200
+                      ${
+                        isActive
+                          ? 'font-bold text-(--color-active)'
+                          : 'font-medium text-(--color-inactive) hover:bg-(--color-background) hover:text-(--color-active)'
+                      }
+                    `}
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+
+              {/* Mobile Auth Buttons */}
+              <div className="pt-4 border-t border-(--color-tertiary-button)">
+                {user ? (
+                  <div className="space-y-2">
+                    <div className="px-4 py-2 text-sm text-(--color-foreground)">
+                      Hi, <span className="font-semibold">{user.name}</span>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="
+                        w-full px-4 py-3 rounded-lg
+                        text-base font-semibold
+                        bg-(--color-danger) text-(--color-peace)
+                      "
+                    >
+                      Logout
+                    </button>
                   </div>
-                  <button
-                    onClick={handleLogout}
-                    className="
-                      w-full px-4 py-3 rounded-lg
-                      text-base font-semibold
-                      bg-(--color-danger) text-(--color-peace)
-                    "
-                  >
-                    Logout
-                  </button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <Link
-                    href="/login"
-                    onClick={handleNavClick}
-                    className="
-                      flex-1 px-4 py-3 rounded-lg
-                      text-base font-semibold text-center
-                      border border-(--color-tertiary-button)
-                      text-(--color-secondary-button) hover:text-(--color-primary-button)
-                      hover:border-(--color-secondary-button)
-                      bg-transparent
-                      transition-colors duration-200
-                    "
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    href="/register"
-                    onClick={handleNavClick}
-                    className="
-                      flex-1 px-4 py-3 rounded-lg
-                      text-base font-semibold text-center
-                      bg-(--color-secondary-button) text-(--color-peace)
-                      hover:bg-(--color-primary-button)
-                      transition-colors duration-200
-                    "
-                  >
-                    Register
-                  </Link>
-                </div>
-              )}
+                ) : (
+                  <div className="flex gap-2">
+                    <Link
+                      href="/login"
+                      onClick={handleNavClick}
+                      className="
+                        flex-1 px-4 py-3 rounded-lg
+                        text-base font-semibold text-center
+                        border border-(--color-tertiary-button)
+                        text-(--color-secondary-button) hover:text-(--color-primary-button)
+                        hover:border-(--color-secondary-button)
+                        bg-transparent
+                        transition-colors duration-200
+                      "
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      href="/register"
+                      onClick={handleNavClick}
+                      className="
+                        flex-1 px-4 py-3 rounded-lg
+                        text-base font-semibold text-center
+                        bg-(--color-secondary-button) text-(--color-peace)
+                        hover:bg-(--color-primary-button)
+                        transition-colors duration-200
+                      "
+                    >
+                      Register
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* IATA Certificate Modal */}

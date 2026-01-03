@@ -6,20 +6,19 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { forgotPasswordSchema, type ForgotPasswordFormData } from '@/lib/validations/auth';
 import { api } from '@/lib/api';
+import { showToast } from '@/lib/toast';
 import Logo from '@/components/Logo';
 import BackgroundVideo from '@/components/BackgroundVideo';
 import FormInput from '@/components/FormInput';
 
 export default function ForgotPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
-  const [submittedEmail, setSubmittedEmail] = useState('');
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    reset,
   } = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
     mode: 'onBlur',
@@ -28,15 +27,22 @@ export default function ForgotPasswordPage() {
   const onSubmit = async (data: ForgotPasswordFormData) => {
     try {
       setIsSubmitting(true);
-      setError('');
-      setSuccess(false);
 
       await api.forgotPassword(data.email);
 
-      setSuccess(true);
-      setSubmittedEmail(data.email);
+      showToast({
+        title: 'Check Your Email',
+        body: `If an account exists for ${data.email}, you will receive password reset instructions shortly.`,
+        type: 'success'
+      });
+
+      reset();
     } catch (err: any) {
-      setError(err.message || 'Failed to send reset email. Please try again.');
+      showToast({
+        title: 'Failed to Send Email',
+        body: err.message || 'Could not send reset email. Please try again.',
+        type: 'error'
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -62,41 +68,7 @@ export default function ForgotPasswordPage() {
 
           {/* Form Container */}
           <div className="space-y-3.5">
-            {/* Success Message */}
-            {success && (
-              <div className="bg-(--color-success) bg-opacity-10 border border-(--color-success) rounded-lg p-4">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-(--color-success)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="ml-3 flex-1">
-                    <h3 className="text-sm font-semibold text-(--color-foreground)">
-                      Check Your Email
-                    </h3>
-                    <div className="mt-2 text-sm text-(--color-foreground)">
-                      <p>
-                        If an account exists for <strong>{submittedEmail}</strong>, you will receive password reset instructions shortly.
-                      </p>
-                      <p className="mt-2">
-                        Please check your inbox and spam folder.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Error Message */}
-            {error && (
-              <div className="bg-(--color-danger) border border-(--color-danger) text-(--color-peace) px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
-
-            {!success && (
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
                 {/* Email Field */}
                 <FormInput
                   id="email"
@@ -118,7 +90,6 @@ export default function ForgotPasswordPage() {
                   {isSubmitting ? 'Sending...' : 'Send Reset Link'}
                 </button>
               </form>
-            )}
 
             {/* Back to Login Link */}
             <div className="text-center pt-2">

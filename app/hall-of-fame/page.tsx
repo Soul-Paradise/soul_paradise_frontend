@@ -1,7 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { api, type Testimonial } from '@/lib/api';
 
 const galleryImages = [
   { id: 1, src: '/dubai_1.jpg', alt: 'Dubai Travel Experience', category: 'Dubai' },
@@ -28,54 +29,30 @@ const galleryImages = [
   { id: 22, src: '/digha_2.jpg', alt: 'Digha Memories', category: 'Digha' },
 ];
 
-const testimonials = [
-  {
-    id: 1,
-    name: 'Amandeep Singh',
-    review: 'The services SOUL PARADISE provide are really amazing. Coordination between the team members everything is just perfect. They provide great customer service with a great experience.',
-    rating: 5,
-    service: 'Complete Travel Package',
-  },
-  {
-    id: 2,
-    name: 'Nisha Dutta',
-    review: 'After a long time, I planned to go on a long trip with my wife. Soul Paradise provides genuine Tour & Travel services to help customers feel at ease.',
-    rating: 5,
-    service: 'Tour Package',
-  },
-  {
-    id: 3,
-    name: 'Navneet Kaur',
-    review: 'I enjoyed the traveling service very much with my friends. Soul Paradise helps to book hotels as well as complete tour packages at a reasonable price.',
-    rating: 5,
-    service: 'Hotel & Tour Package',
-  },
-  {
-    id: 4,
-    name: 'Rajesh Kumar',
-    review: 'Excellent service for visa processing. The team was very professional and helped me get my tourist visa approved without any hassle. Highly recommended!',
-    rating: 5,
-    service: 'Visa Assistance',
-  },
-  {
-    id: 5,
-    name: 'Priya Sharma',
-    review: 'Booked an international flight through Soul Paradise and got the best price compared to other agencies. Very transparent and helpful throughout the process.',
-    rating: 5,
-    service: 'International Flight Booking',
-  },
-  {
-    id: 6,
-    name: 'Gurpreet Singh',
-    review: 'Amazing experience! They arranged our entire Dubai trip including flights, hotels, and sightseeing. Everything was perfectly organized and within our budget.',
-    rating: 5,
-    service: 'Dubai Holiday Package',
-  },
-];
-
 export default function HallOfFamePage() {
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [isLoadingTestimonials, setIsLoadingTestimonials] = useState(true);
+
+  // Fetch testimonials from backend on component mount
+  useEffect(() => {
+    const fetchTestimonials = async () => {
+      try {
+        setIsLoadingTestimonials(true);
+        const response = await api.getLatestTestimonials(6);
+        setTestimonials(response.data);
+      } catch (error) {
+        console.error('Failed to fetch testimonials:', error);
+        // Keep empty array if fetch fails
+        setTestimonials([]);
+      } finally {
+        setIsLoadingTestimonials(false);
+      }
+    };
+
+    fetchTestimonials();
+  }, []);
 
   const categories = ['All', ...Array.from(new Set(galleryImages.map(img => img.category)))];
   const filteredImages = selectedCategory === 'All'
@@ -290,53 +267,66 @@ export default function HallOfFamePage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-          {testimonials.map((testimonial) => (
-            <div
-              key={testimonial.id}
-              className="bg-(--color-peace) p-6 rounded-lg shadow-md hover:shadow-xl transition-all duration-300"
-            >
-              {/* Star Rating */}
-              <div className="flex gap-1 mb-4">
-                {[...Array(testimonial.rating)].map((_, index) => (
-                  <svg
-                    key={index}
-                    className="w-5 h-5 text-(--color-warn)"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                ))}
-              </div>
+        {isLoadingTestimonials ? (
+          <div className="flex justify-center items-center py-12">
+            <svg className="animate-spin h-12 w-12 text-(--color-links)" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
+        ) : testimonials.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-(--color-inactive) text-lg">No testimonials available at the moment.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            {testimonials.map((testimonial) => (
+              <div
+                key={testimonial.id}
+                className="bg-(--color-peace) p-6 rounded-lg shadow-md hover:shadow-xl transition-all duration-300"
+              >
+                {/* Star Rating */}
+                <div className="flex gap-1 mb-4">
+                  {[...Array(testimonial.rating)].map((_, index) => (
+                    <svg
+                      key={index}
+                      className="w-5 h-5 text-(--color-warn)"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
 
-              {/* Review Text */}
-              <p className="text-(--color-inactive) mb-6 leading-relaxed">
-                "{testimonial.review}"
-              </p>
+                {/* Review Text */}
+                <p className="text-(--color-inactive) mb-6 leading-relaxed">
+                  "{testimonial.review}"
+                </p>
 
-              {/* Customer Info */}
-              <div className="border-t border-(--color-tertiary-button) pt-4">
-                <div className="flex items-center gap-3">
-                  {/* Avatar with Initials */}
-                  <div className="w-12 h-12 bg-(--color-links) rounded-full flex items-center justify-center shrink-0">
-                    <span className="text-white font-bold text-lg">
-                      {testimonial.name.split(' ').map(n => n[0]).join('')}
-                    </span>
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-(--color-foreground)">
-                      {testimonial.name}
-                    </h3>
-                    <p className="text-sm text-(--color-inactive)">
-                      {testimonial.service}
-                    </p>
+                {/* Customer Info */}
+                <div className="border-t border-(--color-tertiary-button) pt-4">
+                  <div className="flex items-center gap-3">
+                    {/* Avatar with Initials */}
+                    <div className="w-12 h-12 bg-(--color-links) rounded-full flex items-center justify-center shrink-0">
+                      <span className="text-white font-bold text-lg">
+                        {testimonial.name.split(' ').map(n => n[0]).join('')}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-(--color-foreground)">
+                        {testimonial.name}
+                      </h3>
+                      <p className="text-sm text-(--color-inactive)">
+                        {testimonial.service}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
     </main>

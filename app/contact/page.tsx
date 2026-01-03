@@ -1,6 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { api, type ApiError } from '@/lib/api';
+import { contactFormSchema } from '@/lib/validations/contact';
+import { showToast } from '@/lib/toast';
+import { ZodError } from 'zod';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -11,33 +15,68 @@ export default function ContactPage() {
     message: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear field error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setSubmitStatus('idle');
+    setFieldErrors({});
 
     try {
-      // TODO: Replace with your actual API endpoint
-      // const response = await fetch('/api/contact', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData),
-      // });
+      // Validate form data
+      const validatedData = contactFormSchema.parse({
+        fullName: formData.name,
+        email: formData.email,
+        phoneNumber: formData.phone,
+        subject: formData.subject,
+        message: formData.message,
+      });
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Submit to backend
+      await api.submitContactForm(validatedData);
 
-      setSubmitStatus('success');
+      // Reset form on success
       setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+
+      showToast({
+        title: 'Message Sent Successfully!',
+        body: "Thank you for reaching out. We'll get back to you at the earliest.",
+        type: 'success'
+      });
     } catch (error) {
-      setSubmitStatus('error');
+      if (error instanceof ZodError) {
+        // Handle validation errors
+        const errors: Record<string, string> = {};
+        error.issues.forEach((err) => {
+          if (err.path[0]) {
+            // Map field names back to form field names
+            const fieldMap: Record<string, string> = {
+              'fullName': 'name',
+              'phoneNumber': 'phone',
+            };
+            const fieldName = fieldMap[err.path[0] as string] || err.path[0] as string;
+            errors[fieldName] = err.message;
+          }
+        });
+        setFieldErrors(errors);
+      } else {
+        // Handle API errors
+        const apiError = error as ApiError;
+        showToast({
+          title: 'Failed to Send Message',
+          body: apiError.message || 'Something went wrong. Please try again later.',
+          type: 'error'
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -160,9 +199,14 @@ export default function ContactPage() {
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 rounded-lg border border-(--color-tertiary-button) focus:border-(--color-links) focus:ring-2 focus:ring-(--color-links) focus:ring-opacity-20 outline-none transition-all"
+                    className={`w-full px-4 py-3 rounded-lg border ${
+                      fieldErrors.name ? 'border-(--color-danger)' : 'border-(--color-tertiary-button)'
+                    } focus:border-(--color-links) focus:ring-2 focus:ring-(--color-links) focus:ring-opacity-20 outline-none transition-all`}
                     placeholder="John Doe"
                   />
+                  {fieldErrors.name && (
+                    <p className="mt-1 text-sm text-(--color-danger)">{fieldErrors.name}</p>
+                  )}
                 </div>
 
                 {/* Email */}
@@ -177,9 +221,14 @@ export default function ContactPage() {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 rounded-lg border border-(--color-tertiary-button) focus:border-(--color-links) focus:ring-2 focus:ring-(--color-links) focus:ring-opacity-20 outline-none transition-all"
+                    className={`w-full px-4 py-3 rounded-lg border ${
+                      fieldErrors.email ? 'border-(--color-danger)' : 'border-(--color-tertiary-button)'
+                    } focus:border-(--color-links) focus:ring-2 focus:ring-(--color-links) focus:ring-opacity-20 outline-none transition-all`}
                     placeholder="john@example.com"
                   />
+                  {fieldErrors.email && (
+                    <p className="mt-1 text-sm text-(--color-danger)">{fieldErrors.email}</p>
+                  )}
                 </div>
               </div>
 
@@ -197,9 +246,14 @@ export default function ContactPage() {
                     value={formData.phone}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 rounded-lg border border-(--color-tertiary-button) focus:border-(--color-links) focus:ring-2 focus:ring-(--color-links) focus:ring-opacity-20 outline-none transition-all"
+                    className={`w-full px-4 py-3 rounded-lg border ${
+                      fieldErrors.phone ? 'border-(--color-danger)' : 'border-(--color-tertiary-button)'
+                    } focus:border-(--color-links) focus:ring-2 focus:ring-(--color-links) focus:ring-opacity-20 outline-none transition-all`}
                     placeholder="+91-9876543210"
                   />
+                  {fieldErrors.phone && (
+                    <p className="mt-1 text-sm text-(--color-danger)">{fieldErrors.phone}</p>
+                  )}
                 </div>
 
                 {/* Subject */}
@@ -213,17 +267,22 @@ export default function ContactPage() {
                     value={formData.subject}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 rounded-lg border border-(--color-tertiary-button) focus:border-(--color-links) focus:ring-2 focus:ring-(--color-links) focus:ring-opacity-20 outline-none transition-all"
+                    className={`w-full px-4 py-3 rounded-lg border ${
+                      fieldErrors.subject ? 'border-(--color-danger)' : 'border-(--color-tertiary-button)'
+                    } focus:border-(--color-links) focus:ring-2 focus:ring-(--color-links) focus:ring-opacity-20 outline-none transition-all`}
                   >
                     <option value="">Select a subject</option>
-                    <option value="flight-booking">Flight Booking</option>
-                    <option value="tour-package">Tour Package</option>
-                    <option value="visa-assistance">Visa Assistance</option>
-                    <option value="hotel-booking">Hotel Booking</option>
-                    <option value="travel-insurance">Travel Insurance</option>
-                    <option value="general-inquiry">General Inquiry</option>
-                    <option value="other">Other</option>
+                    <option value="Flight Booking">Flight Booking</option>
+                    <option value="Tour Package">Tour Package</option>
+                    <option value="Visa Assistance">Visa Assistance</option>
+                    <option value="Hotel Booking">Hotel Booking</option>
+                    <option value="Travel Insurance">Travel Insurance</option>
+                    <option value="General Inquiry">General Inquiry</option>
+                    <option value="Other">Other</option>
                   </select>
+                  {fieldErrors.subject && (
+                    <p className="mt-1 text-sm text-(--color-danger)">{fieldErrors.subject}</p>
+                  )}
                 </div>
               </div>
 
@@ -239,33 +298,15 @@ export default function ContactPage() {
                   onChange={handleChange}
                   required
                   rows={5}
-                  className="w-full px-4 py-3 rounded-lg border border-(--color-tertiary-button) focus:border-(--color-links) focus:ring-2 focus:ring-(--color-links) focus:ring-opacity-20 outline-none transition-all resize-none"
+                  className={`w-full px-4 py-3 rounded-lg border ${
+                    fieldErrors.message ? 'border-(--color-danger)' : 'border-(--color-tertiary-button)'
+                  } focus:border-(--color-links) focus:ring-2 focus:ring-(--color-links) focus:ring-opacity-20 outline-none transition-all resize-none`}
                   placeholder="Tell us about your travel plans or any questions you have..."
                 ></textarea>
+                {fieldErrors.message && (
+                  <p className="mt-1 text-sm text-(--color-danger)">{fieldErrors.message}</p>
+                )}
               </div>
-
-              {/* Submit Status Messages */}
-              {submitStatus === 'success' && (
-                <div className="p-4 bg-(--color-success) bg-opacity-10 border border-(--color-success) rounded-lg">
-                  <p className="text-(--color-success) font-semibold flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    Message sent successfully! We'll get back to you soon.
-                  </p>
-                </div>
-              )}
-
-              {submitStatus === 'error' && (
-                <div className="p-4 bg-(--color-danger) bg-opacity-10 border border-(--color-danger) rounded-lg">
-                  <p className="text-(--color-danger) font-semibold flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                    Something went wrong. Please try again or contact us directly.
-                  </p>
-                </div>
-              )}
 
               {/* Submit Button */}
               <div>
@@ -353,7 +394,7 @@ export default function ContactPage() {
               </h2>
               <div className="rounded-lg overflow-hidden shadow-lg h-[400px] md:h-[500px]">
                 <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3408.9076254567234!2d75.56862831511744!3d31.325020981460564!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x391a5a5a5a5a5a5a%3A0x5a5a5a5a5a5a5a5a!2sPPR%20Plaza!5e0!3m2!1sen!2sin!4v1234567890123!5m2!1sen!2sin"
+                  src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d27268.05989596027!2d75.599576!3d31.317355!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x391a5b68da0a20fb%3A0x54bdb5d17a992f5d!2sSOUL%20PARADISE%20JALANDHAR%20INDIA!5e0!3m2!1sen!2sin!4v1767454904897!5m2!1sen!2sin"
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}

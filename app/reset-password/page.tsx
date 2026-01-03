@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { resetPasswordSchema, type ResetPasswordFormData } from '@/lib/validations/auth';
 import { api } from '@/lib/api';
+import { showToast } from '@/lib/toast';
 import Logo from '@/components/Logo';
 import BackgroundVideo from '@/components/BackgroundVideo';
 import FormInput from '@/components/FormInput';
@@ -17,8 +18,6 @@ function ResetPasswordForm() {
   const token = searchParams.get('token');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
 
   const {
     register,
@@ -31,31 +30,45 @@ function ResetPasswordForm() {
 
   useEffect(() => {
     if (!token) {
-      setError('Invalid or missing reset token');
+      showToast({
+        title: 'Invalid Reset Link',
+        body: 'The password reset link is invalid or has expired.',
+        type: 'error'
+      });
     }
   }, [token]);
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     if (!token) {
-      setError('Invalid or missing reset token');
+      showToast({
+        title: 'Invalid Reset Link',
+        body: 'The password reset link is invalid or has expired.',
+        type: 'error'
+      });
       return;
     }
 
     try {
       setIsSubmitting(true);
-      setError('');
-      setSuccess(false);
 
       await api.resetPassword(token, data.password);
 
-      setSuccess(true);
+      showToast({
+        title: 'Password Reset Successfully!',
+        body: 'Your password has been reset. Redirecting to login...',
+        type: 'success'
+      });
 
       // Redirect to login after 3 seconds
       setTimeout(() => {
         router.push('/login');
       }, 3000);
     } catch (err: any) {
-      setError(err.message || 'Failed to reset password. Please try again.');
+      showToast({
+        title: 'Reset Failed',
+        body: err.message || 'Failed to reset password. Please try again.',
+        type: 'error'
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -81,44 +94,7 @@ function ResetPasswordForm() {
 
           {/* Form Container */}
           <div className="space-y-3.5">
-            {/* Success Message */}
-            {success && (
-              <div className="bg-(--color-success) bg-opacity-10 border border-(--color-success) rounded-lg p-4">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-(--color-success)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="ml-3 flex-1">
-                    <h3 className="text-sm font-semibold text-(--color-foreground)">
-                      Password Reset Successfully!
-                    </h3>
-                    <div className="mt-2 text-sm text-(--color-foreground)">
-                      <p>
-                        Your password has been reset. Redirecting you to login...
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Error Message */}
-            {error && (
-              <div className="bg-(--color-danger) border border-(--color-danger) text-(--color-peace) px-4 py-3 rounded-lg text-sm">
-                {error}
-                {error.includes('token') && (
-                  <div className="mt-2">
-                    <Link href="/forgot-password" className="underline font-semibold">
-                      Request a new reset link
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {!success && token && (
+            {token && (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
                 {/* Password Field */}
                 <FormInput
@@ -143,17 +119,6 @@ function ResetPasswordForm() {
                   error={errors.confirmPassword?.message}
                   disabled={isSubmitting}
                 />
-
-                {/* Password Requirements */}
-                <div className="bg-(--color-links) bg-opacity-10 border border-(--color-links) rounded-lg p-3 text-xs text-(--color-foreground)">
-                  <p className="font-semibold mb-1">Password must contain:</p>
-                  <ul className="list-disc list-inside space-y-0.5">
-                    <li>At least 8 characters</li>
-                    <li>One uppercase letter</li>
-                    <li>One lowercase letter</li>
-                    <li>One number or special character</li>
-                  </ul>
-                </div>
 
                 {/* Submit Button */}
                 <button

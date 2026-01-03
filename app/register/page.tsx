@@ -6,13 +6,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/contexts/AuthContext';
 import { registerSchema, type RegisterFormData } from '@/lib/validations/auth';
+import { showToast } from '@/lib/toast';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 import Logo from '@/components/Logo';
 import BackgroundVideo from '@/components/BackgroundVideo';
 import FormInput from '@/components/FormInput';
 
 export default function SignupPage() {
-  const { register: registerUser, isLoading, error, clearError } = useAuth();
+  const { register: registerUser, isLoading, clearError } = useAuth();
 
   const {
     register,
@@ -34,10 +35,18 @@ export default function SignupPage() {
       // Extract only the fields needed for API (exclude confirmPassword)
       const { name, email, password } = data;
       await registerUser({ name, email, password });
+      showToast({
+        title: 'Registration Successful!',
+        body: 'Please check your email to verify your account.',
+        type: 'success'
+      });
       // Navigation is handled by AuthContext
-    } catch (err) {
-      // Error is handled by AuthContext
-      console.error('Registration failed:', err);
+    } catch (err: any) {
+      showToast({
+        title: 'Registration Failed',
+        body: err.message || 'Unable to create account. Please try again.',
+        type: 'error'
+      });
     }
   };
 
@@ -77,13 +86,6 @@ export default function SignupPage() {
                 <span className="px-2 font-medium bg-(--color-background) text-(--color-foreground)">Or</span>
               </div>
             </div>
-
-            {/* Global Error Message from API */}
-            {error && (
-              <div className="px-4 py-3 rounded-lg text-sm bg-(--color-danger) text-(--color-peace) border border-(--color-danger)">
-                {error}
-              </div>
-            )}
 
             {/* Register Form */}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">

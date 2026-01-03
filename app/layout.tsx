@@ -3,7 +3,8 @@ import { Geist, Geist_Mono, Nunito, Poppins } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ConditionalNavbar from "@/components/ConditionalNavbar";
-import { Footer } from "@/components/Footer";
+import ConditionalFooter from "@/components/ConditionalFooter";
+import { Toaster } from "react-hot-toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -116,8 +117,17 @@ export default function RootLayout({
         <AuthProvider>
           <ConditionalNavbar />
           {children}
-          <Footer />
+          <ConditionalFooter />
         </AuthProvider>
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              color: '#fff',
+            },
+          }}
+        />
       </body>
     </html>
   );

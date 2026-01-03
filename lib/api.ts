@@ -48,6 +48,56 @@ export interface User {
   lastLoginAt: string;
 }
 
+export interface ContactFormRequest {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  subject: string;
+  message: string;
+}
+
+export interface ContactFormResponse {
+  success: boolean;
+  message: string;
+  data: {
+    id: string;
+    createdAt: string;
+  };
+}
+
+export interface Testimonial {
+  id: string;
+  name: string;
+  review: string;
+  rating: number;
+  service: string;
+  isApproved: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTestimonialRequest {
+  name: string;
+  review: string;
+  rating: number;
+  service: string;
+}
+
+export interface TestimonialResponse {
+  success: boolean;
+  message: string;
+  data: {
+    id: string;
+    createdAt: string;
+  };
+}
+
+export interface TestimonialsListResponse {
+  success: boolean;
+  data: Testimonial[];
+  count: number;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -342,6 +392,40 @@ class ApiClient {
     return this.request<{ message: string }>('/auth/reset-password', {
       method: 'POST',
       body: JSON.stringify({ token, password }),
+    });
+  }
+
+  // Contact Form Endpoints
+
+  /**
+   * Submit contact form
+   * POST /contacts
+   */
+  async submitContactForm(data: ContactFormRequest): Promise<ContactFormResponse> {
+    return this.request<ContactFormResponse>('/contacts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Testimonials Endpoints
+
+  /**
+   * Get latest approved testimonials
+   * GET /testimonials?limit=6
+   */
+  async getLatestTestimonials(limit: number = 6): Promise<TestimonialsListResponse> {
+    return this.request<TestimonialsListResponse>(`/testimonials?limit=${limit}`);
+  }
+
+  /**
+   * Submit a new testimonial
+   * POST /testimonials
+   */
+  async submitTestimonial(data: CreateTestimonialRequest): Promise<TestimonialResponse> {
+    return this.request<TestimonialResponse>('/testimonials', {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   }
 }

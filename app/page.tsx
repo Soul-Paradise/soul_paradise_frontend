@@ -28,8 +28,8 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-(--color-background)">
       {/* Booking Tabs Section */}
-      <section className="bg-(--color-background) pt-24 pb-12 md:pt-28 md:pb-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="bg-(--color-background)">
+        <div className="max-w-7xl mx-auto">
           <BookingTabs />
         </div>
       </section>

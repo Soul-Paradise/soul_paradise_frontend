@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { showToast } from '@/lib/toast';
 import Logo from '@/components/Logo';
 
 function VerificationPendingContent() {
@@ -11,8 +12,6 @@ function VerificationPendingContent() {
   const email = searchParams.get('email');
 
   const [isResending, setIsResending] = useState(false);
-  const [resendSuccess, setResendSuccess] = useState(false);
-  const [resendError, setResendError] = useState('');
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
 
@@ -41,8 +40,6 @@ function VerificationPendingContent() {
     if (!email || !canResend) return;
 
     setIsResending(true);
-    setResendSuccess(false);
-    setResendError('');
 
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/resend-verification`, {
@@ -58,9 +55,14 @@ function VerificationPendingContent() {
         throw new Error(errorData.message || 'Failed to resend verification email');
       }
 
-      setResendSuccess(true);
       setCanResend(false);
       setCountdown(60);
+
+      showToast({
+        title: 'Email Sent!',
+        body: 'Verification email resent successfully. Please check your inbox.',
+        type: 'success'
+      });
 
       // Restart countdown
       const timer = setInterval(() => {
@@ -74,7 +76,11 @@ function VerificationPendingContent() {
         });
       }, 1000);
     } catch (error: any) {
-      setResendError(error.message || 'Failed to resend verification email');
+      showToast({
+        title: 'Failed to Resend',
+        body: error.message || 'Could not resend verification email. Please try again.',
+        type: 'error'
+      });
     } finally {
       setIsResending(false);
     }
@@ -107,39 +113,6 @@ function VerificationPendingContent() {
                 </svg>
               </div>
             </div>
-
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Verify Your Email
-            </h1>
-
-            <p className="text-gray-600 mb-6">
-              We've sent a verification link to:
-            </p>
-
-            <p className="text-lg font-semibold text-gray-900 mb-6 break-all">
-              {email}
-            </p>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <p className="text-sm text-blue-800">
-                Please check your email and click the verification link to activate your account.
-                The link will expire in 24 hours.
-              </p>
-            </div>
-
-            {/* Success Message */}
-            {resendSuccess && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm">
-                Verification email resent successfully! Please check your inbox.
-              </div>
-            )}
-
-            {/* Error Message */}
-            {resendError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-                {resendError}
-              </div>
-            )}
 
             {/* Resend Button */}
             <div className="mb-6">
