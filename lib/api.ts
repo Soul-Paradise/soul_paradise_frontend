@@ -22,6 +22,8 @@ export interface RegisterRequest {
   name: string;
 }
 
+export type UserRole = 'CUSTOMER' | 'AGENT' | 'ADMIN';
+
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
@@ -30,6 +32,7 @@ export interface AuthResponse {
     email: string;
     name: string;
     profilePicture: string | null;
+    role: UserRole;
     emailVerified?: boolean;
     provider?: string;
     createdAt?: string;
@@ -42,6 +45,7 @@ export interface User {
   email: string;
   name: string;
   profilePicture: string | null;
+  role: UserRole;
   emailVerified: boolean;
   provider: string;
   createdAt: string;

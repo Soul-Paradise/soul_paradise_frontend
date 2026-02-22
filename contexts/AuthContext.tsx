@@ -10,7 +10,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { api, type User, type LoginRequest, type RegisterRequest, type ApiError } from '@/lib/api';
+import { api, type User, type UserRole, type LoginRequest, type RegisterRequest, type ApiError } from '@/lib/api';
 
 // Authentication State Interface
 interface AuthState {
@@ -254,4 +254,25 @@ export function useRequireAuth() {
   }, [isAuthenticated, isLoading, router]);
 
   return { isAuthenticated, isLoading };
+}
+
+/**
+ * Helper hook for role-protected routes
+ * Redirects to home if user doesn't have the required role
+ */
+export function useRequireRole(...requiredRoles: UserRole[]) {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (!isAuthenticated) {
+        router.replace('/login');
+      } else if (user && !requiredRoles.includes(user.role)) {
+        router.replace('/');
+      }
+    }
+  }, [user, isAuthenticated, isLoading, router, requiredRoles]);
+
+  return { user, isLoading, hasAccess: !!user && requiredRoles.includes(user.role) };
 }
