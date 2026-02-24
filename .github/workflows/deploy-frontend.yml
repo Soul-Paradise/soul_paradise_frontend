@@ -1,9 +1,9 @@
 name: Deploy to Vercel
 
 on:
-  # Scheduled deployment at 4:30 AM IST (11:00 PM UTC)
-  schedule:
-    - cron: '0 23 * * *'
+  push:
+    branches:
+      - main
   # Manual trigger for urgent deployments
   workflow_dispatch:
 
@@ -39,6 +39,8 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
 
       - name: Deploy to Vercel
         id: deploy
