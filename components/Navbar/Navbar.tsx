@@ -170,14 +170,6 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
                 </Link>
               </>
             )}
-
-            {/* IATA Accreditation Badge */}
-
-              <img
-                src="/iata_logo.png"
-                alt="IATA Accredited"
-                className="ml-2 h-10 w-auto"
-              />
           </div>
 
           {/* Mobile Menu Button */}
