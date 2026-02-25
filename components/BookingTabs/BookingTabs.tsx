@@ -7,7 +7,7 @@ import { HotelBooking } from './HotelBooking';
 import { TouristVisa } from './TouristVisa';
 import { TravelInsurance } from './TravelInsurance';
 
-type TabType = 'flight' | 'package' | 'hotel' | 'visa' | 'insurance';
+type TabType = 'flights' | 'holiday' | 'hotel' | 'visa' | 'insurance';
 
 interface Tab {
   id: TabType;
@@ -17,11 +17,11 @@ interface Tab {
 }
 
 export const BookingTabs = () => {
-  const [activeTab, setActiveTab] = useState<TabType>('flight');
+  const [activeTab, setActiveTab] = useState<TabType>('flights');
 
   const tabs: Tab[] = [
     {
-      id: 'flight',
+      id: 'flights',
       label: 'Flight Tickets',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -30,14 +30,13 @@ export const BookingTabs = () => {
       ),
     },
     {
-      id: 'package',
+      id: 'holiday',
       label: 'Holiday Packages',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
         </svg>
       ),
-      badge: 'Popular',
     },
     {
       id: 'hotel',
@@ -70,9 +69,9 @@ export const BookingTabs = () => {
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'flight':
-        return <FlightBooking type="domestic" />;
-      case 'package':
+      case 'flights':
+        return <FlightBooking />;
+      case 'holiday':
         return <HolidayPackages />;
       case 'hotel':
         return <HotelBooking />;
@@ -87,31 +86,31 @@ export const BookingTabs = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl">
         {/* Tabs Navigation */}
-        <div className="bg-gradient-to-r from-(--color-primary-button) to-(--color-secondary-button) p-1">
+        <div className="bg-gradient-to-r from-(--color-primary-button) to-(--color-secondary-button) rounded-t-xl">
           <div className="overflow-x-auto scrollbar-hide">
-            <div className="flex min-w-max lg:min-w-0 lg:grid lg:grid-cols-6 gap-1">
+            <div className="flex">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`
-                    relative flex items-center justify-center gap-2 px-4 py-3 sm:py-4
-                    text-sm sm:text-base font-medium transition-all duration-300
-                    whitespace-nowrap sm:whitespace-normal
+                    relative flex-1 flex items-center justify-center gap-2 px-3 py-3 sm:py-4
+                    text-xs sm:text-sm font-medium transition-all duration-300 rounded-t-lg shadow-lg
+                    whitespace-nowrap min-w-0
                     ${
                       activeTab === tab.id
-                        ? 'bg-white text-(--color-primary-button) shadow-lg'
-                        : 'text-white hover:bg-white/10'
+                        ? 'bg-white text-(--color-primary-button)'
+                        : 'text-white/80 hover:text-white hover:bg-white/10'
                     }
                   `}
                 >
                   <span className="flex-shrink-0">{tab.icon}</span>
-                  <span className="hidden sm:inline">{tab.label}</span>
-                  <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+                  <span className="hidden md:inline truncate">{tab.label}</span>
+                  <span className="md:hidden truncate">{tab.label.split(' ')[0]}</span>
                   {tab.badge && activeTab === tab.id && (
-                    <span className="absolute -top-1 -right-1 bg-(--color-success) text-white text-xs px-2 py-0.5 rounded-full">
+                    <span className="absolute -top-1 -right-1 bg-(--color-success) text-white text-[10px] px-1.5 py-0.5 rounded-full">
                       {tab.badge}
                     </span>
                   )}

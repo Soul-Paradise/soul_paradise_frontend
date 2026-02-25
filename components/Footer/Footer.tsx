@@ -67,18 +67,18 @@ export const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/service" className="text-sm opacity-80 hover:opacity-100 hover:text-(--color-links) transition-all">
-                  Services
-                </Link>
-              </li>
-              <li>
                 <Link href="/hall-of-fame" className="text-sm opacity-80 hover:opacity-100 hover:text-(--color-links) transition-all">
                   Hall of Fame
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-sm opacity-80 hover:opacity-100 hover:text-(--color-links) transition-all">
-                  Contact Us
+                <Link href="/terms" className="text-sm opacity-80 hover:opacity-100 hover:text-(--color-links) transition-all">
+                  Terms &amp; Conditions
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy-policy" className="text-sm opacity-80 hover:opacity-100 hover:text-(--color-links) transition-all">
+                  Privacy Policy
                 </Link>
               </li>
             </ul>
@@ -142,9 +142,11 @@ export const Footer = () => {
         {/* Bottom Bar */}
         <div className="pt-6 border-t border-(--color-peace) border-opacity-20">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm opacity-70 text-center md:text-left">
-              © Copyright {currentYear}. All Rights Reserved.
-            </p>
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+              <p className="text-sm opacity-70 text-center md:text-left">
+                © Copyright {currentYear}. All Rights Reserved.
+              </p>
+            </div>
             <div className="flex items-center gap-2">
               <span className="text-sm opacity-70">IATA Certified</span>
               <Image

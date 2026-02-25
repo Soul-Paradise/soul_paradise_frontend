@@ -172,7 +172,7 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
             )}
 
             {/* IATA Accreditation Badge */}
-            
+
               <img
                 src="/iata_logo.png"
                 alt="IATA Accredited"
@@ -297,57 +297,6 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
             </div>
           </div>
         </>
-      )}
-
-      {/* IATA Certificate Modal */}
-      {showCertificate && (
-        <div
-          className="fixed inset-0 z-10 flex items-center justify-center backdrop-blur p-4"
-          onClick={() => setShowCertificate(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="certificate-title"
-        >
-          <div
-            className="relative max-w-5xl w-full bg-(--color-peace) rounded-lg shadow-2xl overflow-hidden animate-fadeIn"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 bg-(--color-links) text-(--color-peace)">
-              <h2 id="certificate-title" className="text-xl font-bold">
-                IATA Accreditation Certificate
-              </h2>
-              <button
-                onClick={() => setShowCertificate(false)}
-                className="
-                  p-2 rounded-full hover:text-danger cursor-pointer"
-                aria-label="Close certificate"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Certificate Image */}
-            <div className="p-6 bg-(--color-background)">
-              <div className="bg-(--color-peace) rounded-lg shadow-lg overflow-hidden">
-                <img
-                  src="/iata_certificate.jpg"
-                  alt="Soul Paradise IATA Certificate of Accreditation"
-                  className="w-full h-auto"
-                />
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 bg-(--color-tertiary-button) border-t border-(--color-tertiary-button)">
-              <p className="text-sm text-(--color-inactive) text-center">
-                Soul Paradise is an IATA accredited travel agent (Code: 14009881) - Valid through 2023
-              </p>
-            </div>
-          </div>
-        </div>
       )}
     </nav>
   );

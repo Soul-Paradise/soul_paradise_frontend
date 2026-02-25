@@ -44,6 +44,7 @@ export interface User {
   profilePicture: string | null;
   emailVerified: boolean;
   provider: string;
+  role: 'USER' | 'ADMIN';
   createdAt: string;
   lastLoginAt: string;
 }
