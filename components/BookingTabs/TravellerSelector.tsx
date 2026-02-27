@@ -119,9 +119,7 @@ export const TravellerSelector = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full text-left px-4 py-3 transition-all min-h-[80px] ${
-          isOpen ? 'bg-blue-50/50' : 'bg-white hover:bg-gray-50'
-        }`}
+        className={`w-full text-left px-4 py-3 transition-all min-h-[80px]`}
       >
         <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">
           Travellers & Class

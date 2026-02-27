@@ -65,9 +65,7 @@ export const DateDisplay = ({
       <button
         type="button"
         onClick={handleClick}
-        className={`w-full text-left px-4 py-3 transition-all min-h-[80px] cursor-pointer ${
-          disabled ? 'bg-gray-50/50' : 'bg-white hover:bg-gray-50'
-        }`}
+        className={`w-full text-left px-4 py-3 transition-all min-h-[80px] cursor-pointer`}
       >
         <div className="flex items-center gap-1.5 mb-1">
           <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -94,9 +94,7 @@ export const AirportPicker = ({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className={`w-full text-left px-4 py-3 transition-all min-h-[80px] ${
-          isOpen ? 'bg-blue-50/50' : 'bg-white hover:bg-gray-50'
-        }`}
+        className={`w-full text-left pl-6 py-3 transition-all min-h-[80px]`}
       >
         <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">
           {label}
@@ -117,7 +115,7 @@ export const AirportPicker = ({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden">
+        <div className="absolute top-full left-0 right-0 z-50 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden">
           {/* Search input */}
           <div className="p-3 border-b border-gray-100">
             <input

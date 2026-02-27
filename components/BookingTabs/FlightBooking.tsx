@@ -122,7 +122,7 @@ export const FlightBooking = () => {
       <div className="border-2 border-gray-200 rounded-xl overflow-visible bg-white">
         <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-gray-200">
           {/* FROM */}
-          <div className="flex-[2] min-w-0 relative">
+          <div className="flex-[2] min-w-0 relative ">
             <AirportPicker
               label="From"
               value={fromAirport}
