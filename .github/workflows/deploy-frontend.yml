@@ -1,9 +1,6 @@
 name: Deploy to Vercel - FrontEnd
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 env:
