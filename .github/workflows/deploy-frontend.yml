@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-  # Manual trigger for urgent deployments
   workflow_dispatch:
 
 env:
