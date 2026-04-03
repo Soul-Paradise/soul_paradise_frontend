@@ -28,7 +28,7 @@ export const Footer = () => {
             {/* Social Media Links */}
             <div className="flex gap-3">
               <a
-                href="https://facebook.com"
+                href="https://m.facebook.com/soulparadisetravels/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 bg-(--color-links) rounded-full flex items-center justify-center hover:bg-opacity-80 transition-all"
@@ -39,7 +39,7 @@ export const Footer = () => {
                 </svg>
               </a>
               <a
-                href="https://instagram.com"
+                href="https://www.instagram.com/soulparadisetravels/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 bg-(--color-links) rounded-full flex items-center justify-center hover:bg-opacity-80 transition-all"

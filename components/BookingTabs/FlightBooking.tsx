@@ -12,6 +12,16 @@ import {
 import type { Airport } from '@/lib/flights-api';
 
 type TripType = 'oneway' | 'roundtrip';
+type SpecialFare = 'regular' | 'student' | 'armed' | 'gst' | 'senior' | 'doctor';
+
+const specialFares: { id: SpecialFare; label: string; sub: string }[] = [
+  { id: 'regular', label: 'Regular', sub: 'Regular fares' },
+  { id: 'student', label: 'Student', sub: 'Extra discounts/baggage' },
+  { id: 'armed', label: 'Armed Forces', sub: 'Up to ₹600 off' },
+  { id: 'gst', label: 'Have a GST number?', sub: 'Upto 10% Extra Savings!' },
+  { id: 'senior', label: 'Senior Citizen', sub: 'Up to ₹600 off' },
+  { id: 'doctor', label: 'Doctor and Nurses', sub: 'Up to ₹600 off' },
+];
 
 export const FlightBooking = () => {
   const router = useRouter();
@@ -28,6 +38,7 @@ export const FlightBooking = () => {
   });
   const [cabinClass, setCabinClass] = useState<CabinClass>('E');
   const [error, setError] = useState('');
+  const [specialFare, setSpecialFare] = useState<SpecialFare>('regular');
 
   const swapLocations = () => {
     const temp = fromAirport;
@@ -92,30 +103,36 @@ export const FlightBooking = () => {
 
   return (
     <div className="space-y-5">
-      {/* Trip Type Tabs */}
-      <div className="flex items-center gap-1">
-        {(
-          [
-            { value: 'oneway', label: 'One Way' },
-            { value: 'roundtrip', label: 'Round Trip' },
-          ] as const
-        ).map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => {
-              setTripType(opt.value);
-              if (opt.value === 'oneway') setReturnDate('');
-            }}
-            className={`px-5 py-2 text-sm font-semibold rounded-full border-2 transition-all ${
-              tripType === opt.value
-                ? 'border-(--color-links) bg-(--color-links) text-white'
-                : 'border-gray-200 text-gray-600 hover:border-gray-300 bg-white'
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
+      {/* Trip Type + subtitle row */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-1">
+          {(
+            [
+              { value: 'oneway', label: 'One Way' },
+              { value: 'roundtrip', label: 'Round Trip' },
+            ] as const
+          ).map((opt) => (
+            <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer px-3 py-1.5">
+              <input
+                type="radio"
+                name="tripType"
+                value={opt.value}
+                checked={tripType === opt.value}
+                onChange={() => {
+                  setTripType(opt.value);
+                  if (opt.value === 'oneway') setReturnDate('');
+                }}
+                className="w-4 h-4 accent-[#1F7AC4]"
+              />
+              <span className={`text-sm font-semibold ${tripType === opt.value ? 'text-[#1F7AC4]' : 'text-gray-600'}`}>
+                {opt.label}
+              </span>
+            </label>
+          ))}
+        </div>
+        <span className="text-sm text-gray-500 font-medium hidden sm:block">
+          Book International and Domestic Flights
+        </span>
       </div>
 
       {/* Main Search Fields — single bordered row */}
@@ -198,27 +215,39 @@ export const FlightBooking = () => {
         </div>
       </div>
 
-      {/* Search Button */}
-      <div className="flex justify-end">
+      {/* Special Fares + Search Button row */}
+      <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+        {/* Special Fares */}
+        <div className="flex-1">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Special Fares</p>
+          <div className="flex flex-wrap gap-2">
+            {specialFares.map((fare) => (
+              <button
+                key={fare.id}
+                type="button"
+                onClick={() => setSpecialFare(fare.id)}
+                className={`px-3 py-1.5 rounded border text-xs font-semibold transition-all ${
+                  specialFare === fare.id
+                    ? 'border-[#1F7AC4] bg-blue-50 text-[#1F7AC4]'
+                    : 'border-gray-200 text-gray-600 hover:border-gray-300 bg-white'
+                }`}
+              >
+                <span>{fare.label}</span>
+                {specialFare === fare.id && (
+                  <span className="block text-[10px] font-normal text-gray-400 mt-0.5">{fare.sub}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Search button */}
         <button
           type="button"
           onClick={handleSearch}
-          className="w-full sm:w-auto px-8 py-3.5 bg-(--color-danger) hover:bg-red-600 text-white text-sm font-bold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 uppercase tracking-wide flex items-center justify-center gap-2"
+          className="sm:self-end px-10 py-3.5 bg-[#D34E4E] hover:bg-red-600 text-white text-sm font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all uppercase tracking-wide flex items-center justify-center gap-2 whitespace-nowrap"
         >
-          Search
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2.5}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+          SEARCH
         </button>
       </div>
 

@@ -4,101 +4,97 @@ import { useState } from 'react';
 import { FlightBooking } from './FlightBooking';
 import { HotelBooking } from './HotelBooking';
 import { TravelInsurance } from './TravelInsurance';
+import { HolidayPackages } from './HolidayPackages';
+import { TouristVisa } from './TouristVisa';
 
-type TabType = 'flights' | 'hotel' | 'insurance';
+type TabType = 'flights' | 'hotel' | 'holidays' | 'visa' | 'insurance';
 
-interface Tab {
-  id: TabType;
-  label: string;
-  icon: React.ReactNode;
-  badge?: string;
-}
+const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
+  {
+    id: 'flights',
+    label: 'Flights',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7">
+        <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'hotel',
+    label: 'Hotels',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7">
+        <path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'holidays',
+    label: 'Holiday\nPackages',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'visa',
+    label: 'Tourist\nVisa',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7">
+        <path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'insurance',
+    label: 'Travel\nInsurance',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7">
+        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5zm-2 9l5-5-1.41-1.42L10 11.17l-1.59-1.59L7 11l3 3z"/>
+      </svg>
+    ),
+  },
+];
 
 export const BookingTabs = () => {
   const [activeTab, setActiveTab] = useState<TabType>('flights');
 
-  const tabs: Tab[] = [
-    {
-      id: 'flights',
-      label: 'Flight Tickets',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-        </svg>
-      ),
-    },
-    {
-      id: 'hotel',
-      label: 'Hotel Booking',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-        </svg>
-      ),
-    },
-    {
-      id: 'insurance',
-      label: 'Travel Insurance',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      ),
-    },
-  ];
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'flights':
-        return <FlightBooking />;
-      case 'hotel':
-        return <HotelBooking />;
-      case 'insurance':
-        return <TravelInsurance />;
-      default:
-        return null;
-    }
-  };
-
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="bg-white rounded-2xl shadow-2xl">
-        {/* Tabs Navigation */}
-        <div className="bg-gradient-to-r from-(--color-primary-button) to-(--color-secondary-button) rounded-t-xl">
-          <div className="overflow-x-auto scrollbar-hide">
-            <div className="flex">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`
-                    relative flex-1 flex items-center justify-center gap-2 px-3 py-3 sm:py-4
-                    text-xs sm:text-sm font-medium transition-all duration-300 rounded-t-lg shadow-lg
-                    whitespace-nowrap min-w-0
-                    ${
-                      activeTab === tab.id
-                        ? 'bg-white text-(--color-primary-button)'
-                        : 'text-white/80 hover:text-white hover:bg-white/10'
-                    }
-                  `}
-                >
-                  <span className="flex-shrink-0">{tab.icon}</span>
-                  <span className="hidden md:inline truncate">{tab.label}</span>
-                  <span className="md:hidden truncate">{tab.label.split(' ')[0]}</span>
-                  {tab.badge && activeTab === tab.id && (
-                    <span className="absolute -top-1 -right-1 bg-(--color-success) text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
+      <div className="bg-white rounded-2xl shadow-2xl overflow-visible">
+        {/* Tabs Navigation — MMT style: icons above labels, blue underline for active */}
+        <div className="border-b border-gray-100 overflow-x-auto scrollbar-hide">
+          <div className="flex">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`relative flex flex-col items-center gap-1 px-5 py-3.5 min-w-[88px] transition-colors ${
+                  activeTab === tab.id
+                    ? 'text-[#1F7AC4]'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {tab.icon}
+                <span className="text-[11px] font-semibold text-center leading-tight whitespace-pre-line">
+                  {tab.label}
+                </span>
+                {activeTab === tab.id && (
+                  <span className="absolute bottom-0 left-3 right-3 h-[3px] bg-[#1F7AC4] rounded-t-full" />
+                )}
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Tab Content */}
-        <div className="p-4 sm:p-6 lg:p-8">
-          {renderTabContent()}
+        <div className="p-5 sm:p-6 lg:p-8">
+          {activeTab === 'flights' && <FlightBooking />}
+          {activeTab === 'hotel' && <HotelBooking />}
+          {activeTab === 'holidays' && <HolidayPackages />}
+          {activeTab === 'visa' && <TouristVisa />}
+          {activeTab === 'insurance' && <TravelInsurance />}
         </div>
       </div>
     </div>
