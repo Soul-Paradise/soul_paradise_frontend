@@ -254,9 +254,10 @@ export const HotelBooking = () => {
   }
 
   return (
-    <div ref={wrapperRef} className="relative">
+    <div ref={wrapperRef} className="relative space-y-5">
       {/* Main Search Bar */}
-      <div className="flex items-stretch bg-white rounded-xl shadow-md border border-gray-200 overflow-visible">
+      <div className="border-2 border-gray-200 rounded-xl overflow-visible bg-white">
+      <div className="flex items-stretch">
         {/* Destination */}
         <button
           onClick={() => { setActivePanel(activePanel === 'destination' ? null : 'destination'); setSearchTerm(''); setSuggestions([]); }}
@@ -303,14 +304,6 @@ export const HotelBooking = () => {
           <div className="text-xs text-gray-500 mt-0.5">{formatWeekday(checkIn)}</div>
         </button>
 
-        {/* Night Badge */}
-        <div className="flex items-center justify-center px-2 border-r border-gray-200">
-          <div className="w-12 h-12 rounded-full border-2 border-gray-300 flex flex-col items-center justify-center">
-            <span className="text-sm font-bold text-gray-700 leading-none">{nights}</span>
-            <span className="text-[9px] text-gray-500 leading-none mt-0.5">NIGHT{nights !== 1 ? 'S' : ''}</span>
-          </div>
-        </div>
-
         {/* Check Out */}
         <button
           onClick={() => openDatePanel('checkout')}
@@ -339,7 +332,7 @@ export const HotelBooking = () => {
         <button
           onClick={() => setActivePanel(activePanel === 'guests' ? null : 'guests')}
           className={[
-            'flex-1 text-left px-5 py-4 border-r border-gray-200 transition-colors',
+            'flex-1 text-left px-5 py-4 transition-colors',
             activePanel === 'guests' ? 'bg-blue-50' : 'hover:bg-gray-50',
           ].join(' ')}
         >
@@ -353,15 +346,16 @@ export const HotelBooking = () => {
           </div>
         </button>
 
-        {/* Search Button */}
+      </div>
+      </div>
+
+      {/* Search Button row — matches Flights tab */}
+      <div className="flex justify-end">
         <button
           onClick={handleSearch}
-          className="flex items-center gap-2 px-8 bg-[#e8262a] hover:bg-[#c9191d] text-white font-bold text-sm tracking-widest uppercase transition-colors flex-shrink-0"
+          className="px-10 py-3.5 bg-[#D34E4E] hover:bg-red-600 text-white text-sm font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all uppercase tracking-wide"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          Search
+          SEARCH
         </button>
       </div>
 

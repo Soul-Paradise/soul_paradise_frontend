@@ -4,10 +4,8 @@ import { useState } from 'react';
 import { FlightBooking } from './FlightBooking';
 import { HotelBooking } from './HotelBooking';
 import { TravelInsurance } from './TravelInsurance';
-import { HolidayPackages } from './HolidayPackages';
-import { TouristVisa } from './TouristVisa';
 
-type TabType = 'flights' | 'hotel' | 'holidays' | 'visa' | 'insurance';
+type TabType = 'flights' | 'hotel' | 'insurance';
 
 const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
   {
@@ -25,24 +23,6 @@ const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     icon: (
       <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7">
         <path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'holidays',
-    label: 'Holiday\nPackages',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7">
-        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'visa',
-    label: 'Tourist\nVisa',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7">
-        <path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
       </svg>
     ),
   },
@@ -92,8 +72,6 @@ export const BookingTabs = () => {
         <div className="p-5 sm:p-6 lg:p-8">
           {activeTab === 'flights' && <FlightBooking />}
           {activeTab === 'hotel' && <HotelBooking />}
-          {activeTab === 'holidays' && <HolidayPackages />}
-          {activeTab === 'visa' && <TouristVisa />}
           {activeTab === 'insurance' && <TravelInsurance />}
         </div>
       </div>
