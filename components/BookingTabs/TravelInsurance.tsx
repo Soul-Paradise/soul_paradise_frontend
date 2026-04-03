@@ -112,7 +112,7 @@ function formatDisplayDate(dateStr: string) {
 
 export const TravelInsurance = () => {
   const router = useRouter();
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLFormElement>(null);
 
   const [policyType, setPolicyType] = useState<PolicyType>('INDIVIDUAL');
   const [destinations, setDestinations] = useState<CountryOption[]>([]);
