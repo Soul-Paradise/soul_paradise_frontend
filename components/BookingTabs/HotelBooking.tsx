@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { MapPin, CalendarDays, ChevronDown, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Location {
@@ -256,97 +257,87 @@ export const HotelBooking = () => {
   return (
     <div ref={wrapperRef} className="relative space-y-5">
       {/* Main Search Bar */}
-      <div className="border-2 border-gray-200 rounded-xl overflow-visible bg-white">
-      <div className="flex items-stretch">
-        {/* Destination */}
-        <button
-          onClick={() => { setActivePanel(activePanel === 'destination' ? null : 'destination'); setSearchTerm(''); setSuggestions([]); }}
-          className={[
-            'flex-[2] text-left px-5 py-4 border-r border-gray-200 transition-colors min-w-0',
-            activePanel === 'destination' ? 'bg-blue-50' : 'hover:bg-gray-50',
-          ].join(' ')}
-        >
-          <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${activePanel === 'destination' ? 'text-blue-600' : 'text-gray-500'}`}>
-            Enter your destination or property
-          </div>
-          <div className="flex items-center gap-2">
-            <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <span className={`text-lg font-bold truncate ${destination ? 'text-gray-900' : 'text-gray-400'}`}>
-              {destination ? destination.name : 'Select Destination'}
-            </span>
-          </div>
-        </button>
+      <div className="border-2 border-gray-200 rounded-xl overflow-hidden bg-white">
+        {/* Mobile: 2-col grid (destination full-width, dates side-by-side, guests full-width) */}
+        {/* sm+: single flex row */}
+        <div className="grid grid-cols-2 sm:flex sm:items-stretch divide-y divide-gray-200 sm:divide-y-0">
+          {/* Destination — full width on mobile */}
+          <button
+            onClick={() => { setActivePanel(activePanel === 'destination' ? null : 'destination'); setSearchTerm(''); setSuggestions([]); }}
+            className={[
+              'col-span-2 sm:flex-[2] text-left px-5 py-4 sm:border-r sm:border-gray-200 transition-colors min-w-0',
+              activePanel === 'destination' ? 'bg-blue-50' : 'hover:bg-gray-50',
+            ].join(' ')}
+          >
+            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${activePanel === 'destination' ? 'text-blue-600' : 'text-gray-500'}`}>
+              Enter your destination or property
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <span className={`text-lg font-bold truncate ${destination ? 'text-gray-900' : 'text-gray-400'}`}>
+                {destination ? destination.name : 'Select Destination'}
+              </span>
+            </div>
+          </button>
 
-        {/* Check In */}
-        <button
-          onClick={() => openDatePanel('checkin')}
-          className={[
-            'flex-1 text-left px-5 py-4 border-r border-gray-200 transition-colors',
-            activePanel === 'dates' && dateTab === 'checkin' ? 'bg-blue-50' : 'hover:bg-gray-50',
-          ].join(' ')}
-        >
-          <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'dates' && dateTab === 'checkin' ? 'text-blue-600' : 'text-gray-500'}`}>
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            Check In
-            <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-bold text-gray-900 leading-none">{formatDay(checkIn)}</span>
-            <span className="text-base font-bold text-gray-900">{formatMonthYear(checkIn)}</span>
-          </div>
-          <div className="text-xs text-gray-500 mt-0.5">{formatWeekday(checkIn)}</div>
-        </button>
+          {/* Check In */}
+          <button
+            onClick={() => openDatePanel('checkin')}
+            className={[
+              'col-span-1 sm:flex-1 text-left px-5 py-4 border-r border-gray-200 transition-colors',
+              activePanel === 'dates' && dateTab === 'checkin' ? 'bg-blue-50' : 'hover:bg-gray-50',
+            ].join(' ')}
+          >
+            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'dates' && dateTab === 'checkin' ? 'text-blue-600' : 'text-gray-500'}`}>
+              <CalendarDays className="w-3 h-3" />
+              Check In
+              <ChevronDown className="w-3 h-3 ml-0.5" />
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-3xl font-bold text-gray-900 leading-none">{formatDay(checkIn)}</span>
+              <span className="text-base font-bold text-gray-900">{formatMonthYear(checkIn)}</span>
+            </div>
+            <div className="text-xs text-gray-500 mt-0.5">{formatWeekday(checkIn)}</div>
+          </button>
 
-        {/* Check Out */}
-        <button
-          onClick={() => openDatePanel('checkout')}
-          className={[
-            'flex-1 text-left px-5 py-4 border-r border-gray-200 transition-colors',
-            activePanel === 'dates' && dateTab === 'checkout' ? 'bg-blue-50' : 'hover:bg-gray-50',
-          ].join(' ')}
-        >
-          <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'dates' && dateTab === 'checkout' ? 'text-blue-600' : 'text-gray-500'}`}>
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            Check Out
-            <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-bold text-gray-900 leading-none">{formatDay(checkOut)}</span>
-            <span className="text-base font-bold text-gray-900">{formatMonthYear(checkOut)}</span>
-          </div>
-          <div className="text-xs text-gray-500 mt-0.5">{formatWeekday(checkOut)}</div>
-        </button>
+          {/* Check Out */}
+          <button
+            onClick={() => openDatePanel('checkout')}
+            className={[
+              'col-span-1 sm:flex-1 text-left px-5 py-4 sm:border-r sm:border-gray-200 transition-colors',
+              activePanel === 'dates' && dateTab === 'checkout' ? 'bg-blue-50' : 'hover:bg-gray-50',
+            ].join(' ')}
+          >
+            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'dates' && dateTab === 'checkout' ? 'text-blue-600' : 'text-gray-500'}`}>
+              <CalendarDays className="w-3 h-3" />
+              Check Out
+              <ChevronDown className="w-3 h-3 ml-0.5" />
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-3xl font-bold text-gray-900 leading-none">{formatDay(checkOut)}</span>
+              <span className="text-base font-bold text-gray-900">{formatMonthYear(checkOut)}</span>
+            </div>
+            <div className="text-xs text-gray-500 mt-0.5">{formatWeekday(checkOut)}</div>
+          </button>
 
-        {/* Rooms & Guests */}
-        <button
-          onClick={() => setActivePanel(activePanel === 'guests' ? null : 'guests')}
-          className={[
-            'flex-1 text-left px-5 py-4 transition-colors',
-            activePanel === 'guests' ? 'bg-blue-50' : 'hover:bg-gray-50',
-          ].join(' ')}
-        >
-          <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${activePanel === 'guests' ? 'text-blue-600' : 'text-gray-500'}`}>
-            Rooms &amp; Guests
-          </div>
-          <div className="text-lg font-bold text-gray-900 leading-tight">
-            <span>{rooms.length} Room{rooms.length !== 1 ? 's' : ''}</span>
-            <span className="mx-1 text-gray-400">·</span>
-            <span>{totalGuests()} Guest{totalGuests() !== 1 ? 's' : ''}</span>
-          </div>
-        </button>
-
-      </div>
+          {/* Rooms & Guests — full width on mobile */}
+          <button
+            onClick={() => setActivePanel(activePanel === 'guests' ? null : 'guests')}
+            className={[
+              'col-span-2 sm:flex-1 text-left px-5 py-4 transition-colors',
+              activePanel === 'guests' ? 'bg-blue-50' : 'hover:bg-gray-50',
+            ].join(' ')}
+          >
+            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${activePanel === 'guests' ? 'text-blue-600' : 'text-gray-500'}`}>
+              Rooms &amp; Guests
+            </div>
+            <div className="text-lg font-bold text-gray-900 leading-tight">
+              <span>{rooms.length} Room{rooms.length !== 1 ? 's' : ''}</span>
+              <span className="mx-1 text-gray-400">·</span>
+              <span>{totalGuests()} Guest{totalGuests() !== 1 ? 's' : ''}</span>
+            </div>
+          </button>
+        </div>
       </div>
 
       {/* Search Button row — matches Flights tab */}
@@ -361,12 +352,10 @@ export const HotelBooking = () => {
 
       {/* Destination Dropdown */}
       {activePanel === 'destination' && (
-        <div className="absolute top-full left-0 z-50 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 overflow-hidden">
+        <div className="absolute top-full left-0 z-50 w-full sm:w-80 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 overflow-hidden">
           <div className="p-3 border-b border-gray-100">
             <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg">
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              <Search className="w-4 h-4 text-gray-400" />
               <input
                 autoFocus
                 type="text"
@@ -395,10 +384,7 @@ export const HotelBooking = () => {
                 onClick={() => { setDestination(loc); setActivePanel(null); }}
                 className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-start gap-3 border-b border-gray-50 last:border-0"
               >
-                <svg className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+                <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
                 <div>
                   <div className="text-sm font-semibold text-gray-800">{loc.name}</div>
                   <div className="text-xs text-gray-400">{loc.fullName}</div>
@@ -434,27 +420,25 @@ export const HotelBooking = () => {
               </span>
             </button>
           </div>
-          {/* Calendars */}
+          {/* Calendars: 1 on mobile, 2 on sm+ */}
           <div className="flex gap-6">
             <button onClick={prevMonth} className="self-start mt-7 p-1 hover:bg-gray-100 rounded-full text-gray-400">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
+              <ChevronLeft className="w-5 h-5" />
             </button>
             <CalendarMonth
               year={calMonth.year} month={calMonth.month}
               checkIn={checkIn} checkOut={checkOut} hoverDate={hoverDate}
               onSelect={handleDateSelect} onHover={setHoverDate} minDate={today}
             />
-            <CalendarMonth
-              year={nextCalMonth.year} month={nextCalMonth.month}
-              checkIn={checkIn} checkOut={checkOut} hoverDate={hoverDate}
-              onSelect={handleDateSelect} onHover={setHoverDate} minDate={today}
-            />
+            <div className="hidden sm:flex flex-1">
+              <CalendarMonth
+                year={nextCalMonth.year} month={nextCalMonth.month}
+                checkIn={checkIn} checkOut={checkOut} hoverDate={hoverDate}
+                onSelect={handleDateSelect} onHover={setHoverDate} minDate={today}
+              />
+            </div>
             <button onClick={nextMonth} className="self-start mt-7 p-1 hover:bg-gray-100 rounded-full text-gray-400">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+              <ChevronRight className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -462,7 +446,7 @@ export const HotelBooking = () => {
 
       {/* Guests Dropdown */}
       {activePanel === 'guests' && (
-        <div className="absolute top-full right-0 z-50 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 p-4">
+        <div className="absolute top-full right-0 z-50 w-full sm:w-80 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 p-4">
           <div className="space-y-4 max-h-80 overflow-y-auto">
             {rooms.map((room, idx) => (
               <div key={idx} className="border-b border-gray-100 pb-4 last:border-0">

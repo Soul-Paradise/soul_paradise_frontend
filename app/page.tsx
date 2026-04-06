@@ -1,37 +1,52 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BookingTabs } from '@/components/BookingTabs';
+import { BookingTabs, MobileBookingTabs } from '@/components/BookingTabs';
 
-const heroImages = [
-  '/dubai_1.jpg',
-  '/kerala_1.jpg',
-  '/rajasthan_1.jpg',
-  '/ne_1.jpg',
-];
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+
+type OfferCategory = 'ALL_OFFERS' | 'BANK_OFFERS' | 'FLIGHTS' | 'HOTELS' | 'HOLIDAYS' | 'VISA';
+
+interface Offer {
+  id: string;
+  title: string;
+  description: string;
+  category: OfferCategory;
+  colorTheme: string;
+  isActive: boolean;
+  sortOrder: number;
+  validFrom: string | null;
+  validUntil: string | null;
+}
+
+const COLOR_GRADIENTS: Record<string, string> = {
+  blue: 'from-blue-500 to-indigo-600',
+  green: 'from-emerald-500 to-teal-600',
+  orange: 'from-orange-500 to-red-500',
+  purple: 'from-purple-500 to-violet-600',
+  teal: 'from-teal-500 to-cyan-600',
+  pink: 'from-pink-500 to-rose-600',
+};
+
+const CATEGORY_LABELS: Record<OfferCategory, string> = {
+  ALL_OFFERS: 'All Offers',
+  BANK_OFFERS: 'Bank Offers',
+  FLIGHTS: 'Flights',
+  HOTELS: 'Hotels',
+  HOLIDAYS: 'Holidays',
+  VISA: 'Visa',
+};
 
 const offerTabs = ['All Offers', 'Bank Offers', 'Flights', 'Hotels', 'Holidays', 'Visa'];
 
-const offers = [
-  {
-    title: 'Flat ₹1500 off on Flights',
-    desc: 'Use code SOUL1500 on your next international booking',
-    tag: 'Flights',
-    color: 'from-blue-500 to-indigo-600',
-  },
-  {
-    title: 'Up to 40% off on Hotels',
-    desc: 'Exclusive deals on select properties across India',
-    tag: 'Hotels',
-    color: 'from-emerald-500 to-teal-600',
-  },
-  {
-    title: 'Holiday Packages from ₹9,999',
-    desc: 'Best curated holiday packages — just for you',
-    tag: 'Holidays',
-    color: 'from-orange-500 to-red-500',
-  },
-];
+const TAB_TO_CATEGORY: Record<string, OfferCategory> = {
+  'All Offers': 'ALL_OFFERS',
+  'Bank Offers': 'BANK_OFFERS',
+  'Flights': 'FLIGHTS',
+  'Hotels': 'HOTELS',
+  'Holidays': 'HOLIDAYS',
+  'Visa': 'VISA',
+};
 
 const exploreLinks = [
   { label: 'Where2Go', desc: 'Discover destinations', badge: null },
@@ -42,50 +57,41 @@ const exploreLinks = [
 ];
 
 export default function Home() {
-  const [currentImage, setCurrentImage] = useState(0);
   const [activeOfferTab, setActiveOfferTab] = useState('All Offers');
   const [showExplore, setShowExplore] = useState(false);
+  const [offers, setOffers] = useState<Offer[]>([]);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentImage((prev) => (prev + 1) % heroImages.length);
-    }, 5000);
-    return () => clearInterval(timer);
+    fetch(`${API_BASE}/offers`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setOffers(data);
+      })
+      .catch(() => {});
   }, []);
+
+  const filteredOffers =
+    activeOfferTab === 'All Offers'
+      ? offers
+      : offers.filter((o) => o.category === TAB_TO_CATEGORY[activeOfferTab]);
 
   return (
     <main className="min-h-screen bg-(--color-background)">
-      {/* ── Hero Section ── */}
-      <section className="relative min-h-[580px] flex items-center pt-16 overflow-hidden">
-        {/* Rotating background images */}
-        {heroImages.map((img, i) => (
-          <div
-            key={img}
-            className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000"
-            style={{
-              backgroundImage: `url(${img})`,
-              opacity: i === currentImage ? 1 : 0,
-            }}
-          />
-        ))}
+      {/* ── Mobile Icon View (small screens only) ── */}
+      <section className="sm:hidden bg-white shadow-sm">
+        <MobileBookingTabs />
+      </section>
+
+      {/* ── Hero Section (sm+ only) ── */}
+      <section
+        className="relative h-[400px] hidden sm:flex items-center pb-10 overflow-hidden"
+        style={{ backgroundImage: 'url(/hero_bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+      >
         {/* Dark overlay */}
         <div className="absolute inset-0 bg-black/40" />
 
-        {/* Image indicator dots */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-          {heroImages.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrentImage(i)}
-              className={`w-2 h-2 rounded-full transition-all ${
-                i === currentImage ? 'bg-white w-5' : 'bg-white/50'
-              }`}
-            />
-          ))}
-        </div>
-
         {/* Booking card */}
-        <div className="relative z-10 w-full">
+        <div className="relative z-20 w-full mt-16">
           <BookingTabs />
         </div>
       </section>
@@ -162,20 +168,24 @@ export default function Home() {
           </div>
 
           {/* Offer cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {offers.map((offer) => (
-              <div
-                key={offer.title}
-                className={`bg-gradient-to-br ${offer.color} rounded-xl p-5 text-white cursor-pointer hover:shadow-lg transition-all hover:-translate-y-0.5`}
-              >
-                <span className="text-[11px] font-bold uppercase tracking-wider bg-white/20 px-2 py-1 rounded-full">
-                  {offer.tag}
-                </span>
-                <h3 className="text-lg font-bold mt-3 mb-1">{offer.title}</h3>
-                <p className="text-sm opacity-90">{offer.desc}</p>
-              </div>
-            ))}
-          </div>
+          {filteredOffers.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredOffers.map((offer) => (
+                <div
+                  key={offer.id}
+                  className={`bg-gradient-to-br ${COLOR_GRADIENTS[offer.colorTheme] ?? COLOR_GRADIENTS.blue} rounded-xl p-5 text-white cursor-pointer hover:shadow-lg transition-all hover:-translate-y-0.5`}
+                >
+                  <span className="text-[11px] font-bold uppercase tracking-wider bg-white/20 px-2 py-1 rounded-full">
+                    {CATEGORY_LABELS[offer.category]}
+                  </span>
+                  <h3 className="text-lg font-bold mt-3 mb-1">{offer.title}</h3>
+                  <p className="text-sm opacity-90">{offer.description}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-400 text-sm">No offers available right now.</p>
+          )}
         </div>
       </section>
     </main>

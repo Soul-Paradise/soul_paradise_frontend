@@ -12,16 +12,6 @@ import {
 import type { Airport } from '@/lib/flights-api';
 
 type TripType = 'oneway' | 'roundtrip';
-type SpecialFare = 'regular' | 'student' | 'armed' | 'gst' | 'senior' | 'doctor';
-
-const specialFares: { id: SpecialFare; label: string; sub: string }[] = [
-  { id: 'regular', label: 'Regular', sub: 'Regular fares' },
-  { id: 'student', label: 'Student', sub: 'Extra discounts/baggage' },
-  { id: 'armed', label: 'Armed Forces', sub: 'Up to ₹600 off' },
-  { id: 'gst', label: 'Have a GST number?', sub: 'Upto 10% Extra Savings!' },
-  { id: 'senior', label: 'Senior Citizen', sub: 'Up to ₹600 off' },
-  { id: 'doctor', label: 'Doctor and Nurses', sub: 'Up to ₹600 off' },
-];
 
 export const FlightBooking = () => {
   const router = useRouter();
@@ -38,8 +28,6 @@ export const FlightBooking = () => {
   });
   const [cabinClass, setCabinClass] = useState<CabinClass>('E');
   const [error, setError] = useState('');
-  const [specialFare, setSpecialFare] = useState<SpecialFare>('regular');
-
   const swapLocations = () => {
     const temp = fromAirport;
     setFromAirport(toAirport);
@@ -137,9 +125,9 @@ export const FlightBooking = () => {
 
       {/* Main Search Fields — single bordered row */}
       <div className="border-2 border-gray-200 rounded-xl overflow-visible bg-white">
-        <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-gray-200">
-          {/* FROM */}
-          <div className="flex-[2] min-w-0 relative ">
+        <div className="grid grid-cols-2 sm:flex sm:items-stretch divide-y divide-gray-200 sm:divide-y-0">
+          {/* FROM — full width on mobile */}
+          <div className="col-span-2 sm:flex-[2] min-w-0 relative sm:border-r sm:border-gray-200">
             <AirportPicker
               label="From"
               value={fromAirport}
@@ -151,7 +139,7 @@ export const FlightBooking = () => {
             <button
               type="button"
               onClick={swapLocations}
-              className="absolute right-4 lg:right-[-18px] bottom-[-18px] lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2 z-20 w-9 h-9 bg-(--color-links) hover:bg-blue-700 rounded-full flex items-center justify-center shadow-md transition-all transform hover:rotate-180"
+              className="absolute right-4 sm:right-[-18px] bottom-[-18px] sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 z-20 w-9 h-9 bg-(--color-links) hover:bg-blue-700 rounded-full flex items-center justify-center shadow-md transition-all transform hover:rotate-180"
               aria-label="Swap locations"
             >
               <svg
@@ -170,8 +158,8 @@ export const FlightBooking = () => {
             </button>
           </div>
 
-          {/* TO */}
-          <div className="flex-[2] min-w-0">
+          {/* TO — full width on mobile */}
+          <div className="col-span-2 sm:flex-[2] min-w-0 sm:border-r sm:border-gray-200">
             <AirportPicker
               label="To"
               value={toAirport}
@@ -180,8 +168,8 @@ export const FlightBooking = () => {
             />
           </div>
 
-          {/* DEPARTURE */}
-          <div className="flex-[1.3] min-w-0">
+          {/* DEPARTURE — left half on mobile */}
+          <div className="col-span-1 sm:flex-[1.3] min-w-0 border-r border-gray-200">
             <DateDisplay
               label="Departure"
               value={departDate}
@@ -190,8 +178,8 @@ export const FlightBooking = () => {
             />
           </div>
 
-          {/* RETURN */}
-          <div className="flex-[1.3] min-w-0">
+          {/* RETURN — right half on mobile */}
+          <div className="col-span-1 sm:flex-[1.3] min-w-0 sm:border-r sm:border-gray-200">
             <DateDisplay
               label="Return"
               value={returnDate}
@@ -203,8 +191,8 @@ export const FlightBooking = () => {
             />
           </div>
 
-          {/* TRAVELLERS & CLASS */}
-          <div className="flex-[1.5] min-w-0">
+          {/* TRAVELLERS & CLASS — full width on mobile */}
+          <div className="col-span-2 sm:flex-[1.5] min-w-0">
             <TravellerSelector
               travellers={travellers}
               cabinClass={cabinClass}
@@ -215,37 +203,12 @@ export const FlightBooking = () => {
         </div>
       </div>
 
-      {/* Special Fares + Search Button row */}
-      <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-        {/* Special Fares */}
-        <div className="flex-1">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Special Fares</p>
-          <div className="flex flex-wrap gap-2">
-            {specialFares.map((fare) => (
-              <button
-                key={fare.id}
-                type="button"
-                onClick={() => setSpecialFare(fare.id)}
-                className={`px-3 py-1.5 rounded border text-xs font-semibold transition-all ${
-                  specialFare === fare.id
-                    ? 'border-[#1F7AC4] bg-blue-50 text-[#1F7AC4]'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300 bg-white'
-                }`}
-              >
-                <span>{fare.label}</span>
-                {specialFare === fare.id && (
-                  <span className="block text-[10px] font-normal text-gray-400 mt-0.5">{fare.sub}</span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Search button */}
+      {/* Search Button */}
+      <div className="flex justify-end">
         <button
           type="button"
           onClick={handleSearch}
-          className="sm:self-end px-10 py-3.5 bg-[#D34E4E] hover:bg-red-600 text-white text-sm font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all uppercase tracking-wide flex items-center justify-center gap-2 whitespace-nowrap"
+          className="px-10 py-3.5 bg-[#D34E4E] hover:bg-red-600 text-white text-sm font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all uppercase tracking-wide whitespace-nowrap"
         >
           SEARCH
         </button>

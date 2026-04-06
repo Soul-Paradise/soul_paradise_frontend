@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
+import { CalendarDays } from 'lucide-react';
 
 interface DateDisplayProps {
   label: string;
@@ -68,9 +69,7 @@ export const DateDisplay = ({
         className={`w-full text-left px-4 py-3 transition-all min-h-[80px] cursor-pointer`}
       >
         <div className="flex items-center gap-1.5 mb-1">
-          <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
+          <CalendarDays className="w-3.5 h-3.5 text-gray-400" />
           <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">
             {label}
           </span>

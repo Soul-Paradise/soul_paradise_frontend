@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { MapPin, CalendarDays, Search, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 type PolicyType = 'INDIVIDUAL' | 'FAMILY' | 'FRIENDS' | 'STUDENT' | 'ANNUAL MULTITRIP';
@@ -236,21 +237,19 @@ export const TravelInsurance = () => {
 
       {/* Main fields row — same bordered container as Flights/Hotels */}
       <div className="relative border-2 border-gray-200 rounded-xl overflow-visible bg-white">
-        <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-gray-200">
+        <div className="grid grid-cols-2 sm:flex sm:items-stretch divide-y divide-gray-200 sm:divide-y-0">
 
           {/* Destination */}
           <button
             type="button"
             onClick={() => { setActivePanel(activePanel === 'destination' ? null : 'destination'); setCountryQuery(''); }}
-            className={`flex-[2] text-left px-5 py-4 transition-colors min-w-0 ${activePanel === 'destination' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+            className={`col-span-2 sm:flex-[2] text-left px-5 py-4 transition-colors min-w-0 sm:border-r sm:border-gray-200 ${activePanel === 'destination' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
           >
             <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${activePanel === 'destination' ? 'text-[#1F7AC4]' : 'text-gray-500'}`}>
               Destination Country
             </div>
             <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
-              </svg>
+              <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
               <span className={`text-lg font-bold truncate ${destinationLabel ? 'text-gray-900' : 'text-gray-400'}`}>
                 {destinationLabel ?? 'Select Country'}
               </span>
@@ -261,12 +260,10 @@ export const TravelInsurance = () => {
           <button
             type="button"
             onClick={() => setActivePanel(activePanel === 'startDate' ? null : 'startDate')}
-            className={`flex-[1.3] text-left px-5 py-4 transition-colors ${activePanel === 'startDate' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+            className={`col-span-1 sm:flex-[1.3] text-left px-5 py-4 transition-colors border-r border-gray-200 ${activePanel === 'startDate' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
           >
             <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'startDate' ? 'text-[#1F7AC4]' : 'text-gray-500'}`}>
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+              <CalendarDays className="w-3 h-3" />
               Start Date
             </div>
             {startDisplay ? (
@@ -286,12 +283,10 @@ export const TravelInsurance = () => {
           <button
             type="button"
             onClick={() => setActivePanel(activePanel === 'endDate' ? null : 'endDate')}
-            className={`flex-[1.3] text-left px-5 py-4 transition-colors ${activePanel === 'endDate' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+            className={`col-span-1 sm:flex-[1.3] text-left px-5 py-4 transition-colors sm:border-r sm:border-gray-200 ${activePanel === 'endDate' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
           >
             <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'endDate' ? 'text-[#1F7AC4]' : 'text-gray-500'}`}>
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+              <CalendarDays className="w-3 h-3" />
               {isStudent ? 'Tenure' : 'End Date'}
             </div>
             {isStudent ? (
@@ -315,7 +310,7 @@ export const TravelInsurance = () => {
           <button
             type="button"
             onClick={() => setActivePanel(activePanel === 'travellers' ? null : 'travellers')}
-            className={`flex-[1.3] text-left px-5 py-4 transition-colors ${activePanel === 'travellers' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+            className={`col-span-2 sm:flex-[1.3] text-left px-5 py-4 transition-colors ${activePanel === 'travellers' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
           >
             <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${activePanel === 'travellers' ? 'text-[#1F7AC4]' : 'text-gray-500'}`}>
               Travellers
@@ -331,12 +326,10 @@ export const TravelInsurance = () => {
 
         {/* Destination Dropdown */}
         {activePanel === 'destination' && (
-          <div className="absolute top-full left-0 z-50 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 overflow-hidden">
+          <div className="absolute top-full left-0 z-50 w-full sm:w-80 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 overflow-hidden">
             <div className="p-3 border-b border-gray-100">
               <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg">
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+                <Search className="w-4 h-4 text-gray-400" />
                 <input
                   autoFocus
                   type="text"
@@ -384,7 +377,7 @@ export const TravelInsurance = () => {
 
         {/* Start Date Dropdown */}
         {activePanel === 'startDate' && (
-          <div className="absolute top-full left-0 z-50 w-72 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 p-4">
+          <div className="absolute top-full left-0 z-50 w-full sm:w-72 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 p-4">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Travel Start Date</p>
             <input
               autoFocus
@@ -399,7 +392,7 @@ export const TravelInsurance = () => {
 
         {/* End Date / Tenure Dropdown */}
         {activePanel === 'endDate' && (
-          <div className="absolute top-full z-50 w-72 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 p-4" style={{ left: '33%' }}>
+          <div className="absolute top-full left-0 z-50 w-full sm:w-72 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 p-4">
             {isStudent ? (
               <>
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Tenure</p>
@@ -434,7 +427,7 @@ export const TravelInsurance = () => {
 
         {/* Travellers Dropdown */}
         {activePanel === 'travellers' && (
-          <div className="absolute top-full right-0 z-50 w-96 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 p-4">
+          <div className="absolute top-full right-0 z-50 w-full sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 p-4">
             <div className="space-y-3 max-h-72 overflow-y-auto">
               {travellers.map((t, i) => {
                 const allRelations = RELATION_OPTIONS[policyType];
@@ -497,9 +490,7 @@ export const TravelInsurance = () => {
       {/* Error */}
       {error && (
         <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
           {error}
         </div>
       )}
