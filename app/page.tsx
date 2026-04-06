@@ -184,7 +184,16 @@ export default function Home() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-400 text-sm">No offers available right now.</p>
+            <div className="flex flex-col items-center justify-center py-6">
+              <video
+                src="/empty_box.webm"
+                autoPlay
+                muted
+                playsInline
+                className="w-48 h-48"
+              />
+              <p className="text-gray-400 text-sm mt-2">No offers available right now.</p>
+            </div>
           )}
         </div>
       </section>
