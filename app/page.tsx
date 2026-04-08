@@ -84,11 +84,12 @@ export default function Home() {
 
       {/* ── Hero Section (sm+ only) ── */}
       <section
-        className="relative h-[400px] hidden sm:flex items-center pb-10 overflow-hidden"
-        style={{ backgroundImage: 'url(/hero_bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+        className="relative h-[400px] hidden sm:flex items-center pb-10 z-10"
       >
-        {/* Dark overlay */}
-        <div className="absolute inset-0 bg-black/40" />
+        {/* Background image + overlay */}
+        <div className="absolute inset-0 overflow-hidden" style={{ backgroundImage: 'url(/hero_bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+          <div className="absolute inset-0 bg-black/40" />
+        </div>
 
         {/* Booking card */}
         <div className="relative z-20 w-full mt-16">
