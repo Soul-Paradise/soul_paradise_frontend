@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   getBookingDetails,
+  downloadTicketPdf,
   type BookingDetailsResponse,
 } from '@/lib/flights-api';
 
@@ -81,6 +82,20 @@ function ConfirmationContent() {
   const [booking, setBooking] = useState<BookingDetailsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = useCallback(async () => {
+    if (!transactionId || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadTicketPdf(transactionId);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Download failed';
+      setError(msg);
+    } finally {
+      setDownloading(false);
+    }
+  }, [transactionId, downloading]);
 
   const loadBooking = useCallback(async () => {
     if (!transactionId) {
@@ -417,10 +432,11 @@ function ConfirmationContent() {
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button
-            onClick={() => window.print()}
-            className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-md hover:bg-gray-50 transition-colors"
+            onClick={handleDownload}
+            disabled={downloading}
+            className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-md hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Print Booking
+            {downloading ? 'Preparing…' : 'Download Ticket (PDF)'}
           </button>
           <button
             onClick={() => router.push('/')}

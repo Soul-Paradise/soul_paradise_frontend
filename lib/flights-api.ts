@@ -248,16 +248,24 @@ export interface BookingFlightDetail {
   flightNo: string;
   airline: string;
   airlineCode: string;
+  aircraft?: string;
+  cabin?: string;
+  direction?: 'ONWARD' | 'RETURN';
   from: string;
   to: string;
   fromName: string;
   toName: string;
+  fromCountry?: string;
+  toCountry?: string;
   departureTime: string;
   arrivalTime: string;
   departureTerminal: string;
   arrivalTerminal: string;
   duration: string;
+  stops?: string;
+  baggage?: string | null;
   pnr: string;
+  crsPnr?: string;
   webCheckinUrl: string;
 }
 
@@ -268,14 +276,36 @@ export interface BookingPassenger {
   gender: string;
 }
 
+export interface BookingFareBreakdown {
+  baseFare: number;
+  taxes: number;
+  ssrAmount: number;
+  gst: number;
+  atFare: number;
+  total: number;
+}
+
+export interface BookingJourneySummary {
+  direction: 'ONWARD' | 'RETURN';
+  fromCity: string;
+  toCity: string;
+  date: string;
+  durationLabel: string;
+  airlineRef: string;
+  crsRef: string;
+}
+
 export interface BookingDetailsResponse {
   bookingId: string;
   transactionId: string;
   status: string;
+  bookingDate?: string;
   flights: BookingFlightDetail[];
+  journeys?: BookingJourneySummary[];
   passengers: BookingPassenger[];
   totalAmount: number;
   currency: string;
+  fareBreakdown?: BookingFareBreakdown;
   contactEmail: string;
   contactMobile: string;
 }
@@ -351,6 +381,27 @@ export async function getBookingDetails(
     throw new Error(err.message || 'Failed to fetch booking details');
   }
   return res.json();
+}
+
+export async function downloadTicketPdf(transactionId: string): Promise<void> {
+  const res = await fetch(
+    `${API_BASE}/flights/booking/${transactionId}/ticket.pdf`,
+  );
+  if (!res.ok) {
+    const err = await res
+      .json()
+      .catch(() => ({ message: 'Failed to download ticket' }));
+    throw new Error(err.message || 'Failed to download ticket');
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ticket-SP-${transactionId}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 // ========== Promo Code Types ==========

@@ -53,10 +53,15 @@ export const DateStrip = ({
   const [datePrices, setDatePrices] = useState<Record<string, number | 'loading' | null>>({});
 
   const dates = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const base = new Date(departDate + 'T00:00:00');
+    const start = new Date(base);
+    start.setDate(start.getDate() - 3);
+    if (start < today) start.setTime(today.getTime());
     const result: { date: Date; dateStr: string; label: string; isSelected: boolean }[] = [];
-    for (let i = -3; i <= 4; i++) {
-      const d = new Date(base);
+    for (let i = 0; i < 8; i++) {
+      const d = new Date(start);
       d.setDate(d.getDate() + i);
       const dateStr = toDateString(d);
       result.push({

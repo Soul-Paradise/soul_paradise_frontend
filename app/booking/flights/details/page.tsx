@@ -105,14 +105,12 @@ function FlightDetailsContent() {
       return;
     }
 
-    let cancelled = false;
     pricingLoadedRef.current = true;
     setLoading(true);
     setError('');
 
     priceAndGetDetails(searchId, flightIndex, tripType)
       .then((data) => {
-        if (cancelled) return;
         setPricing(data);
 
         // Initialize travellers from passenger counts
@@ -129,16 +127,11 @@ function FlightDetailsContent() {
         setTravellers(paxList);
       })
       .catch((err: any) => {
-        if (cancelled) return;
         setError(err.message || 'Failed to load flight pricing.');
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       });
-
-    return () => {
-      cancelled = true;
-    };
   }, [searchId, flightIndex, tripType]);
 
   const updateTraveller = (index: number, updated: TravellerInfo) => {
