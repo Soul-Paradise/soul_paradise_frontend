@@ -11,6 +11,7 @@ import {
 import { FlightCard } from '@/components/FlightResults/FlightCard';
 import { SearchSummary } from '@/components/FlightResults/SearchSummary';
 import { DateStrip } from '@/components/FlightResults/DateStrip';
+import { SelectionBar } from '@/components/FlightResults/SelectionBar';
 import { NoticeBanner } from '@/components/FlightResults/NoticeBanner';
 import { SortTabs, type SortOption } from '@/components/FlightResults/SortTabs';
 import {
@@ -54,6 +55,8 @@ function FlightSearchResults() {
   const [filterState, setFilterState] = useState<FilterState>(createEmptyFilterState(0));
   const [showNotices, setShowNotices] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [selectedOnward, setSelectedOnward] = useState<FlightResult | null>(null);
+  const [selectedReturn, setSelectedReturn] = useState<FlightResult | null>(null);
 
   // Extract search params
   const from = searchParams.get('from') || '';
@@ -100,10 +103,13 @@ function FlightSearchResults() {
 
       const data = await searchFlights(params);
       setResults(data);
+      setSelectedOnward(null);
+      setSelectedReturn(null);
 
-      // Initialize filter state with max price from results
-      if (data.flights.length > 0) {
-        const maxPrice = Math.max(...data.flights.map((f) => f.grossFare));
+      // Initialize filter state with max price across both lists
+      const allFlights = [...data.flights, ...(data.returnFlights || [])];
+      if (allFlights.length > 0) {
+        const maxPrice = Math.max(...allFlights.map((f) => f.grossFare));
         setFilterState(createEmptyFilterState(maxPrice));
       }
     } catch (err: any) {
@@ -117,11 +123,8 @@ function FlightSearchResults() {
     doSearch();
   }, [doSearch]);
 
-  // Apply all filters
-  const filteredFlights = useMemo(() => {
-    if (!results?.flights) return [];
-
-    let flights = [...results.flights];
+  const applyFiltersAndSort = useCallback((source: FlightResult[]): FlightResult[] => {
+    let flights = [...source];
 
     // Stops
     if (filterState.stops.size > 0) {
@@ -199,7 +202,45 @@ function FlightSearchResults() {
     });
 
     return flights;
-  }, [results, filterState, sortBy]);
+  }, [filterState, sortBy]);
+
+  const filteredFlights = useMemo(
+    () => (results?.flights ? applyFiltersAndSort(results.flights) : []),
+    [results, applyFiltersAndSort],
+  );
+  const filteredReturnFlights = useMemo(
+    () => (results?.returnFlights ? applyFiltersAndSort(results.returnFlights) : []),
+    [results, applyFiltersAndSort],
+  );
+
+  const isRoundTrip = tripType === 'roundtrip' && !!results?.returnFlights;
+
+  // Default-select the first flight in each column for round-trip
+  useEffect(() => {
+    if (!isRoundTrip) return;
+    if (!selectedOnward && filteredFlights.length > 0) {
+      setSelectedOnward(filteredFlights[0]);
+    }
+    if (!selectedReturn && filteredReturnFlights.length > 0) {
+      setSelectedReturn(filteredReturnFlights[0]);
+    }
+  }, [isRoundTrip, filteredFlights, filteredReturnFlights, selectedOnward, selectedReturn]);
+
+  const handleBookRoundTrip = useCallback(() => {
+    if (!selectedOnward || !selectedReturn || !results) return;
+    const params = new URLSearchParams({
+      searchId: results.searchId,
+      index: selectedOnward.index,
+      returnIndex: selectedReturn.index,
+      tripType,
+    });
+    router.push(`/booking/flights/details?${params.toString()}`);
+  }, [selectedOnward, selectedReturn, results, tripType, router]);
+
+  const allFlights = useMemo(
+    () => (results ? [...results.flights, ...(results.returnFlights || [])] : []),
+    [results],
+  );
 
   const hasActiveFilters =
     filterState.stops.size > 0 ||
@@ -208,13 +249,12 @@ function FlightSearchResults() {
     filterState.arrivalTimeRanges.size > 0 ||
     filterState.airlines.size > 0 ||
     filterState.connectingAirports.size > 0 ||
-    (results &&
-      results.flights.length > 0 &&
-      filterState.priceRange[1] < Math.max(...results.flights.map((f) => f.grossFare)));
+    (allFlights.length > 0 &&
+      filterState.priceRange[1] < Math.max(...allFlights.map((f) => f.grossFare)));
 
   const clearFilters = () => {
-    if (results?.flights.length) {
-      const maxPrice = Math.max(...results.flights.map((f) => f.grossFare));
+    if (allFlights.length) {
+      const maxPrice = Math.max(...allFlights.map((f) => f.grossFare));
       setFilterState(createEmptyFilterState(maxPrice));
     }
   };
@@ -300,33 +340,6 @@ function FlightSearchResults() {
       {/* Results */}
       {!loading && !error && results && (
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Date Strip */}
-          {departDate && (
-            <div className="mb-4">
-              <DateStrip
-                departDate={departDate}
-                cheapestPrice={
-                  results.flights.length > 0
-                    ? Math.min(...results.flights.map((f) => f.grossFare))
-                    : null
-                }
-                currency={results.currency}
-                searchParams={{
-                  from,
-                  to,
-                  adults,
-                  children,
-                  infants,
-                  cabin,
-                  tripType,
-                  directOnly,
-                  refundableOnly,
-                  nearbyAirports,
-                }}
-              />
-            </div>
-          )}
-
           {/* Notices */}
           {showNotices && results.notices?.length > 0 && (
             <div className="mb-4">
@@ -341,7 +354,7 @@ function FlightSearchResults() {
             <div className="flex gap-5">
               {/* Filter Sidebar - Desktop */}
               <div className="hidden lg:block w-[280px] flex-shrink-0">
-                <div className="sticky top-[85px]">
+                <div className="sticky top-[85px] max-h-[calc(100vh-100px)] overflow-y-auto pr-1">
                   <FilterSidebar
                     flights={results.flights}
                     filterState={filterState}
@@ -387,6 +400,89 @@ function FlightSearchResults() {
 
               {/* Main content */}
               <div className="flex-1 min-w-0">
+                {/* Date Strip(s) */}
+                {departDate && (
+                  <div className="mb-4">
+                    {isRoundTrip && returnDate ? (
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                        <DateStrip
+                          departDate={departDate}
+                          cheapestPrice={
+                            results.flights.length > 0
+                              ? Math.min(...results.flights.map((f) => f.grossFare))
+                              : null
+                          }
+                          currency={results.currency}
+                          mode="depart"
+                          seamless
+                          pairedReturnDate={returnDate}
+                          searchParams={{
+                            from,
+                            to,
+                            adults,
+                            children,
+                            infants,
+                            cabin,
+                            tripType,
+                            directOnly,
+                            refundableOnly,
+                            nearbyAirports,
+                          }}
+                        />
+                        <DateStrip
+                          departDate={returnDate}
+                          cheapestPrice={
+                            (results.returnFlights?.length ?? 0) > 0
+                              ? Math.min(
+                                  ...(results.returnFlights || []).map((f) => f.grossFare),
+                                )
+                              : null
+                          }
+                          currency={results.currency}
+                          mode="return"
+                          minDate={departDate}
+                          seamless
+                          onwardDate={departDate}
+                          searchParams={{
+                            from,
+                            to,
+                            adults,
+                            children,
+                            infants,
+                            cabin,
+                            tripType,
+                            directOnly,
+                            refundableOnly,
+                            nearbyAirports,
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <DateStrip
+                        departDate={departDate}
+                        cheapestPrice={
+                          results.flights.length > 0
+                            ? Math.min(...results.flights.map((f) => f.grossFare))
+                            : null
+                        }
+                        currency={results.currency}
+                        mode="depart"
+                        searchParams={{
+                          from,
+                          to,
+                          adults,
+                          children,
+                          infants,
+                          cabin,
+                          tripType,
+                          directOnly,
+                          refundableOnly,
+                          nearbyAirports,
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
                 {/* Sort Tabs */}
                 <div className="mb-4">
                   <SortTabs
@@ -415,7 +511,90 @@ function FlightSearchResults() {
                 </div>
 
                 {/* Flight cards */}
-                {filteredFlights.length > 0 ? (
+                {isRoundTrip ? (
+                  filteredFlights.length > 0 || filteredReturnFlights.length > 0 ? (
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                      <div>
+                        <div className="sticky top-[85px] z-10 bg-gray-100 pb-2 mb-2">
+                          <div className="bg-white border border-gray-200 rounded-md px-3 py-2 flex items-center justify-between">
+                            <div className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                              Onward · {fromName || from} → {toName || to}
+                            </div>
+                            <div className="text-[11px] text-gray-500">
+                              {filteredFlights.length} flights
+                            </div>
+                          </div>
+                        </div>
+                        {filteredFlights.length > 0 ? (
+                          <div className="space-y-3">
+                            {filteredFlights.map((flight) => (
+                              <FlightCard
+                                key={`o-${flight.index}`}
+                                flight={flight}
+                                currency={results.currency}
+                                searchId={results.searchId}
+                                tripType={tripType}
+                                selectionMode
+                                selected={selectedOnward?.index === flight.index}
+                                onSelect={setSelectedOnward}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="bg-white rounded-lg p-6 text-center text-sm text-gray-500">
+                            No onward flights match your filters.
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="sticky top-[85px] z-10 bg-gray-100 pb-2 mb-2">
+                          <div className="bg-white border border-gray-200 rounded-md px-3 py-2 flex items-center justify-between">
+                            <div className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                              Return · {toName || to} → {fromName || from}
+                            </div>
+                            <div className="text-[11px] text-gray-500">
+                              {filteredReturnFlights.length} flights
+                            </div>
+                          </div>
+                        </div>
+                        {filteredReturnFlights.length > 0 ? (
+                          <div className="space-y-3">
+                            {filteredReturnFlights.map((flight) => (
+                              <FlightCard
+                                key={`r-${flight.index}`}
+                                flight={flight}
+                                currency={results.currency}
+                                searchId={results.searchId}
+                                tripType={tripType}
+                                selectionMode
+                                selected={selectedReturn?.index === flight.index}
+                                onSelect={setSelectedReturn}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="bg-white rounded-lg p-6 text-center text-sm text-gray-500">
+                            No return flights match your filters.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-lg p-8 text-center">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        No flights match your filters
+                      </h3>
+                      {hasActiveFilters && (
+                        <button
+                          onClick={clearFilters}
+                          className="text-sm font-medium text-blue-600 hover:underline"
+                        >
+                          Clear all filters
+                        </button>
+                      )}
+                    </div>
+                  )
+                ) : filteredFlights.length > 0 ? (
                   <div className="space-y-3">
                     {filteredFlights.map((flight) => (
                       <FlightCard
@@ -463,6 +642,17 @@ function FlightSearchResults() {
           )}
         </div>
       )}
+
+      {/* Sticky selection bar for round-trip */}
+      {isRoundTrip && !loading && (
+        <SelectionBar
+          selectedOnward={selectedOnward}
+          selectedReturn={selectedReturn}
+          currency={results?.currency || 'INR'}
+          onBook={handleBookRoundTrip}
+        />
+      )}
+      {isRoundTrip && <div className="h-24" />}
     </main>
   );
 }

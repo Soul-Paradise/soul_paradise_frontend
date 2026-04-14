@@ -56,6 +56,7 @@ export interface FlightSearchResponse {
   completed: boolean;
   currency: string;
   flights: FlightResult[];
+  returnFlights?: FlightResult[];
   notices: Array<{ notice: string; link: string }>;
   totalResults: number;
 }
@@ -95,6 +96,12 @@ export interface SegmentDetail {
   cabin: string;
   fareClass: string;
   stops: number;
+  baggage?: string | null;
+  refundable?: string;
+  amenities?: string;
+  equipmentType?: string;
+  seatsAvailable?: number;
+  direction?: 'ONWARD' | 'RETURN';
 }
 
 export interface FareBreakdownItem {
@@ -342,11 +349,12 @@ export async function priceAndGetDetails(
   searchId: string,
   flightIndex: string,
   tripType: string,
+  returnFlightIndex?: string,
 ): Promise<FlightPricingResponse> {
   const res = await fetch(`${API_BASE}/flights/price`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ searchId, flightIndex, tripType }),
+    body: JSON.stringify({ searchId, flightIndex, tripType, returnFlightIndex }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Pricing failed' }));

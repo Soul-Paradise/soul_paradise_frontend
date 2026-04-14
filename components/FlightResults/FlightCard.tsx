@@ -11,6 +11,9 @@ interface FlightCardProps {
   currency: string;
   searchId: string;
   tripType: string;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onSelect?: (flight: FlightResult) => void;
 }
 
 // Airline brand colors
@@ -62,11 +65,23 @@ function isNextDay(departure: string, arrival: string): boolean {
   return dep.toDateString() !== arr.toDateString();
 }
 
-export const FlightCard = ({ flight, currency, searchId, tripType }: FlightCardProps) => {
+export const FlightCard = ({
+  flight,
+  currency,
+  searchId,
+  tripType,
+  selectionMode = false,
+  selected = false,
+  onSelect,
+}: FlightCardProps) => {
   const router = useRouter();
   const [showDetails, setShowDetails] = useState(false);
 
   const handleBook = () => {
+    if (selectionMode) {
+      onSelect?.(flight);
+      return;
+    }
     const params = new URLSearchParams({ searchId, index: flight.index, tripType });
     router.push(`/booking/flights/details?${params.toString()}`);
   };
@@ -85,145 +100,224 @@ export const FlightCard = ({ flight, currency, searchId, tripType }: FlightCardP
 
   const nextDay = isNextDay(flight.departureTime, flight.arrivalTime);
 
+  const fromCity = (flight.fromName || flight.from).split('|')[0].trim();
+  const toCity = (flight.toName || flight.to).split('|')[0].trim();
+  const flightCode = `${flight.airlineCode} - ${flight.flightNo.replace(flight.airlineCode, '').trim()}`;
+
   return (
-    <div className="bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow overflow-hidden">
-      {/* Main row */}
-      <div className="p-4 sm:p-5">
-        <div className="flex items-center gap-4 sm:gap-6">
-          {/* Airline info */}
-          <div className="flex items-center gap-2.5 min-w-[130px] sm:min-w-[150px] flex-shrink-0">
+    <div
+      onClick={selectionMode ? () => onSelect?.(flight) : undefined}
+      className={`bg-white border rounded-lg hover:shadow-md transition-all relative ${
+        selectionMode ? 'cursor-pointer' : ''
+      } ${
+        selected ? 'border-red-500 ring-2 ring-red-500/30 shadow-md' : 'border-gray-200'
+      }`}
+    >
+      {/* Return Special ribbon */}
+      {flight.fareType === 'RS' && (
+        <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg tracking-wide z-10">
+          RETURN SPECIAL
+        </div>
+      )}
+
+      <div className={selectionMode ? 'px-3 py-2.5' : 'px-4 py-3'}>
+        {/* Main single-row layout */}
+        <div
+          className={`flex items-center min-w-0 ${selectionMode ? 'gap-2' : 'gap-3 sm:gap-4'}`}
+        >
+          {/* Radio (selection mode only) */}
+          {selectionMode && (
             <div
-              className={`w-9 h-9 rounded ${colors.bg} ${colors.border} border flex items-center justify-center flex-shrink-0`}
+              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                selected ? 'border-red-500' : 'border-gray-300'
+              }`}
+            >
+              {selected && <div className="w-2 h-2 rounded-full bg-red-500" />}
+            </div>
+          )}
+
+          {/* Airline */}
+          <div
+            className={`flex items-center gap-2 min-w-0 flex-shrink ${
+              selectionMode ? 'basis-[110px]' : 'basis-[140px] sm:basis-[160px]'
+            }`}
+          >
+            <div
+              className={`${selectionMode ? 'w-8 h-8' : 'w-9 h-9'} rounded ${colors.bg} ${colors.border} border flex items-center justify-center flex-shrink-0`}
             >
               <span className={`text-[10px] font-bold ${colors.text}`}>
                 {flight.airlineCode}
               </span>
             </div>
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-gray-900 truncate leading-tight">
-                {flight.airlineName}
+              <div className="text-[13px] font-semibold text-gray-900 truncate leading-tight">
+                {flight.airlineName.split('|')[0]}
               </div>
-              <div className="text-xs text-gray-400">{flight.flightNo}</div>
+              <div className="text-[11px] text-gray-400 leading-tight truncate">
+                {flightCode}
+              </div>
             </div>
           </div>
 
           {/* Departure */}
-          <div className="text-center min-w-[60px]">
-            <div className="text-xl font-bold text-gray-900 leading-tight">
+          <div className="text-center flex-shrink-0 min-w-0">
+            <div
+              className={`${selectionMode ? 'text-base' : 'text-lg'} font-bold text-gray-900 leading-tight`}
+            >
               {formatTime(flight.departureTime)}
             </div>
-            <div className="text-xs text-gray-500 mt-0.5">
-              {flight.fromName || flight.from}
+            <div
+              className={`text-[11px] text-gray-500 leading-tight truncate ${
+                selectionMode ? 'max-w-[70px]' : 'max-w-[90px]'
+              }`}
+            >
+              {fromCity}
             </div>
           </div>
 
-          {/* Duration & Stops */}
-          <div className="flex-1 flex flex-col items-center px-1 min-w-[100px]">
-            <div className="text-[11px] text-gray-400 mb-1 font-medium">
+          {/* Duration + plane */}
+          <div
+            className={`flex-1 flex flex-col items-center px-1 min-w-0 ${
+              selectionMode ? 'basis-[60px]' : 'basis-[90px]'
+            }`}
+          >
+            <div className="text-[11px] text-gray-500 font-medium leading-tight whitespace-nowrap">
               {formatDuration(flight.duration)}
             </div>
-            <div className="w-full flex items-center">
+            <div className="w-full flex items-center my-0.5">
               <div className="h-[1px] flex-1 border-t border-dashed border-gray-300" />
-              {flight.stops > 0 && (
-                <div className="w-1.5 h-1.5 rounded-full bg-gray-400 mx-0.5 flex-shrink-0" />
-              )}
-              <svg className="w-3 h-3 text-gray-400 flex-shrink-0 -ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M10 17l5-5-5-5v10z" />
+              <svg
+                className="w-3.5 h-3.5 text-gray-500 flex-shrink-0 mx-0.5"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" />
               </svg>
+              <div className="h-[1px] flex-1 border-t border-dashed border-gray-300" />
             </div>
-            <div className="text-[11px] text-gray-400 mt-1">
+            <div className="text-[11px] text-gray-500 leading-tight text-center truncate w-full">
               {stopsText}
               {connectionInfo}
             </div>
           </div>
 
           {/* Arrival */}
-          <div className="text-center min-w-[60px]">
-            <div className="text-xl font-bold text-gray-900 leading-tight">
+          <div className="text-center flex-shrink-0 min-w-0">
+            <div
+              className={`${selectionMode ? 'text-base' : 'text-lg'} font-bold text-gray-900 leading-tight whitespace-nowrap`}
+            >
               {formatTime(flight.arrivalTime)}
+              {nextDay && (
+                <span className="text-[9px] text-red-500 ml-0.5 align-top">
+                  +1
+                </span>
+              )}
             </div>
-            <div className="text-xs text-gray-500 mt-0.5">
-              {flight.toName || flight.to}
+            <div
+              className={`text-[11px] text-gray-500 leading-tight truncate ${
+                selectionMode ? 'max-w-[70px]' : 'max-w-[90px]'
+              }`}
+            >
+              {toCity}
             </div>
-            {nextDay && (
-              <div className="text-[10px] text-red-500 font-medium">Next Day</div>
-            )}
           </div>
 
-          {/* Seats left */}
-          {flight.seats > 0 && flight.seats <= 9 && (
-            <div className="hidden sm:flex flex-col items-center min-w-[50px] flex-shrink-0">
+          {/* Seats */}
+          {flight.seats > 0 && (
+            <div className="flex flex-col items-center flex-shrink-0">
               <Image
                 src="/seat.png"
                 alt="Seat"
-                width={20}
-                height={20}
-                className="opacity-70"
+                width={selectionMode ? 16 : 20}
+                height={selectionMode ? 16 : 20}
+                className="opacity-80"
               />
-              <span className="text-[10px] text-red-500 font-semibold">
+              <span
+                className={`text-[10px] font-semibold whitespace-nowrap ${
+                  flight.seats <= 9 ? 'text-red-500' : 'text-gray-600'
+                }`}
+              >
                 {flight.seats} Left
               </span>
             </div>
           )}
 
-          {/* Price & Book */}
-          <div className="flex flex-col items-end gap-1.5 min-w-[110px] flex-shrink-0">
-            <div className="text-right">
-              <div className="text-xl font-bold text-gray-900">
-                {formatCurrency(flight.grossFare, currency)}
-              </div>
+          {/* Price */}
+          <div className="text-right flex-shrink-0">
+            <div
+              className={`${selectionMode ? 'text-base' : 'text-lg'} font-bold text-gray-900 leading-tight whitespace-nowrap`}
+            >
+              {formatCurrency(flight.grossFare, currency)}
             </div>
-            <button
-              type="button"
-              onClick={handleBook}
-              className="px-5 py-1.5 bg-red-500 text-white text-sm font-bold rounded hover:bg-red-600 transition-colors"
-            >
-              Book Now
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowDetails(!showDetails)}
-              className="text-xs text-blue-600 hover:underline font-medium"
-            >
-              {showDetails ? '- Details' : '+ Details'}
-            </button>
-            {/* Refundable badge */}
+          </div>
+
+          {/* Action button */}
+          {!selectionMode && (
+            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleBook();
+                }}
+                className="px-4 py-1.5 bg-red-500 text-white text-sm font-bold rounded hover:bg-red-600 transition-colors whitespace-nowrap"
+              >
+                View Fare
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDetails(!showDetails);
+                }}
+                className="text-[11px] text-blue-600 hover:underline font-medium"
+              >
+                + Details
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Footer: meal note + details */}
+        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+          <div className="flex items-center gap-1 text-[11px] text-gray-400 min-w-0">
+            <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="truncate">
+              Meal, Seat are chargeable.{' '}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDetails(!showDetails);
+                }}
+                className="text-blue-500 hover:underline font-medium"
+              >
+                (More)
+              </button>
+            </span>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+            {selectionMode && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDetails(!showDetails);
+                }}
+                className="text-[11px] text-blue-600 hover:underline font-semibold"
+              >
+                {showDetails ? '− Details' : '+ Details'}
+              </button>
+            )}
             {flight.refundable && (
-              <span className="text-[10px] font-bold text-green-600">R</span>
+              <span className="text-[11px] font-bold text-green-600">R</span>
             )}
           </div>
         </div>
-
-        {/* Mobile seats indicator */}
-        {flight.seats > 0 && flight.seats <= 9 && (
-          <div className="sm:hidden flex items-center gap-1 mt-2 text-red-500">
-            <Image src="/seat.png" alt="Seat" width={16} height={16} className="opacity-70" />
-            <span className="text-xs font-semibold">{flight.seats} Left</span>
-          </div>
-        )}
       </div>
-
-      {/* Info line */}
-      <div className="px-4 sm:px-5 pb-3 flex items-center justify-between">
-        <div className="text-xs text-gray-400 flex items-center gap-1">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Meal, Seat are chargeable.{' '}
-          <button
-            type="button"
-            onClick={() => setShowDetails(!showDetails)}
-            className="text-blue-500 hover:underline font-medium"
-          >
-            (More)
-          </button>
-        </div>
-      </div>
-
-      {/* Expandable details */}
-      {showDetails && (
-        <FlightDetails flight={flight} currency={currency} />
-      )}
+      {showDetails && <FlightDetails flight={flight} currency={currency} />}
     </div>
   );
 };

@@ -8,6 +8,11 @@ interface DateStripProps {
   departDate: string;
   cheapestPrice: number | null;
   currency: string;
+  mode?: 'depart' | 'return';
+  minDate?: string;
+  seamless?: boolean;
+  onwardDate?: string;
+  pairedReturnDate?: string;
   searchParams: {
     from: string;
     to: string;
@@ -45,6 +50,11 @@ export const DateStrip = ({
   departDate,
   cheapestPrice,
   currency,
+  mode = 'depart',
+  minDate,
+  seamless = false,
+  onwardDate,
+  pairedReturnDate,
   searchParams: sp,
 }: DateStripProps) => {
   const router = useRouter();
@@ -55,12 +65,17 @@ export const DateStrip = ({
   const dates = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const floorDate = minDate ? new Date(minDate + 'T00:00:00') : today;
+    if (floorDate < today) floorDate.setTime(today.getTime());
     const base = new Date(departDate + 'T00:00:00');
     const start = new Date(base);
-    start.setDate(start.getDate() - 3);
-    if (start < today) start.setTime(today.getTime());
-    const result: { date: Date; dateStr: string; label: string; isSelected: boolean }[] = [];
-    for (let i = 0; i < 8; i++) {
+    // Fewer dates when rendered seamlessly side-by-side (round-trip split).
+    const daysBefore = seamless ? 1 : 3;
+    const totalDays = seamless ? 4 : 8;
+    start.setDate(start.getDate() - daysBefore);
+    if (start < floorDate) start.setTime(floorDate.getTime());
+    const result: { date: Date; dateStr: string; label: string; isSelected: boolean; disabled: boolean }[] = [];
+    for (let i = 0; i < totalDays; i++) {
       const d = new Date(start);
       d.setDate(d.getDate() + i);
       const dateStr = toDateString(d);
@@ -69,10 +84,11 @@ export const DateStrip = ({
         dateStr,
         label: formatStripDate(d),
         isSelected: dateStr === departDate,
+        disabled: d < floorDate,
       });
     }
     return result;
-  }, [departDate]);
+  }, [departDate, minDate, seamless]);
 
   // Fetch prices for surrounding dates in background
   useEffect(() => {
@@ -88,25 +104,50 @@ export const DateStrip = ({
     }
     setDatePrices(initial);
 
-    // Fetch each date in parallel
+    // For roundtrip context fire a single RT search per alt date (never ON);
+    // for the depart strip we vary depart, for the return strip we vary
+    // return. Backend splits onward vs return by from/to.
     for (const dateStr of surroundingDates) {
-      searchFlights({
-        from: sp.from,
-        to: sp.to,
-        departDate: dateStr,
-        adults: sp.adults,
-        children: sp.children,
-        infants: sp.infants,
-        cabin: sp.cabin,
-        tripType: sp.tripType,
-        directOnly: sp.directOnly,
-        refundableOnly: sp.refundableOnly,
-        nearbyAirports: sp.nearbyAirports,
-      })
+      const isReturn = mode === 'return';
+      const rtForReturn = sp.tripType === 'roundtrip' && isReturn && !!onwardDate;
+      const rtForDepart = sp.tripType === 'roundtrip' && !isReturn && !!pairedReturnDate;
+      const asRoundTrip = rtForReturn || rtForDepart;
+      const params: FlightSearchParams = asRoundTrip
+        ? {
+            from: sp.from,
+            to: sp.to,
+            departDate: rtForReturn ? (onwardDate as string) : dateStr,
+            returnDate: rtForReturn ? dateStr : (pairedReturnDate as string),
+            adults: sp.adults,
+            children: sp.children,
+            infants: sp.infants,
+            cabin: sp.cabin,
+            tripType: 'roundtrip',
+            directOnly: sp.directOnly,
+            refundableOnly: sp.refundableOnly,
+            nearbyAirports: sp.nearbyAirports,
+          }
+        : {
+            from: isReturn ? sp.to : sp.from,
+            to: isReturn ? sp.from : sp.to,
+            departDate: dateStr,
+            adults: sp.adults,
+            children: sp.children,
+            infants: sp.infants,
+            cabin: sp.cabin,
+            tripType: 'oneway',
+            directOnly: sp.directOnly,
+            refundableOnly: sp.refundableOnly,
+            nearbyAirports: sp.nearbyAirports,
+          };
+      searchFlights(params)
         .then((res) => {
           if (cancelled) return;
-          if (res.flights.length > 0) {
-            const cheapest = Math.min(...res.flights.map((f) => f.grossFare));
+          const flights = rtForReturn
+            ? (res.returnFlights ?? [])
+            : res.flights;
+          if (flights.length > 0) {
+            const cheapest = Math.min(...flights.map((f) => f.grossFare));
             setDatePrices((prev) => ({ ...prev, [dateStr]: cheapest }));
           } else {
             setDatePrices((prev) => ({ ...prev, [dateStr]: null }));
@@ -121,12 +162,21 @@ export const DateStrip = ({
     return () => {
       cancelled = true;
     };
-  }, [departDate, sp.from, sp.to, sp.adults, sp.children, sp.infants, sp.cabin, sp.tripType, sp.directOnly, sp.refundableOnly, sp.nearbyAirports, dates]);
+  }, [departDate, mode, onwardDate, pairedReturnDate, sp.from, sp.to, sp.adults, sp.children, sp.infants, sp.cabin, sp.tripType, sp.directOnly, sp.refundableOnly, sp.nearbyAirports, dates]);
 
-  const handleDateClick = (dateStr: string) => {
-    if (dateStr === departDate) return;
+  const handleDateClick = (dateStr: string, disabled: boolean) => {
+    if (disabled || dateStr === departDate) return;
     const params = new URLSearchParams(urlParams.toString());
-    params.set('departDate', dateStr);
+    if (mode === 'return') {
+      params.set('returnDate', dateStr);
+    } else {
+      params.set('departDate', dateStr);
+      // Keep returnDate >= departDate
+      const existingReturn = params.get('returnDate');
+      if (existingReturn && existingReturn < dateStr) {
+        params.set('returnDate', dateStr);
+      }
+    }
     router.push(`/booking/flights?${params.toString()}`);
   };
 
@@ -158,7 +208,7 @@ export const DateStrip = ({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg flex items-center">
+    <div className="bg-white border border-gray-200 rounded-lg flex items-center overflow-hidden">
       {/* Left arrow */}
       <button
         type="button"
@@ -176,11 +226,14 @@ export const DateStrip = ({
           <button
             key={d.dateStr}
             type="button"
-            onClick={() => handleDateClick(d.dateStr)}
+            disabled={d.disabled}
+            onClick={() => handleDateClick(d.dateStr, d.disabled)}
             className={`flex-1 min-w-[120px] px-3 py-2.5 text-center border-r border-gray-100 last:border-r-0 transition-colors ${
               d.isSelected
                 ? 'bg-gray-800 text-white'
-                : 'text-gray-600 hover:bg-gray-50'
+                : d.disabled
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
             <div

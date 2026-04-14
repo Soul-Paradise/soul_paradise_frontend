@@ -14,7 +14,6 @@ import {
 } from '@/lib/flights-api';
 import { useAuth } from '@/contexts/AuthContext';
 import { FlightSegments } from '@/components/FlightBookingDetails/FlightSegments';
-import { FareBreakdown } from '@/components/FlightBookingDetails/FareBreakdown';
 import { FareRulesAccordion } from '@/components/FlightBookingDetails/FareRulesAccordion';
 import { SSRSelector } from '@/components/FlightBookingDetails/SSRSelector';
 import { SeatSelector } from '@/components/FlightBookingDetails/SeatSelector';
@@ -59,6 +58,7 @@ function FlightDetailsContent() {
 
   const searchId = searchParams.get('searchId') || '';
   const flightIndex = searchParams.get('index') || '';
+  const returnFlightIndex = searchParams.get('returnIndex') || undefined;
   const tripType = searchParams.get('tripType') || 'oneway';
 
   const [pricing, setPricing] = useState<FlightPricingResponse | null>(null);
@@ -109,7 +109,7 @@ function FlightDetailsContent() {
     setLoading(true);
     setError('');
 
-    priceAndGetDetails(searchId, flightIndex, tripType)
+    priceAndGetDetails(searchId, flightIndex, tripType, returnFlightIndex)
       .then((data) => {
         setPricing(data);
 
@@ -132,7 +132,7 @@ function FlightDetailsContent() {
       .finally(() => {
         setLoading(false);
       });
-  }, [searchId, flightIndex, tripType]);
+  }, [searchId, flightIndex, returnFlightIndex, tripType]);
 
   const updateTraveller = (index: number, updated: TravellerInfo) => {
     setTravellers((prev) => prev.map((t, i) => (i === index ? updated : t)));
@@ -413,17 +413,7 @@ function FlightDetailsContent() {
                 {/* Flight Segments */}
                 <FlightSegments segments={pricing.segments} />
 
-                {/* Fare Breakdown */}
-                <FareBreakdown
-                  fareBreakdown={pricing.fareBreakdown}
-                  totalFare={pricing.totalFare}
-                  passengerCounts={pricing.passengerCounts}
-                />
-
-                {/* Fare Rules */}
-                <FareRulesAccordion fareRules={pricing.fareRules} />
-
-                {/* Passenger Forms */}
+{/* Passenger Forms */}
                 <div>
                   <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">
                     Traveller Details
@@ -585,7 +575,10 @@ function FlightDetailsContent() {
 
             {/* Mobile-only sidebar */}
             <div className="lg:hidden">
-              <BookingSummary {...sidebarProps} />
+              <div className="space-y-4">
+                <FareRulesAccordion fareRules={pricing.fareRules} />
+                <BookingSummary {...sidebarProps} />
+              </div>
             </div>
           </div>
 

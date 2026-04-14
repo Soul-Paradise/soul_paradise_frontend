@@ -47,16 +47,13 @@ export const BookingSummary = ({
     passengerCounts.adults + passengerCounts.children + passengerCounts.infants;
 
   // Calculate base fare and taxes from the fareBreakdown items
-  const baseFareItem = fareBreakdown.find(
-    (item) =>
-      item.label.toLowerCase().includes('base') ||
-      item.label.toLowerCase().includes('fare'),
+  const baseFareItem = fareBreakdown.find((item) =>
+    item.label.toLowerCase().includes('base'),
   );
-  const taxItems = fareBreakdown.filter(
-    (item) =>
-      !item.label.toLowerCase().includes('base') &&
-      !item.label.toLowerCase().includes('fare'),
-  );
+  const taxItems = fareBreakdown.filter((item) => {
+    const label = item.label.toLowerCase();
+    return !label.includes('base') && !label.includes('total');
+  });
 
   const baseFareTotal = baseFareItem
     ? baseFareItem.adultAmount + baseFareItem.childAmount + baseFareItem.infantAmount
