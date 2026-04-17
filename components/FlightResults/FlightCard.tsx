@@ -9,7 +9,7 @@ import { FlightDetails } from './FlightDetails';
 interface FlightCardProps {
   flight: FlightResult;
   currency: string;
-  searchId: string;
+  tui: string;
   tripType: string;
   selectionMode?: boolean;
   selected?: boolean;
@@ -68,7 +68,7 @@ function isNextDay(departure: string, arrival: string): boolean {
 export const FlightCard = ({
   flight,
   currency,
-  searchId,
+  tui,
   tripType,
   selectionMode = false,
   selected = false,
@@ -82,7 +82,12 @@ export const FlightCard = ({
       onSelect?.(flight);
       return;
     }
-    const params = new URLSearchParams({ searchId, index: flight.index, tripType });
+    const params = new URLSearchParams({
+      tui,
+      index: flight.index,
+      netFare: String(flight.netFare),
+      tripType,
+    });
     router.push(`/booking/flights/details?${params.toString()}`);
   };
 

@@ -229,9 +229,11 @@ function FlightSearchResults() {
   const handleBookRoundTrip = useCallback(() => {
     if (!selectedOnward || !selectedReturn || !results) return;
     const params = new URLSearchParams({
-      searchId: results.searchId,
+      tui: results.tui,
       index: selectedOnward.index,
+      netFare: String(selectedOnward.netFare),
       returnIndex: selectedReturn.index,
+      returnNetFare: String(selectedReturn.netFare),
       tripType,
     });
     router.push(`/booking/flights/details?${params.toString()}`);
@@ -532,7 +534,7 @@ function FlightSearchResults() {
                                 key={`o-${flight.index}`}
                                 flight={flight}
                                 currency={results.currency}
-                                searchId={results.searchId}
+                                tui={results.tui}
                                 tripType={tripType}
                                 selectionMode
                                 selected={selectedOnward?.index === flight.index}
@@ -564,7 +566,7 @@ function FlightSearchResults() {
                                 key={`r-${flight.index}`}
                                 flight={flight}
                                 currency={results.currency}
-                                searchId={results.searchId}
+                                tui={results.tui}
                                 tripType={tripType}
                                 selectionMode
                                 selected={selectedReturn?.index === flight.index}
@@ -601,7 +603,7 @@ function FlightSearchResults() {
                         key={flight.index}
                         flight={flight}
                         currency={results.currency}
-                        searchId={results.searchId}
+                        tui={results.tui}
                         tripType={tripType}
                       />
                     ))}

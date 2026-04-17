@@ -2,6 +2,39 @@
 
 import { useEffect, useState, Suspense, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import {
+  Car, Trees, CigaretteOff, Waves, Wifi, Utensils, Dumbbell, Sparkles,
+  Wind, Coffee, Bath, Tv, Bell, Briefcase, Baby, Dog, Accessibility,
+  ParkingCircle, ShieldCheck, Snowflake, Plane, Bus, CreditCard, Check,
+  type LucideIcon,
+} from 'lucide-react';
+
+function getFacilityIcon(name: string): LucideIcon {
+  const n = name.toLowerCase();
+  if (n.includes('parking')) return n.includes('valet') ? Car : ParkingCircle;
+  if (n.includes('garden') || n.includes('outdoor')) return Trees;
+  if (n.includes('non smoking') || n.includes('non-smoking')) return CigaretteOff;
+  if (n.includes('pool') || n.includes('swim')) return Waves;
+  if (n.includes('internet') || n.includes('wifi') || n.includes('wi-fi')) return Wifi;
+  if (n.includes('restaurant') || n.includes('dining') || n.includes('breakfast')) return Utensils;
+  if (n.includes('gym') || n.includes('fitness')) return Dumbbell;
+  if (n.includes('spa') || n.includes('massage')) return Sparkles;
+  if (n.includes('air condition') || n.includes('ac ')) return Snowflake;
+  if (n.includes('hair') || n.includes('dryer')) return Wind;
+  if (n.includes('coffee') || n.includes('tea')) return Coffee;
+  if (n.includes('bath') || n.includes('shower') || n.includes('toilet')) return Bath;
+  if (n.includes('tv') || n.includes('television')) return Tv;
+  if (n.includes('reception') || n.includes('concierge') || n.includes('front desk')) return Bell;
+  if (n.includes('business') || n.includes('meeting')) return Briefcase;
+  if (n.includes('child') || n.includes('kid') || n.includes('baby')) return Baby;
+  if (n.includes('pet')) return Dog;
+  if (n.includes('wheelchair') || n.includes('accessib')) return Accessibility;
+  if (n.includes('safe') || n.includes('security')) return ShieldCheck;
+  if (n.includes('airport') || n.includes('shuttle')) return Plane;
+  if (n.includes('transport') || n.includes('bus')) return Bus;
+  if (n.includes('card') || n.includes('payment')) return CreditCard;
+  return Check;
+}
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -225,11 +258,15 @@ function HotelCard({
           {/* Facilities */}
           {topFacilities.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
-              {topFacilities.map((f) => (
-                <span key={f.id} className="flex items-center gap-1 text-xs text-gray-600 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded">
-                  {f.name}
-                </span>
-              ))}
+              {topFacilities.map((f) => {
+                const Icon = getFacilityIcon(f.name);
+                return (
+                  <span key={f.id} className="flex items-center gap-1 text-xs text-gray-600 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded">
+                    <Icon className="w-3 h-3" />
+                    {f.name}
+                  </span>
+                );
+              })}
             </div>
           )}
 

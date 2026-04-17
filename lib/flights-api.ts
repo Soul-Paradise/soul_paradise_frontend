@@ -52,7 +52,7 @@ export interface FlightResult {
 }
 
 export interface FlightSearchResponse {
-  searchId: string;
+  tui: string;
   completed: boolean;
   currency: string;
   flights: FlightResult[];
@@ -168,8 +168,15 @@ export interface TravelChecklist {
   emigrationCheck: boolean;
 }
 
+export interface FreeSSR {
+  fuid: number;
+  ssrId: number;
+  ptc: string;
+}
+
 export interface FlightPricingResponse {
-  pricingId: string;
+  tui: string;
+  netAmount: number;
   segments: SegmentDetail[];
   fareBreakdown: FareBreakdownItem[];
   totalFare: {
@@ -192,6 +199,8 @@ export interface FlightPricingResponse {
     children: number;
     infants: number;
   };
+  ssrChargeMap: Record<string, number>;
+  freeSSRs: FreeSSR[];
 }
 
 export interface ContactInfo {
@@ -236,10 +245,13 @@ export interface SSRSelection {
 }
 
 export interface BookingRequest {
-  pricingId: string;
+  tui: string;
+  netAmount: number;
   contactInfo: ContactInfo;
   travellers: TravellerInfo[];
   selectedSSR: SSRSelection[];
+  ssrChargeMap: Record<string, number>;
+  freeSSRs: FreeSSR[];
 }
 
 export interface BookingResponse {
@@ -346,15 +358,24 @@ export async function searchFlights(
 }
 
 export async function priceAndGetDetails(
-  searchId: string,
+  tui: string,
   flightIndex: string,
-  tripType: string,
+  onwardNetFare: number,
+  tripType: 'oneway' | 'roundtrip',
   returnFlightIndex?: string,
+  returnNetFare?: number,
 ): Promise<FlightPricingResponse> {
   const res = await fetch(`${API_BASE}/flights/price`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ searchId, flightIndex, tripType, returnFlightIndex }),
+    body: JSON.stringify({
+      tui,
+      flightIndex,
+      onwardNetFare,
+      tripType,
+      returnFlightIndex,
+      returnNetFare,
+    }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Pricing failed' }));

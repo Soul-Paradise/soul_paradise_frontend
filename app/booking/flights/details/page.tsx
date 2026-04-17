@@ -56,10 +56,15 @@ function FlightDetailsContent() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const searchId = searchParams.get('searchId') || '';
+  const tui = searchParams.get('tui') || '';
   const flightIndex = searchParams.get('index') || '';
+  const onwardNetFare = parseFloat(searchParams.get('netFare') || '0') || 0;
   const returnFlightIndex = searchParams.get('returnIndex') || undefined;
-  const tripType = searchParams.get('tripType') || 'oneway';
+  const returnNetFareRaw = searchParams.get('returnNetFare');
+  const returnNetFare = returnNetFareRaw ? parseFloat(returnNetFareRaw) || 0 : undefined;
+  const tripType = (searchParams.get('tripType') === 'roundtrip' ? 'roundtrip' : 'oneway') as
+    | 'oneway'
+    | 'roundtrip';
 
   const [pricing, setPricing] = useState<FlightPricingResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -99,7 +104,7 @@ function FlightDetailsContent() {
     // Prevent duplicate pricing calls from React StrictMode double-render
     if (pricingLoadedRef.current) return;
 
-    if (!searchId || !flightIndex) {
+    if (!tui || !flightIndex) {
       setError('Missing search parameters. Please go back and search again.');
       setLoading(false);
       return;
@@ -109,7 +114,7 @@ function FlightDetailsContent() {
     setLoading(true);
     setError('');
 
-    priceAndGetDetails(searchId, flightIndex, tripType, returnFlightIndex)
+    priceAndGetDetails(tui, flightIndex, onwardNetFare, tripType, returnFlightIndex, returnNetFare)
       .then((data) => {
         setPricing(data);
 
@@ -132,7 +137,7 @@ function FlightDetailsContent() {
       .finally(() => {
         setLoading(false);
       });
-  }, [searchId, flightIndex, returnFlightIndex, tripType]);
+  }, [tui, flightIndex, onwardNetFare, returnFlightIndex, returnNetFare, tripType]);
 
   const updateTraveller = (index: number, updated: TravellerInfo) => {
     setTravellers((prev) => prev.map((t, i) => (i === index ? updated : t)));
@@ -258,10 +263,13 @@ function FlightDetailsContent() {
       };
 
       const result = await createBooking({
-        pricingId: pricing.pricingId,
+        tui: pricing.tui,
+        netAmount: pricing.netAmount,
         contactInfo: finalContactInfo,
         travellers,
         selectedSSR: allSelections,
+        ssrChargeMap: pricing.ssrChargeMap,
+        freeSSRs: pricing.freeSSRs,
       });
 
       // Navigate to confirmation page
