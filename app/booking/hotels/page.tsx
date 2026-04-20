@@ -2,12 +2,23 @@
 
 import { useEffect, useState, Suspense, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import {
   Car, Trees, CigaretteOff, Waves, Wifi, Utensils, Dumbbell, Sparkles,
   Wind, Coffee, Bath, Tv, Bell, Briefcase, Baby, Dog, Accessibility,
   ParkingCircle, ShieldCheck, Snowflake, Plane, Bus, CreditCard, Check,
+  MapPin, X,
   type LucideIcon,
 } from 'lucide-react';
+
+const HotelMap = dynamic(() => import('@/components/HotelMap/HotelMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-sm">
+      Loading map…
+    </div>
+  ),
+});
 
 function getFacilityIcon(name: string): LucideIcon {
   const n = name.toLowerCase();
@@ -53,6 +64,7 @@ interface Hotel {
   heroImage: string;
   images: string[];
   facilities: Array<{ id: number; name: string }>;
+  geoCode: { lat: number; long: number };
   userReview: { count: number; rating: number } | null;
   rate: HotelRate | null;
   isRefundable: boolean | null;
@@ -72,7 +84,11 @@ interface FilterData {
 }
 
 interface SearchResponse {
-  searchId: string;
+  searchId: string; // Benzy searchId
+  searchTracingKey: string; // Benzy TUI
+  destinationCountryCode: string;
+  checkIn: string; // MM/DD/YYYY (Benzy format)
+  checkOut: string;
   locationName: string;
   hotels: Hotel[];
   filters: FilterData[];
@@ -140,7 +156,7 @@ function Stars({ count }: { count: number }) {
 }
 
 // ── Sidebar Checkbox ──
-function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
+function Checkbox({ checked, onChange, label, count }: { checked: boolean; onChange: () => void; label: string; count?: number }) {
   return (
     <label onClick={onChange} className="flex items-center gap-2 cursor-pointer group py-1">
       <span className={`w-4 h-4 flex-shrink-0 border rounded flex items-center justify-center transition-colors ${checked ? 'bg-blue-600 border-blue-600' : 'border-gray-400 group-hover:border-blue-400'}`}>
@@ -150,7 +166,8 @@ function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: ()
           </svg>
         )}
       </span>
-      <span className="text-sm text-gray-700">{label}</span>
+      <span className="text-sm text-gray-700 flex-1 truncate">{label}</span>
+      {typeof count === 'number' && <span className="text-xs text-gray-500 ml-auto">({count})</span>}
     </label>
   );
 }
@@ -179,6 +196,10 @@ function HotelCard({
   hotel,
   currency,
   searchId,
+  searchTracingKey,
+  destinationCountryCode,
+  benzyCheckIn,
+  benzyCheckOut,
   checkIn,
   checkOut,
   nights,
@@ -186,6 +207,10 @@ function HotelCard({
   hotel: Hotel;
   currency: string;
   searchId: string;
+  searchTracingKey: string;
+  destinationCountryCode: string;
+  benzyCheckIn: string;
+  benzyCheckOut: string;
   checkIn: string;
   checkOut: string;
   nights: number;
@@ -202,24 +227,32 @@ function HotelCard({
   const topFacilities = (hotel.facilities || []).slice(0, 5);
 
   function goToRooms() {
-    const params = new URLSearchParams({ searchId, hotelId: hotel.id, checkIn, checkOut });
+    const params = new URLSearchParams({
+      searchId,
+      hotelId: hotel.id,
+      checkIn,
+      checkOut,
+      searchTracingKey,
+      destinationCountryCode,
+      benzyCheckIn,
+      benzyCheckOut,
+    });
     router.push(`/booking/hotels/rooms?${params.toString()}`);
   }
 
   return (
-    <div className="bg-white rounded border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex overflow-hidden">
+    <div className="bg-white rounded border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex overflow-hidden h-[240px]">
       {/* Image */}
-      <div className="w-48 flex-shrink-0 relative bg-gray-100">
+      <div className="w-48 flex-shrink-0 relative bg-gray-100 h-full">
         {hotel.heroImage ? (
           <img
             src={hotel.heroImage}
             alt={hotel.name}
             className="w-full h-full object-cover"
-            style={{ minHeight: 180 }}
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center min-h-[180px] text-gray-300">
+          <div className="w-full h-full flex items-center justify-center text-gray-300">
             <svg className="w-14 h-14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
@@ -233,7 +266,7 @@ function HotelCard({
       </div>
 
       {/* Content */}
-      <div className="flex flex-1 p-4 gap-3 min-w-0">
+      <div className="flex flex-1 p-4 gap-3 min-w-0 overflow-hidden">
         {/* Left: info */}
         <div className="flex-1 min-w-0">
           {/* Name + stars */}
@@ -361,20 +394,117 @@ function HotelCard({
   );
 }
 
+// ── Compact Hotel Card (used in map view) ──
+function CompactHotelCard({
+  hotel,
+  currency,
+  selected,
+  onSelect,
+  onBook,
+}: {
+  hotel: Hotel;
+  currency: string;
+  selected: boolean;
+  onSelect: () => void;
+  onBook: () => void;
+}) {
+  const total = hotel.rate?.total ?? 0;
+  const baseRate = hotel.rate?.baseRate ?? 0;
+  const hasSavings = baseRate > total && total > 0;
+  const savings = hasSavings ? baseRate - total : 0;
+
+  return (
+    <div
+      onClick={onSelect}
+      className={`bg-white rounded border transition-all cursor-pointer flex overflow-hidden flex-shrink-0 ${
+        selected ? 'border-[#1a2b6b] ring-2 ring-[#1a2b6b]/30 shadow-md' : 'border-gray-200 hover:shadow-sm'
+      }`}
+    >
+      {/* Thumbnail */}
+      <div className="w-24 flex-shrink-0 bg-gray-100 relative">
+        {hotel.heroImage ? (
+          <img
+            src={hotel.heroImage}
+            alt={hotel.name}
+            className="w-full h-full object-cover"
+            style={{ minHeight: 100 }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        ) : (
+          <div className="w-full h-full min-h-[100px] flex items-center justify-center text-gray-300">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+        )}
+        {hotel.isSoldOut && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <span className="text-white font-bold text-[10px] bg-red-600 px-1.5 py-0.5 rounded">SOLD OUT</span>
+          </div>
+        )}
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 p-2 min-w-0 flex flex-col">
+        <div className="flex items-start gap-1 flex-wrap">
+          <h3 className="font-bold text-gray-900 text-xs leading-tight line-clamp-1">{hotel.name}</h3>
+          <Stars count={hotel.starRating} />
+        </div>
+        <p className="text-[11px] text-gray-500 line-clamp-1 mt-0.5">{hotel.address}</p>
+
+        <div className="mt-auto flex items-end justify-between pt-1.5 gap-2">
+          <div className="flex flex-col items-start min-w-0">
+            {hotel.userReview && (
+              <div className="flex items-center gap-1">
+                <span className={`text-[10px] text-white font-bold px-1.5 py-0.5 rounded ${ratingColor(hotel.userReview.rating)}`}>
+                  {hotel.userReview.rating.toFixed(1)}
+                </span>
+                <span className="text-[10px] text-gray-500">{ratingLabel(hotel.userReview.rating)}</span>
+              </div>
+            )}
+            {hotel.rate && (
+              <div className="mt-0.5">
+                {hasSavings && (
+                  <span className="text-[10px] text-gray-400 line-through mr-1">{fmt(baseRate, currency)}</span>
+                )}
+                <span className="text-sm font-bold text-gray-900">{fmt(total, currency)}</span>
+                {hasSavings && (
+                  <div className="text-[10px] text-green-600 font-semibold">Saved {fmt(savings, currency)}</div>
+                )}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); onBook(); }}
+            disabled={hotel.isSoldOut}
+            className="px-2.5 py-1.5 bg-[#e8262a] hover:bg-[#c9191d] disabled:bg-gray-400 text-white text-[11px] font-bold rounded transition-colors flex-shrink-0"
+          >
+            {hotel.isSoldOut ? 'Sold' : 'Select Room'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Sidebar ──
 function Sidebar({
   hotels,
   filters,
+  onShowMap,
   starFilter, setStarFilter,
   minRating, setMinRating,
   priceRange, setPriceRange,
   amenities, setAmenities,
+  chainFilter, setChainFilter,
+  propertyTypeFilter, setPropertyTypeFilter,
   freeCancellation, setFreeCancellation,
   breakfast, setBreakfast,
   nameSearch, setNameSearch,
 }: {
   hotels: Hotel[];
   filters: FilterData[];
+  onShowMap: () => void;
   starFilter: number[];
   setStarFilter: (v: number[]) => void;
   minRating: number;
@@ -383,6 +513,10 @@ function Sidebar({
   setPriceRange: (v: [number, number] | null) => void;
   amenities: string[];
   setAmenities: (v: string[]) => void;
+  chainFilter: string[];
+  setChainFilter: (v: string[]) => void;
+  propertyTypeFilter: string[];
+  setPropertyTypeFilter: (v: string[]) => void;
   freeCancellation: boolean;
   setFreeCancellation: (v: boolean) => void;
   breakfast: boolean;
@@ -400,13 +534,17 @@ function Sidebar({
     return map;
   }, [hotels]);
 
-  // Amenity options from filter API or derive from hotels
+  // Amenity options from filter API (Benzy returns "Facilities") or derive from hotels
+  const [showAllAmenities, setShowAllAmenities] = useState(false);
   const amenityOptions = useMemo(() => {
-    const apiFilter = filters.find(f => f.category === 'Amenities');
+    const apiFilter = filters.find(f => f.category === 'Facilities');
     if (apiFilter?.options) {
-      return apiFilter.options.slice(0, 8).map(o => ({ label: o.label, value: o.value || o.label }));
+      // API sends `value` as the facility id; we match by label since hotel.facilities has name
+      return apiFilter.options
+        .map(o => ({ label: o.label, value: o.label, count: o.count }))
+        .sort((a, b) => b.count - a.count);
     }
-    // Derive top amenities from hotel facilities
+    // Fallback: derive top amenities from hotel facilities
     const map = new Map<string, number>();
     for (const h of hotels) {
       for (const f of (h.facilities || [])) {
@@ -415,9 +553,28 @@ function Sidebar({
     }
     return Array.from(map.entries())
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([name]) => ({ label: name, value: name }));
+      .map(([name, count]) => ({ label: name, value: name, count }));
   }, [filters, hotels]);
+
+  // Hotel chain options from API (sorted by count desc)
+  const chainOptions = useMemo(() => {
+    const apiFilter = filters.find(f => f.category === 'HotelChain');
+    if (!apiFilter?.options) return [];
+    return apiFilter.options
+      .filter(o => o.value && o.count > 0)
+      .map(o => ({ label: o.label, value: o.value as string, count: o.count }))
+      .sort((a, b) => b.count - a.count);
+  }, [filters]);
+
+  // Property type options from API
+  const propertyTypeOptions = useMemo(() => {
+    const apiFilter = filters.find(f => f.category === 'PropertyType');
+    if (!apiFilter?.options) return [];
+    return apiFilter.options
+      .filter(o => o.value && o.count > 0)
+      .map(o => ({ label: o.label, value: o.value as string, count: o.count }))
+      .sort((a, b) => b.count - a.count);
+  }, [filters]);
 
   // Price range options from API filter or default
   const priceOptions = useMemo(() => {
@@ -439,6 +596,14 @@ function Sidebar({
     setAmenities(amenities.includes(v) ? amenities.filter(x => x !== v) : [...amenities, v]);
   }
 
+  function toggleChain(v: string) {
+    setChainFilter(chainFilter.includes(v) ? chainFilter.filter(x => x !== v) : [...chainFilter, v]);
+  }
+
+  function togglePropertyType(v: string) {
+    setPropertyTypeFilter(propertyTypeFilter.includes(v) ? propertyTypeFilter.filter(x => x !== v) : [...propertyTypeFilter, v]);
+  }
+
   function selectPriceRange(min: number, max: number) {
     const key: [number, number] = [min, max];
     if (priceRange && priceRange[0] === min && priceRange[1] === max) {
@@ -449,7 +614,84 @@ function Sidebar({
   }
 
   return (
-    <aside className="w-56 flex-shrink-0">
+    <aside className="space-y-3">
+      {/* See Map View */}
+      <button
+        onClick={onShowMap}
+        className="w-full h-12 flex items-center justify-center gap-2 shadow-sm rounded transition-all hover:brightness-[0.97] group relative overflow-hidden"
+      >
+        {/* Stylized map illustration */}
+        <svg
+          className="absolute inset-0 w-full h-full"
+          viewBox="0 0 240 48"
+          preserveAspectRatio="xMidYMid slice"
+          aria-hidden
+        >
+          {/* Land base */}
+          <rect width="240" height="48" fill="#f4ecd6" />
+          {/* Water bay top-right */}
+          <path d="M198 0 Q192 10 204 18 Q220 16 240 20 L240 0 Z" fill="#a8cbe6" />
+          {/* Park bottom-left */}
+          <path d="M0 30 Q15 26 30 30 Q46 32 56 40 Q50 48 30 48 L0 48 Z" fill="#bcd5ae" />
+          {/* Park top-center */}
+          <circle cx="152" cy="8" r="6" fill="#bcd5ae" />
+          <circle cx="162" cy="12" r="4" fill="#bcd5ae" opacity="0.85" />
+          {/* Building clusters */}
+          <g fill="#d8c8a5">
+            <rect x="60" y="4" width="7" height="6" />
+            <rect x="70" y="4" width="9" height="8" />
+            <rect x="82" y="5" width="6" height="6" />
+            <rect x="91" y="4" width="10" height="8" />
+            <rect x="104" y="5" width="6" height="6" />
+            <rect x="75" y="30" width="10" height="8" />
+            <rect x="88" y="28" width="8" height="10" />
+            <rect x="100" y="30" width="6" height="8" />
+            <rect x="110" y="28" width="10" height="10" />
+            <rect x="170" y="30" width="9" height="8" />
+            <rect x="183" y="28" width="7" height="10" />
+            <rect x="194" y="30" width="11" height="8" />
+            <rect x="210" y="28" width="8" height="8" />
+            <rect x="222" y="30" width="10" height="8" />
+          </g>
+          {/* Diagonal avenue */}
+          <line x1="-4" y1="48" x2="60" y2="-2" stroke="white" strokeWidth="1.5" opacity="0.85" />
+          {/* Primary horizontal road */}
+          <line x1="0" y1="22" x2="240" y2="22" stroke="white" strokeWidth="3" />
+          {/* Primary vertical road */}
+          <line x1="125" y1="0" x2="125" y2="48" stroke="white" strokeWidth="3" />
+          {/* Secondary roads */}
+          <line x1="0" y1="14" x2="105" y2="14" stroke="white" strokeWidth="1.5" />
+          <line x1="170" y1="40" x2="240" y2="40" stroke="white" strokeWidth="1.5" />
+          <line x1="55" y1="0" x2="55" y2="22" stroke="white" strokeWidth="1.5" />
+          <line x1="90" y1="0" x2="90" y2="22" stroke="white" strokeWidth="1.5" />
+          <line x1="107" y1="22" x2="107" y2="48" stroke="white" strokeWidth="1.5" />
+          <line x1="170" y1="22" x2="170" y2="48" stroke="white" strokeWidth="1.5" />
+          <line x1="205" y1="22" x2="205" y2="48" stroke="white" strokeWidth="1.5" />
+          {/* Navigation route (dashed red) */}
+          <path
+            d="M20 40 Q55 32 90 22 Q130 16 180 12"
+            stroke="#e8262a"
+            strokeWidth="1.5"
+            strokeDasharray="3 2"
+            fill="none"
+            opacity="0.7"
+          />
+          <circle cx="180" cy="12" r="2" fill="#e8262a" opacity="0.75" />
+        </svg>
+        {/* Soft white scrim so label stays readable */}
+        <span className="absolute inset-0 bg-white/30 group-hover:bg-white/20 transition-colors" />
+        <MapPin
+          className="w-4 h-4 text-[#e8262a] relative z-10"
+          style={{ filter: 'drop-shadow(0 1px 1px rgba(255,255,255,0.9))' }}
+        />
+        <span
+          className="font-bold text-sm text-[#1a2b6b] tracking-wide relative z-10"
+          style={{ textShadow: '0 1px 2px rgba(255,255,255,0.95)' }}
+        >
+          SEE MAP VIEW
+        </span>
+      </button>
+
       <div className="bg-white rounded border border-gray-200 p-3">
         {/* Hotel Name Search */}
         <FilterSection title="Hotel Name">
@@ -522,12 +764,51 @@ function Sidebar({
         {/* Amenities */}
         {amenityOptions.length > 0 && (
           <FilterSection title="Amenities" defaultOpen={false}>
-            {amenityOptions.map((a, i) => (
+            {(showAllAmenities ? amenityOptions : amenityOptions.slice(0, 8)).map((a, i) => (
               <Checkbox
                 key={i}
                 checked={amenities.includes(a.value)}
                 onChange={() => toggleAmenity(a.value)}
                 label={a.label}
+                count={a.count}
+              />
+            ))}
+            {amenityOptions.length > 8 && (
+              <button
+                onClick={() => setShowAllAmenities(!showAllAmenities)}
+                className="text-xs text-blue-600 hover:underline mt-1 font-medium"
+              >
+                {showAllAmenities ? 'Show less' : `Show ${amenityOptions.length - 8} more`}
+              </button>
+            )}
+          </FilterSection>
+        )}
+
+        {/* Property Type */}
+        {propertyTypeOptions.length > 0 && (
+          <FilterSection title="Property Type" defaultOpen={false}>
+            {propertyTypeOptions.map((p, i) => (
+              <Checkbox
+                key={i}
+                checked={propertyTypeFilter.includes(p.value)}
+                onChange={() => togglePropertyType(p.value)}
+                label={p.label}
+                count={p.count}
+              />
+            ))}
+          </FilterSection>
+        )}
+
+        {/* Hotel Chain */}
+        {chainOptions.length > 0 && (
+          <FilterSection title="Hotel Chain" defaultOpen={false}>
+            {chainOptions.map((c, i) => (
+              <Checkbox
+                key={i}
+                checked={chainFilter.includes(c.value)}
+                onChange={() => toggleChain(c.value)}
+                label={c.label}
+                count={c.count}
               />
             ))}
           </FilterSection>
@@ -560,9 +841,13 @@ function HotelResults() {
   const [minRating, setMinRating] = useState(0);
   const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
   const [amenities, setAmenities] = useState<string[]>([]);
+  const [chainFilter, setChainFilter] = useState<string[]>([]);
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState<string[]>([]);
   const [freeCancellation, setFreeCancellation] = useState(false);
   const [breakfast, setBreakfast] = useState(false);
   const [sort, setSort] = useState<SortType>('featured');
+  const [showMap, setShowMap] = useState(false);
+  const [selectedHotelId, setSelectedHotelId] = useState<string | null>(null);
 
   const nights = checkIn && checkOut
     ? Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000))
@@ -574,7 +859,7 @@ function HotelResults() {
 
   const totalGuests = rooms.reduce((s: number, r: { adults: number; children: number }) => s + r.adults + r.children, 0);
 
-  // Search — step 1: POST to get searchId immediately, step 2: poll for results
+  // Search — single synchronous POST, no polling, no Redis handoff.
   useEffect(() => {
     if (!lat || !long || !checkIn || !checkOut) {
       setError('Missing search parameters.');
@@ -582,15 +867,14 @@ function HotelResults() {
       return;
     }
 
-    let pollTimer: ReturnType<typeof setInterval> | null = null;
-    let timeoutTimer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
+    const controller = new AbortController();
 
     const search = async () => {
       setLoading(true);
       setError('');
+      setResults(null);
       try {
-        // Step 1: initiate — returns {searchId} instantly
         const res = await fetch(`${API_URL}/hotels/search`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -606,54 +890,20 @@ function HotelResults() {
             countryOfResidence: 'IN',
             destinationCountryCode: 'IN',
           }),
+          signal: controller.signal,
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           throw new Error((err as { message?: string }).message || `Search failed (${res.status})`);
         }
-        const { searchId } = await res.json() as { searchId: string };
-
-        // Step 2: poll GET /hotels/results/:searchId (cheap Redis reads)
-        const poll = async () => {
-          if (cancelled) return;
-          try {
-            const r = await fetch(`${API_URL}/hotels/results/${searchId}`);
-            if (!r.ok || cancelled) return;
-            const data = await r.json() as
-              | { status: 'pending' }
-              | { status: 'ready'; data: SearchResponse }
-              | { status: 'error'; message: string };
-
-            if (data.status === 'ready') {
-              if (pollTimer) clearInterval(pollTimer);
-              if (timeoutTimer) clearTimeout(timeoutTimer);
-              setResults(data.data);
-              setLoading(false);
-            } else if (data.status === 'error') {
-              if (pollTimer) clearInterval(pollTimer);
-              if (timeoutTimer) clearTimeout(timeoutTimer);
-              setError(data.message || 'Search failed. Please try again.');
-              setLoading(false);
-            }
-            // 'pending' → keep polling
-          } catch {
-            // transient network error — keep polling
-          }
-        };
-
-        poll(); // check immediately
-        pollTimer = setInterval(poll, 3000);
-
-        // Timeout after 75s (Benzy rate timeout is 60s + buffer)
-        timeoutTimer = setTimeout(() => {
-          if (cancelled) return;
-          if (pollTimer) clearInterval(pollTimer);
-          setError('Hotel search timed out. Please try again.');
-          setLoading(false);
-        }, 75_000);
+        const data = await res.json() as SearchResponse;
+        if (cancelled) return;
+        setResults(data);
       } catch (e) {
+        if (cancelled || (e instanceof DOMException && e.name === 'AbortError')) return;
         setError(e instanceof Error ? e.message : 'Search failed. Please try again.');
-        setLoading(false);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     };
 
@@ -661,8 +911,7 @@ function HotelResults() {
 
     return () => {
       cancelled = true;
-      if (pollTimer) clearInterval(pollTimer);
-      if (timeoutTimer) clearTimeout(timeoutTimer);
+      controller.abort();
     };
   }, [locationId, lat, long, checkIn, checkOut, roomsParam, locationName]);
 
@@ -697,6 +946,12 @@ function HotelResults() {
         )
       );
     }
+    if (chainFilter.length > 0) {
+      list = list.filter(h => h.chainName && chainFilter.includes(h.chainName));
+    }
+    if (propertyTypeFilter.length > 0) {
+      list = list.filter(h => h.propertyType && propertyTypeFilter.includes(h.propertyType.toLowerCase()));
+    }
 
     if (sort === 'price') {
       list.sort((a, b) => {
@@ -723,9 +978,9 @@ function HotelResults() {
     }
 
     return list;
-  }, [results, nameSearch, starFilter, minRating, priceRange, freeCancellation, breakfast, amenities, sort]);
+  }, [results, nameSearch, starFilter, minRating, priceRange, freeCancellation, breakfast, amenities, chainFilter, propertyTypeFilter, sort]);
 
-  const hasActiveFilters = nameSearch || starFilter.length > 0 || minRating > 0 || priceRange || freeCancellation || breakfast || amenities.length > 0;
+  const hasActiveFilters = nameSearch || starFilter.length > 0 || minRating > 0 || priceRange || freeCancellation || breakfast || amenities.length > 0 || chainFilter.length > 0 || propertyTypeFilter.length > 0;
 
   function clearFilters() {
     setNameSearch('');
@@ -735,13 +990,31 @@ function HotelResults() {
     setFreeCancellation(false);
     setBreakfast(false);
     setAmenities([]);
+    setChainFilter([]);
+    setPropertyTypeFilter([]);
+  }
+
+  function goToRoomsFor(hotelId: string) {
+    if (!results) return;
+    const params = new URLSearchParams({
+      searchId: results.searchId,
+      hotelId,
+      checkIn,
+      checkOut,
+      searchTracingKey: results.searchTracingKey,
+      destinationCountryCode: results.destinationCountryCode,
+      benzyCheckIn: results.checkIn,
+      benzyCheckOut: results.checkOut,
+      rooms: roomsParam,
+    });
+    router.push(`/booking/hotels/rooms?${params.toString()}`);
   }
 
   return (
     <div className="min-h-screen bg-gray-100">
       {/* ── Top Bar ── */}
       <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-6 flex-wrap">
+        <div className="max-w-[1400px] mx-auto px-4 py-3 flex items-center gap-6 flex-wrap">
           {/* City */}
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-red-100 rounded flex items-center justify-center flex-shrink-0">
@@ -798,7 +1071,7 @@ function HotelResults() {
       </div>
 
       {/* ── Body ── */}
-      <div className="max-w-7xl mx-auto px-4 py-5">
+      <div className="max-w-[1400px] mx-auto px-4 py-5">
         {/* Loading */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-32 gap-4">
@@ -824,24 +1097,33 @@ function HotelResults() {
 
         {/* Results */}
         {!loading && !error && results && (
-          <div className="flex gap-4 items-start">
-            {/* Sidebar */}
-            <Sidebar
-              hotels={results.hotels}
-              filters={results.filters || []}
-              starFilter={starFilter} setStarFilter={setStarFilter}
-              minRating={minRating} setMinRating={setMinRating}
-              priceRange={priceRange} setPriceRange={setPriceRange}
-              amenities={amenities} setAmenities={setAmenities}
-              freeCancellation={freeCancellation} setFreeCancellation={setFreeCancellation}
-              breakfast={breakfast} setBreakfast={setBreakfast}
-              nameSearch={nameSearch} setNameSearch={setNameSearch}
-            />
+          <div className="flex gap-5">
+            {/* Sidebar (hidden in map view) — independently scrollable (sticky) */}
+            {!showMap && (
+              <div className="w-[280px] flex-shrink-0">
+                <div className="sticky top-[72px] max-h-[calc(100vh-88px)] overflow-y-auto pr-1">
+                  <Sidebar
+                    hotels={results.hotels}
+                    filters={results.filters || []}
+                    onShowMap={() => setShowMap(true)}
+                    starFilter={starFilter} setStarFilter={setStarFilter}
+                    minRating={minRating} setMinRating={setMinRating}
+                    priceRange={priceRange} setPriceRange={setPriceRange}
+                    amenities={amenities} setAmenities={setAmenities}
+                    chainFilter={chainFilter} setChainFilter={setChainFilter}
+                    propertyTypeFilter={propertyTypeFilter} setPropertyTypeFilter={setPropertyTypeFilter}
+                    freeCancellation={freeCancellation} setFreeCancellation={setFreeCancellation}
+                    breakfast={breakfast} setBreakfast={setBreakfast}
+                    nameSearch={nameSearch} setNameSearch={setNameSearch}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Main */}
             <div className="flex-1 min-w-0">
               {/* Result count + sort */}
-              <div className="flex items-center justify-between mb-3 bg-white rounded border border-gray-200 px-4 py-3">
+              <div className="flex items-center justify-between mb-3 bg-white rounded border border-gray-200 px-4 h-12">
                 <p className="text-sm text-gray-600">
                   Showing <span className="font-bold text-gray-900">{displayed.length}</span> of{' '}
                   <span className="font-bold text-gray-900">{results.total}</span> hotels found
@@ -911,6 +1193,56 @@ function HotelResults() {
                     <button onClick={clearFilters} className="text-sm text-[#e8262a] font-bold hover:underline">Clear filters</button>
                   )}
                 </div>
+              ) : showMap ? (
+                // ── Map view: compact list + map ──
+                <div className="flex gap-3" style={{ height: 'calc(100vh - 180px)' }}>
+                  {/* Compact list */}
+                  <div className="w-[380px] flex-shrink-0 flex flex-col gap-2 overflow-y-auto pr-1">
+                    <button
+                      onClick={() => setShowMap(false)}
+                      className="text-sm font-semibold text-[#1a2b6b] hover:underline text-left px-1 flex-shrink-0"
+                    >
+                      ← Back to List view
+                    </button>
+                    {displayed.map((hotel) => (
+                      <CompactHotelCard
+                        key={hotel.id}
+                        hotel={hotel}
+                        currency={results.currency || 'INR'}
+                        selected={selectedHotelId === hotel.id}
+                        onSelect={() => setSelectedHotelId(hotel.id)}
+                        onBook={() => goToRoomsFor(hotel.id)}
+                      />
+                    ))}
+                  </div>
+                  {/* Map */}
+                  <div className="flex-1 rounded border border-gray-200 overflow-hidden relative bg-gray-50">
+                    <button
+                      onClick={() => setShowMap(false)}
+                      className="absolute top-3 right-3 z-[1000] w-8 h-8 bg-[#e8262a] hover:bg-[#c9191d] text-white rounded-full flex items-center justify-center shadow-lg"
+                      aria-label="Close map"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <HotelMap
+                      hotels={displayed.map(h => ({
+                        id: h.id,
+                        name: h.name,
+                        starRating: h.starRating,
+                        address: h.address,
+                        heroImage: h.heroImage,
+                        geoCode: h.geoCode,
+                        rate: h.rate ? { total: h.rate.total, currency: h.rate.currency } : null,
+                        isSoldOut: h.isSoldOut,
+                      }))}
+                      currency={results.currency || 'INR'}
+                      selectedHotelId={selectedHotelId}
+                      onSelectHotel={setSelectedHotelId}
+                      onBookHotel={goToRoomsFor}
+                      fallbackCenter={lat && long ? { lat: Number(lat), long: Number(long) } : undefined}
+                    />
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-3">
                   {displayed.map((hotel) => (
@@ -919,6 +1251,10 @@ function HotelResults() {
                       hotel={hotel}
                       currency={results.currency || 'INR'}
                       searchId={results.searchId}
+                      searchTracingKey={results.searchTracingKey}
+                      destinationCountryCode={results.destinationCountryCode}
+                      benzyCheckIn={results.checkIn}
+                      benzyCheckOut={results.checkOut}
                       checkIn={checkIn}
                       checkOut={checkOut}
                       nights={nights}
