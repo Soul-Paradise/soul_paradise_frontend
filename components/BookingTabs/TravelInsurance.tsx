@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { MapPin, CalendarDays, Search, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { CalendarPanel } from './CalendarPanel';
 
 type PolicyType = 'INDIVIDUAL' | 'FAMILY' | 'FRIENDS' | 'STUDENT' | 'ANNUAL MULTITRIP';
 
@@ -12,9 +13,20 @@ interface Traveller {
   relation: string;
 }
 
-interface CountryOption {
-  name: string;
-  code: string;
+interface SelectedLocation {
+  placeId: number;
+  displayName: string;
+  countryName: string;
+  countryCode: string;
+}
+
+interface NominatimResult {
+  place_id: number;
+  display_name: string;
+  address?: {
+    country?: string;
+    country_code?: string;
+  };
 }
 
 const POLICY_TYPES: { value: PolicyType; label: string }[] = [
@@ -51,50 +63,23 @@ const TENURE_OPTIONS = [
   { value: 24, label: '24 Months' },
 ];
 
-const COUNTRIES: CountryOption[] = [
-  { name: 'United States', code: 'US' },
-  { name: 'United Kingdom', code: 'GB' },
-  { name: 'France', code: 'FR' },
-  { name: 'Germany', code: 'DE' },
-  { name: 'Italy', code: 'IT' },
-  { name: 'Spain', code: 'ES' },
-  { name: 'Japan', code: 'JP' },
-  { name: 'Australia', code: 'AU' },
-  { name: 'Canada', code: 'CA' },
-  { name: 'Singapore', code: 'SG' },
-  { name: 'Thailand', code: 'TH' },
-  { name: 'Malaysia', code: 'MY' },
-  { name: 'Indonesia', code: 'ID' },
-  { name: 'Sri Lanka', code: 'LK' },
-  { name: 'Nepal', code: 'NP' },
-  { name: 'Bhutan', code: 'BT' },
-  { name: 'Maldives', code: 'MV' },
-  { name: 'Dubai', code: 'AE' },
-  { name: 'Saudi Arabia', code: 'SA' },
-  { name: 'South Africa', code: 'ZA' },
-  { name: 'Kenya', code: 'KE' },
-  { name: 'Egypt', code: 'EG' },
-  { name: 'New Zealand', code: 'NZ' },
-  { name: 'Netherlands', code: 'NL' },
-  { name: 'Switzerland', code: 'CH' },
-  { name: 'Greece', code: 'GR' },
-  { name: 'Portugal', code: 'PT' },
-  { name: 'Turkey', code: 'TR' },
-  { name: 'Russia', code: 'RU' },
-  { name: 'China', code: 'CN' },
-  { name: 'South Korea', code: 'KR' },
-  { name: 'Hong Kong', code: 'HK' },
-  { name: 'Vietnam', code: 'VN' },
-  { name: 'Cambodia', code: 'KH' },
-  { name: 'Philippines', code: 'PH' },
-  { name: 'Mexico', code: 'MX' },
-  { name: 'Brazil', code: 'BR' },
-  { name: 'Argentina', code: 'AR' },
-  { name: 'Europe (Schengen)', code: 'EU' },
-];
+const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
+
+function toDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 function todayStr(): string {
-  return new Date().toISOString().split('T')[0];
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return toDateStr(d);
+}
+
+function tomorrowStr(): string {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 1);
+  return toDateStr(d);
 }
 
 function defaultTravellersForPolicy(policyType: PolicyType): Traveller[] {
@@ -116,15 +101,18 @@ export const TravelInsurance = () => {
   const wrapperRef = useRef<HTMLFormElement>(null);
 
   const [policyType, setPolicyType] = useState<PolicyType>('INDIVIDUAL');
-  const [destinations, setDestinations] = useState<CountryOption[]>([]);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [destinations, setDestinations] = useState<SelectedLocation[]>([]);
+  const [startDate, setStartDate] = useState(todayStr);
+  const [endDate, setEndDate] = useState(tomorrowStr);
   const [tenureInMonths, setTenureInMonths] = useState(3);
   const [travellers, setTravellers] = useState<Traveller[]>(defaultTravellersForPolicy('INDIVIDUAL'));
   const [error, setError] = useState('');
 
-  const [activePanel, setActivePanel] = useState<'destination' | 'startDate' | 'endDate' | 'travellers' | null>(null);
-  const [countryQuery, setCountryQuery] = useState('');
+  const [activePanel, setActivePanel] = useState<'destination' | 'dates' | 'tenure' | 'travellers' | null>(null);
+  const [dateTab, setDateTab] = useState<'start' | 'end'>('start');
+  const [locationQuery, setLocationQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     setTravellers(defaultTravellersForPolicy(policyType));
@@ -140,19 +128,50 @@ export const TravelInsurance = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const filteredCountries = countryQuery.length < 1
-    ? COUNTRIES
-    : COUNTRIES.filter((c) =>
-        c.name.toLowerCase().includes(countryQuery.toLowerCase()) ||
-        c.code.toLowerCase().includes(countryQuery.toLowerCase()),
-      );
+  useEffect(() => {
+    const q = locationQuery.trim();
+    if (q.length < 2) {
+      setSuggestions([]);
+      setSearching(false);
+      return;
+    }
+    const controller = new AbortController();
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const url = `${NOMINATIM_URL}?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=6`;
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: { 'Accept-Language': 'en' },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = (await res.json()) as NominatimResult[];
+        setSuggestions(json.filter((r) => r.address?.country && r.address?.country_code));
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') setSuggestions([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 350);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [locationQuery]);
 
-  const toggleCountry = useCallback((c: CountryOption) => {
+  const pickLocation = useCallback((r: NominatimResult) => {
+    if (!r.address?.country || !r.address?.country_code) return;
+    const loc: SelectedLocation = {
+      placeId: r.place_id,
+      displayName: r.display_name,
+      countryName: r.address.country,
+      countryCode: r.address.country_code.toUpperCase(),
+    };
     setDestinations((prev) =>
-      prev.find((d) => d.code === c.code)
-        ? prev.filter((d) => d.code !== c.code)
-        : [...prev, c],
+      prev.find((d) => d.placeId === loc.placeId) ? prev : [...prev, loc],
     );
+    setLocationQuery('');
+    setSuggestions([]);
   }, []);
 
   const usedRelations = travellers.map((t) => t.relation);
@@ -182,7 +201,7 @@ export const TravelInsurance = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (destinations.length === 0) { setError('Please select at least one destination country.'); return; }
+    if (destinations.length === 0) { setError('Please select at least one destination.'); return; }
     if (!startDate) { setError('Please select a travel start date.'); return; }
     if (!isStudent && !endDate) { setError('Please select a travel end date.'); return; }
     if (!isStudent && endDate <= startDate) { setError('End date must be after start date.'); return; }
@@ -190,10 +209,20 @@ export const TravelInsurance = () => {
       if (!t.birthdate) { setError('Please enter date of birth for all travellers.'); return; }
     }
 
+    const uniqueCodes: string[] = [];
+    const uniqueNames: string[] = [];
+    for (const d of destinations) {
+      if (!uniqueCodes.includes(d.countryCode)) {
+        uniqueCodes.push(d.countryCode);
+        uniqueNames.push(d.countryName);
+      }
+    }
+
     const params = new URLSearchParams({
       policyType,
-      countryCodes: destinations.map((d) => d.code).join(','),
-      countryNames: destinations.map((d) => d.name).join(','),
+      countryCodes: uniqueCodes.join(','),
+      countryNames: uniqueNames.join(','),
+      locations: destinations.map((d) => d.displayName).join('|'),
       startDate,
       endDate: isStudent ? startDate : endDate,
       tenureInMonths: String(isStudent ? tenureInMonths : 0),
@@ -204,13 +233,18 @@ export const TravelInsurance = () => {
     router.push(`/booking/insurance?${params.toString()}`);
   };
 
+  const removeDestination = (placeId: number) =>
+    setDestinations((prev) => prev.filter((d) => d.placeId !== placeId));
+
+  const shortLocationName = (displayName: string) => displayName.split(',')[0].trim();
+
   const startDisplay = formatDisplayDate(startDate);
   const endDisplay = formatDisplayDate(endDate);
   const destinationLabel = destinations.length === 0
     ? null
     : destinations.length === 1
-      ? destinations[0].name
-      : `${destinations[0].name} +${destinations.length - 1}`;
+      ? destinations[0].displayName
+      : `${shortLocationName(destinations[0].displayName)} +${destinations.length - 1}`;
 
   return (
     <form onSubmit={handleSearch} className="space-y-5" ref={wrapperRef}>
@@ -242,69 +276,126 @@ export const TravelInsurance = () => {
           {/* Destination */}
           <button
             type="button"
-            onClick={() => { setActivePanel(activePanel === 'destination' ? null : 'destination'); setCountryQuery(''); }}
+            onClick={() => { setActivePanel(activePanel === 'destination' ? null : 'destination'); setLocationQuery(''); }}
             className={`col-span-2 sm:flex-[2] text-left px-5 py-4 transition-colors min-w-0 sm:border-r sm:border-gray-200 ${activePanel === 'destination' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
           >
             <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${activePanel === 'destination' ? 'text-[#1F7AC4]' : 'text-gray-500'}`}>
-              Destination Country
+              Destination
             </div>
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
               <span className={`text-lg font-bold truncate ${destinationLabel ? 'text-gray-900' : 'text-gray-400'}`}>
-                {destinationLabel ?? 'Select Country'}
+                {destinationLabel ?? 'Search city or country'}
               </span>
             </div>
           </button>
 
-          {/* Start Date */}
-          <button
-            type="button"
-            onClick={() => setActivePanel(activePanel === 'startDate' ? null : 'startDate')}
-            className={`col-span-1 sm:flex-[1.3] text-left px-5 py-4 transition-colors border-r border-gray-200 ${activePanel === 'startDate' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
-          >
-            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'startDate' ? 'text-[#1F7AC4]' : 'text-gray-500'}`}>
-              <CalendarDays className="w-3 h-3" />
-              Start Date
-            </div>
-            {startDisplay ? (
-              <>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-gray-900 leading-none">{startDisplay.day}</span>
-                  <span className="text-base font-bold text-gray-900">{startDisplay.monthYear}</span>
-                </div>
-                <div className="text-xs text-gray-500 mt-0.5">{startDisplay.weekday}</div>
-              </>
-            ) : (
-              <span className="text-lg font-bold text-gray-400">Select date</span>
-            )}
-          </button>
+          {/* Dates wrapper — relative so calendar anchors under the date fields */}
+          <div className="col-span-2 grid grid-cols-2 sm:flex sm:flex-[2.6] relative sm:border-r sm:border-gray-200">
+            {/* Start Date */}
+            <button
+              type="button"
+              onClick={() => { setDateTab('start'); setActivePanel('dates'); }}
+              className={`sm:flex-1 text-left px-5 py-4 transition-colors border-r border-gray-200 ${activePanel === 'dates' && dateTab === 'start' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+            >
+              <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'dates' && dateTab === 'start' ? 'text-[#1F7AC4]' : 'text-gray-500'}`}>
+                <CalendarDays className="w-3 h-3" />
+                Start Date
+              </div>
+              {startDisplay ? (
+                <>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-bold text-gray-900 leading-none">{startDisplay.day}</span>
+                    <span className="text-base font-bold text-gray-900">{startDisplay.monthYear}</span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5">{startDisplay.weekday}</div>
+                </>
+              ) : (
+                <span className="text-lg font-bold text-gray-400">Select date</span>
+              )}
+            </button>
 
-          {/* End Date / Tenure */}
-          <button
-            type="button"
-            onClick={() => setActivePanel(activePanel === 'endDate' ? null : 'endDate')}
-            className={`col-span-1 sm:flex-[1.3] text-left px-5 py-4 transition-colors sm:border-r sm:border-gray-200 ${activePanel === 'endDate' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
-          >
-            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'endDate' ? 'text-[#1F7AC4]' : 'text-gray-500'}`}>
-              <CalendarDays className="w-3 h-3" />
-              {isStudent ? 'Tenure' : 'End Date'}
-            </div>
-            {isStudent ? (
-              <span className="text-lg font-bold text-gray-900">
-                {TENURE_OPTIONS.find((o) => o.value === tenureInMonths)?.label}
-              </span>
-            ) : endDisplay ? (
-              <>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-gray-900 leading-none">{endDisplay.day}</span>
-                  <span className="text-base font-bold text-gray-900">{endDisplay.monthYear}</span>
+            {/* End Date / Tenure */}
+            <button
+              type="button"
+              onClick={() => {
+                if (isStudent) {
+                  setActivePanel(activePanel === 'tenure' ? null : 'tenure');
+                } else {
+                  setDateTab('end');
+                  setActivePanel('dates');
+                }
+              }}
+              className={`sm:flex-1 text-left px-5 py-4 transition-colors ${(activePanel === 'dates' && dateTab === 'end') || activePanel === 'tenure' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+            >
+              <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${(activePanel === 'dates' && dateTab === 'end') || activePanel === 'tenure' ? 'text-[#1F7AC4]' : 'text-gray-500'}`}>
+                <CalendarDays className="w-3 h-3" />
+                {isStudent ? 'Tenure' : 'End Date'}
+              </div>
+              {isStudent ? (
+                <span className="text-lg font-bold text-gray-900">
+                  {TENURE_OPTIONS.find((o) => o.value === tenureInMonths)?.label}
+                </span>
+              ) : endDisplay ? (
+                <>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-bold text-gray-900 leading-none">{endDisplay.day}</span>
+                    <span className="text-base font-bold text-gray-900">{endDisplay.monthYear}</span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5">{endDisplay.weekday}</div>
+                </>
+              ) : (
+                <span className="text-lg font-bold text-gray-400">Select date</span>
+              )}
+            </button>
+
+            {/* Shared CalendarPanel for trip start/end dates */}
+            {!isStudent && (() => {
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const startObj = startDate ? new Date(startDate + 'T00:00:00') : null;
+              const endObj = endDate ? new Date(endDate + 'T00:00:00') : null;
+              const toStr = (d: Date) =>
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+              return (
+                <CalendarPanel
+                  isOpen={activePanel === 'dates'}
+                  mode="range"
+                  startDate={startObj}
+                  endDate={endObj}
+                  activeTab={dateTab}
+                  onActiveTabChange={setDateTab}
+                  startLabel="Start date"
+                  endLabel="End date"
+                  minDate={today}
+                  onChange={(start, end) => {
+                    setStartDate(toStr(start));
+                    if (end) setEndDate(toStr(end));
+                  }}
+                  onClose={() => setActivePanel(null)}
+                />
+              );
+            })()}
+
+            {/* Student tenure dropdown */}
+            {activePanel === 'tenure' && (
+              <div className="absolute top-full left-0 sm:left-auto sm:right-0 z-50 w-full sm:w-72 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 p-4">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Tenure</p>
+                <div className="space-y-1">
+                  {TENURE_OPTIONS.map((o) => (
+                    <button
+                      key={o.value}
+                      type="button"
+                      onClick={() => { setTenureInMonths(o.value); setActivePanel(null); }}
+                      className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${tenureInMonths === o.value ? 'bg-blue-50 text-[#1F7AC4]' : 'hover:bg-gray-50 text-gray-700'}`}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
                 </div>
-                <div className="text-xs text-gray-500 mt-0.5">{endDisplay.weekday}</div>
-              </>
-            ) : (
-              <span className="text-lg font-bold text-gray-400">Select date</span>
+              </div>
             )}
-          </button>
+          </div>
 
           {/* Travellers */}
           <button
@@ -326,102 +417,65 @@ export const TravelInsurance = () => {
 
         {/* Destination Dropdown */}
         {activePanel === 'destination' && (
-          <div className="absolute top-full left-0 z-50 w-full sm:w-80 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 overflow-hidden">
+          <div className="absolute top-full left-0 z-50 w-full sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 overflow-hidden">
             <div className="p-3 border-b border-gray-100">
               <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg">
                 <Search className="w-4 h-4 text-gray-400" />
                 <input
                   autoFocus
                   type="text"
-                  value={countryQuery}
-                  onChange={(e) => setCountryQuery(e.target.value)}
-                  placeholder="Search country..."
+                  value={locationQuery}
+                  onChange={(e) => setLocationQuery(e.target.value)}
+                  placeholder="Type a city, region or country (e.g. Kolkata, Paris)"
                   className="flex-1 outline-none text-sm text-gray-800 placeholder-gray-400"
                 />
+                {searching && (
+                  <div className="w-3 h-3 border-2 border-gray-200 border-t-[#1F7AC4] rounded-full animate-spin" />
+                )}
               </div>
               {destinations.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {destinations.map((c) => (
-                    <span key={c.code} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-[#1F7AC4] text-xs font-medium rounded-full border border-blue-200">
-                      {c.name}
-                      <button type="button" onClick={() => setDestinations((prev) => prev.filter((d) => d.code !== c.code))} className="text-blue-300 hover:text-blue-600">×</button>
+                  {destinations.map((d) => (
+                    <span key={d.placeId} className="inline-flex items-center gap-1 max-w-full px-2 py-0.5 bg-blue-50 text-[#1F7AC4] text-xs font-medium rounded-full border border-blue-200">
+                      <span className="truncate" title={d.displayName}>{d.displayName}</span>
+                      <button type="button" onClick={() => removeDestination(d.placeId)} className="text-blue-300 hover:text-blue-600 flex-shrink-0">×</button>
                     </span>
                   ))}
                 </div>
               )}
             </div>
-            <div className="max-h-56 overflow-y-auto">
-              {filteredCountries.map((c) => {
-                const checked = !!destinations.find((d) => d.code === c.code);
-                return (
-                  <button
-                    key={c.code}
-                    type="button"
-                    onClick={() => toggleCountry(c)}
-                    className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 text-sm border-b border-gray-50 last:border-0"
-                  >
-                    <span className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${checked ? 'border-[#1F7AC4] bg-[#1F7AC4]' : 'border-gray-300'}`}>
-                      {checked && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                    </span>
-                    <span className="text-gray-800">{c.name}</span>
-                    <span className="ml-auto text-xs text-gray-400 font-mono">{c.code}</span>
-                  </button>
-                );
-              })}
+            <div className="max-h-64 overflow-y-auto">
+              {locationQuery.trim().length < 2 ? (
+                <div className="px-4 py-6 text-center text-xs text-gray-400">
+                  Start typing to search locations worldwide
+                </div>
+              ) : !searching && suggestions.length === 0 ? (
+                <div className="px-4 py-6 text-center text-xs text-gray-400">No locations found</div>
+              ) : (
+                suggestions.map((r) => {
+                  const already = destinations.some((d) => d.placeId === r.place_id);
+                  return (
+                    <button
+                      key={r.place_id}
+                      type="button"
+                      onClick={() => pickLocation(r)}
+                      disabled={already}
+                      className="w-full text-left px-4 py-2.5 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-start gap-3 text-sm border-b border-gray-50 last:border-0"
+                    >
+                      <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-gray-800 truncate">{shortLocationName(r.display_name)}</div>
+                        <div className="text-xs text-gray-500 truncate">{r.display_name}</div>
+                      </div>
+                      {already && <span className="text-[10px] text-[#1F7AC4] font-semibold flex-shrink-0">ADDED</span>}
+                    </button>
+                  );
+                })
+              )}
             </div>
             <div className="p-3 border-t border-gray-100">
               <button type="button" onClick={() => setActivePanel(null)} className="w-full py-2 bg-[#1F7AC4] text-white text-sm font-bold rounded-lg">Done</button>
             </div>
-          </div>
-        )}
-
-        {/* Start Date Dropdown */}
-        {activePanel === 'startDate' && (
-          <div className="absolute top-full left-0 z-50 w-full sm:w-72 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 p-4">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Travel Start Date</p>
-            <input
-              autoFocus
-              type="date"
-              value={startDate}
-              onChange={(e) => { setStartDate(e.target.value); if (endDate && e.target.value >= endDate) setEndDate(''); setActivePanel(null); }}
-              min={todayStr()}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1F7AC4] focus:border-[#1F7AC4] outline-none text-sm"
-            />
-          </div>
-        )}
-
-        {/* End Date / Tenure Dropdown */}
-        {activePanel === 'endDate' && (
-          <div className="absolute top-full left-0 z-50 w-full sm:w-72 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 p-4">
-            {isStudent ? (
-              <>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Tenure</p>
-                <div className="space-y-1">
-                  {TENURE_OPTIONS.map((o) => (
-                    <button
-                      key={o.value}
-                      type="button"
-                      onClick={() => { setTenureInMonths(o.value); setActivePanel(null); }}
-                      className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${tenureInMonths === o.value ? 'bg-blue-50 text-[#1F7AC4]' : 'hover:bg-gray-50 text-gray-700'}`}
-                    >
-                      {o.label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Travel End Date</p>
-                <input
-                  autoFocus
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => { setEndDate(e.target.value); setActivePanel(null); }}
-                  min={startDate || todayStr()}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1F7AC4] focus:border-[#1F7AC4] outline-none text-sm"
-                />
-              </>
-            )}
           </div>
         )}
 

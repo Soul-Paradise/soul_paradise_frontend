@@ -71,6 +71,28 @@ interface QuoteResponse {
     annualMultiTripQuotes?: InsuranceQuote[];
     [key: string]: InsuranceQuote[] | undefined;
   };
+  tui?: string;
+}
+
+interface ProvidersResponse {
+  provider: string[];
+  insuranceType: string[];
+  providerCheckList: Record<string, number>;
+  tui: string;
+  code: string;
+  msg: string[];
+}
+
+// Provider names differ between GetProviderCheckList ("ICICILombardNew",
+// "TATAAIG", …) and quoteslisting responses ("ICICI Lombard", …).
+// Normalize for fuzzy matching.
+const normalizeProvider = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+function providerMatches(a: string, b: string): boolean {
+  const na = normalizeProvider(a);
+  const nb = normalizeProvider(b);
+  if (!na || !nb) return false;
+  return na === nb || na.startsWith(nb) || nb.startsWith(na);
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -98,14 +120,17 @@ function getQuotesList(data: QuoteResponse): InsuranceQuote[] {
 function QuoteCard({
   quote,
   searchParams,
+  tui,
 }: {
   quote: InsuranceQuote;
   searchParams: URLSearchParams;
+  tui: string;
 }) {
   const router = useRouter();
 
   const handleSelect = () => {
     const p = new URLSearchParams(searchParams);
+    if (tui) p.set('tui', tui);
     router.push(`/booking/insurance/${quote.planId}?${p.toString()}`);
   };
 
@@ -209,6 +234,7 @@ function QuoteCard({
 // ── Filter Sidebar ─────────────────────────────────────────────────────────
 
 function FilterSidebar({
+  providers,
   providerSummary,
   coverageSummary,
   selectedProviders,
@@ -216,6 +242,7 @@ function FilterSidebar({
   onProvidersChange,
   onCoverageChange,
 }: {
+  providers: string[];
   providerSummary: ProviderSummary[];
   coverageSummary: CoverageSummary[];
   selectedProviders: string[];
@@ -231,23 +258,29 @@ function FilterSidebar({
     );
   };
 
+  const countFor = (name: string): number =>
+    providerSummary.find((p) => providerMatches(p.providerName, name))?.quotesCount ?? 0;
+
+  const labelFor = (name: string): string =>
+    providerSummary.find((p) => providerMatches(p.providerName, name))?.providerName ?? name;
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-6 sticky top-4">
       {/* Providers */}
       <div>
         <h4 className="text-sm font-semibold text-gray-700 mb-3">Insurance Provider</h4>
         <div className="space-y-2">
-          {providerSummary.map((p) => (
-            <label key={p.providerName} className="flex items-center gap-2.5 cursor-pointer">
+          {providers.map((name) => (
+            <label key={name} className="flex items-center gap-2.5 cursor-pointer">
               <input
                 type="checkbox"
-                checked={selectedProviders.includes(p.providerName)}
-                onChange={() => toggleProvider(p.providerName)}
+                checked={selectedProviders.includes(name)}
+                onChange={() => toggleProvider(name)}
                 className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
               />
-              <span className="text-sm text-gray-700 flex-1">{p.providerName}</span>
+              <span className="text-sm text-gray-700 flex-1">{labelFor(name)}</span>
               <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">
-                {p.quotesCount}
+                {countFor(name)}
               </span>
             </label>
           ))}
@@ -304,6 +337,7 @@ function InsuranceResultsInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [data, setData] = useState<QuoteResponse | null>(null);
+  const [providers, setProviders] = useState<string[]>([]);
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
   const [selectedCoverage, setSelectedCoverage] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'price' | 'coverage'>('price');
@@ -318,27 +352,36 @@ function InsuranceResultsInner() {
       travellersRaw = [];
     }
 
-    const fetchQuotes = async () => {
+    const fetchAll = async () => {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`${API_URL}/insurance/quotes`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            policyType,
-            countryCodes: countryCodes.split(',').filter(Boolean),
-            countryNames: countryNames.split(',').filter(Boolean),
-            startDate,
-            endDate,
-            tenureInMonths,
-            isPed: false,
-            travellers: travellersRaw,
+        const [providersRes, quotesRes] = await Promise.all([
+          fetch(`${API_URL}/insurance/providers`),
+          fetch(`${API_URL}/insurance/quotes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              policyType,
+              countryCodes: countryCodes.split(',').filter(Boolean),
+              countryNames: countryNames.split(',').filter(Boolean),
+              startDate,
+              endDate,
+              tenureInMonths,
+              isPed: false,
+              travellers: travellersRaw,
+            }),
           }),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json: QuoteResponse = await res.json();
-        setData(json);
+        ]);
+        if (!quotesRes.ok) throw new Error(`HTTP ${quotesRes.status}`);
+        const quotesJson: QuoteResponse = await quotesRes.json();
+        setData(quotesJson);
+        if (providersRes.ok) {
+          const providersJson: ProvidersResponse = await providersRes.json();
+          setProviders(providersJson.provider ?? []);
+        } else {
+          setProviders([]);
+        }
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Failed to fetch quotes. Please try again.');
       } finally {
@@ -346,14 +389,17 @@ function InsuranceResultsInner() {
       }
     };
 
-    fetchQuotes();
+    fetchAll();
   }, [searchParams]);
 
   const allQuotes = data ? getQuotesList(data) : [];
 
   const filteredQuotes = allQuotes
     .filter((q) => {
-      if (selectedProviders.length > 0 && !selectedProviders.includes(q.providerName)) return false;
+      if (
+        selectedProviders.length > 0 &&
+        !selectedProviders.some((sp) => providerMatches(sp, q.providerName))
+      ) return false;
       if (selectedCoverage) {
         const [min, max] = selectedCoverage.split('-').map(Number);
         if (q.coverage.amount < min || q.coverage.amount > max) return false;
@@ -418,6 +464,7 @@ function InsuranceResultsInner() {
             {/* Sidebar */}
             <aside className="hidden lg:block w-60 flex-shrink-0">
               <FilterSidebar
+                providers={providers}
                 providerSummary={data.providerSummary || []}
                 coverageSummary={data.coverageSummary || []}
                 selectedProviders={selectedProviders}
@@ -471,6 +518,7 @@ function InsuranceResultsInner() {
                       key={`${quote.planId}-${quote.providerName}`}
                       quote={quote}
                       searchParams={searchParams}
+                      tui={data.tui ?? ''}
                     />
                   ))}
                 </div>

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AirportPicker } from './AirportPicker';
 import { DateDisplay } from './DateDisplay';
+import { CalendarPanel } from './CalendarPanel';
 import {
   TravellerSelector,
   type TravellerCounts,
@@ -13,14 +14,37 @@ import type { Airport } from '@/lib/flights-api';
 
 type TripType = 'oneway' | 'roundtrip';
 
+function parseDate(s: string): Date | null {
+  if (!s) return null;
+  const d = new Date(s + 'T00:00:00');
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function toDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function defaultToday(): string {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return toDateStr(d);
+}
+
+function defaultTomorrow(): string {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 1);
+  return toDateStr(d);
+}
+
 export const FlightBooking = () => {
   const router = useRouter();
 
   const [tripType, setTripType] = useState<TripType>('oneway');
   const [fromAirport, setFromAirport] = useState<Airport | null>(null);
   const [toAirport, setToAirport] = useState<Airport | null>(null);
-  const [departDate, setDepartDate] = useState('');
-  const [returnDate, setReturnDate] = useState('');
+  const [departDate, setDepartDate] = useState(defaultToday);
+  const [returnDate, setReturnDate] = useState(defaultTomorrow);
   const [travellers, setTravellers] = useState<TravellerCounts>({
     adults: 1,
     children: 0,
@@ -28,6 +52,21 @@ export const FlightBooking = () => {
   });
   const [cabinClass, setCabinClass] = useState<CabinClass>('E');
   const [error, setError] = useState('');
+
+  // Date panel state
+  const [datePanelOpen, setDatePanelOpen] = useState(false);
+  const [dateTab, setDateTab] = useState<'start' | 'end'>('start');
+  const datesWrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (datesWrapperRef.current && !datesWrapperRef.current.contains(e.target as Node)) {
+        setDatePanelOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
   const swapLocations = () => {
     const temp = fromAirport;
     setFromAirport(toAirport);
@@ -84,10 +123,16 @@ export const FlightBooking = () => {
   const handleReturnClick = () => {
     if (tripType === 'oneway') {
       setTripType('roundtrip');
+      setDateTab('end');
+      setDatePanelOpen(true);
     }
   };
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const departDateObj = parseDate(departDate);
+  const returnDateObj = parseDate(returnDate);
 
   return (
     <div className="space-y-5">
@@ -106,10 +151,7 @@ export const FlightBooking = () => {
                 name="tripType"
                 value={opt.value}
                 checked={tripType === opt.value}
-                onChange={() => {
-                  setTripType(opt.value);
-                  if (opt.value === 'oneway') setReturnDate('');
-                }}
+                onChange={() => setTripType(opt.value)}
                 className="w-4 h-4 accent-[#1F7AC4]"
               />
               <span className={`text-sm font-semibold ${tripType === opt.value ? 'text-[#1F7AC4]' : 'text-gray-600'}`}>
@@ -168,26 +210,46 @@ export const FlightBooking = () => {
             />
           </div>
 
-          {/* DEPARTURE — left half on mobile */}
-          <div className="col-span-1 sm:flex-[1.3] min-w-0 border-r border-gray-200">
-            <DateDisplay
-              label="Departure"
-              value={departDate}
-              onChange={setDepartDate}
-              minDate={today}
-            />
-          </div>
+          {/* Dates wrapper — relative so calendar anchors under both date fields */}
+          <div
+            ref={datesWrapperRef}
+            className="col-span-2 grid grid-cols-2 sm:flex sm:flex-[2.6] min-w-0 sm:border-r sm:border-gray-200 relative"
+          >
+            <div className="sm:flex-1 min-w-0 border-r border-gray-200">
+              <DateDisplay
+                label="Departure"
+                value={departDate}
+                active={datePanelOpen && dateTab === 'start'}
+                onClick={() => { setDateTab('start'); setDatePanelOpen(true); }}
+              />
+            </div>
+            <div className="sm:flex-1 min-w-0">
+              <DateDisplay
+                label="Return"
+                value={returnDate}
+                active={datePanelOpen && dateTab === 'end'}
+                disabled={tripType === 'oneway'}
+                emptyText="Book a round trip to save more"
+                onClick={() => { setDateTab('end'); setDatePanelOpen(true); }}
+                onClickWhenEmpty={handleReturnClick}
+              />
+            </div>
 
-          {/* RETURN — right half on mobile */}
-          <div className="col-span-1 sm:flex-[1.3] min-w-0 sm:border-r sm:border-gray-200">
-            <DateDisplay
-              label="Return"
-              value={returnDate}
-              onChange={setReturnDate}
-              minDate={departDate || today}
-              disabled={tripType === 'oneway'}
-              emptyText="Book a round trip to save more"
-              onClickWhenEmpty={handleReturnClick}
+            <CalendarPanel
+              isOpen={datePanelOpen}
+              mode={tripType === 'roundtrip' ? 'range' : 'single'}
+              startDate={departDateObj}
+              endDate={returnDateObj}
+              activeTab={dateTab}
+              onActiveTabChange={setDateTab}
+              startLabel="Departure"
+              endLabel="Return"
+              minDate={today}
+              onChange={(start, end) => {
+                setDepartDate(toDateStr(start));
+                if (tripType === 'roundtrip' && end) setReturnDate(toDateStr(end));
+              }}
+              onClose={() => setDatePanelOpen(false)}
             />
           </div>
 

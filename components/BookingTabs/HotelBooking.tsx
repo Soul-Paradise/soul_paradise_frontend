@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, CalendarDays, ChevronDown, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, CalendarDays, ChevronDown, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { CalendarPanel } from './CalendarPanel';
 
 interface Location {
   id: string;
@@ -21,12 +22,6 @@ interface Room {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
-const MONTH_NAMES = [
-  'JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE',
-  'JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER',
-];
-const DAY_NAMES = ['Su','Mo','Tu','We','Th','Fr','Sa'];
-
 function formatDay(date: Date) {
   return date.getDate().toString().padStart(2, '0');
 }
@@ -36,75 +31,8 @@ function formatMonthYear(date: Date) {
 function formatWeekday(date: Date) {
   return date.toLocaleString('default', { weekday: 'long' });
 }
-function diffNights(a: Date, b: Date) {
-  return Math.round((b.getTime() - a.getTime()) / 86400000);
-}
 function toDateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-function isSameDay(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
-function CalendarMonth({
-  year, month, checkIn, checkOut, hoverDate, onSelect, onHover, minDate,
-}: {
-  year: number; month: number;
-  checkIn: Date | null; checkOut: Date | null; hoverDate: Date | null;
-  onSelect: (d: Date) => void; onHover: (d: Date | null) => void;
-  minDate: Date;
-}) {
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const rangeEnd = checkOut || hoverDate;
-
-  const cells: (Date | null)[] = Array(firstDay).fill(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
-
-  return (
-    <div className="flex-1 min-w-[260px]">
-      <div className="text-center font-bold text-red-500 mb-3 text-sm tracking-widest">
-        {MONTH_NAMES[month]} {year}
-      </div>
-      <div className="grid grid-cols-7 mb-1">
-        {DAY_NAMES.map((d) => (
-          <div key={d} className="text-center text-xs text-gray-500 font-medium py-1">{d}</div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7">
-        {cells.map((date, i) => {
-          if (!date) return <div key={i} />;
-          const isPast = date < minDate && !isSameDay(date, minDate);
-          const isCheckIn = checkIn && isSameDay(date, checkIn);
-          const isCheckOut = checkOut && isSameDay(date, checkOut);
-          const inRange =
-            checkIn && rangeEnd && !isCheckIn && !isCheckOut &&
-            date > checkIn && date < rangeEnd;
-
-          return (
-            <button
-              key={i}
-              disabled={isPast}
-              onMouseEnter={() => !isPast && onHover(date)}
-              onMouseLeave={() => onHover(null)}
-              onClick={() => !isPast && onSelect(date)}
-              className={[
-                'h-9 w-full text-sm font-medium transition-colors relative',
-                isPast ? 'text-gray-300 cursor-not-allowed' : 'cursor-pointer hover:bg-blue-100',
-                isCheckIn || isCheckOut
-                  ? 'bg-[#1a2b6b] text-white rounded-full z-10'
-                  : inRange
-                  ? 'bg-blue-100 text-blue-900'
-                  : 'text-gray-800',
-              ].join(' ')}
-            >
-              {date.getDate()}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 export const HotelBooking = () => {
@@ -121,10 +49,7 @@ export const HotelBooking = () => {
 
   // Panels
   const [activePanel, setActivePanel] = useState<'destination' | 'dates' | 'guests' | null>(null);
-  const [dateTab, setDateTab] = useState<'checkin' | 'checkout'>('checkin');
-  const [calMonth, setCalMonth] = useState({ year: today.getFullYear(), month: today.getMonth() });
-  const [hoverDate, setHoverDate] = useState<Date | null>(null);
-  const [selectingCheckout, setSelectingCheckout] = useState(false);
+  const [dateTab, setDateTab] = useState<'start' | 'end'>('start');
 
   // Destination search
   const [searchTerm, setSearchTerm] = useState('');
@@ -164,46 +89,9 @@ export const HotelBooking = () => {
     return () => clearTimeout(timer);
   }, [searchTerm, fetchSuggestions]);
 
-  function handleDateSelect(date: Date) {
-    if (!selectingCheckout) {
-      setCheckIn(date);
-      const nextDay = new Date(date);
-      nextDay.setDate(date.getDate() + 1);
-      if (checkOut <= date) setCheckOut(nextDay);
-      setSelectingCheckout(true);
-      setDateTab('checkout');
-    } else {
-      if (date <= checkIn) {
-        setCheckIn(date);
-        const nextDay = new Date(date);
-        nextDay.setDate(date.getDate() + 1);
-        setCheckOut(nextDay);
-      } else {
-        setCheckOut(date);
-        setActivePanel(null);
-        setSelectingCheckout(false);
-      }
-    }
-  }
-
-  function openDatePanel(tab: 'checkin' | 'checkout') {
+  function openDatePanel(tab: 'start' | 'end') {
     setDateTab(tab);
-    setSelectingCheckout(tab === 'checkout');
     setActivePanel('dates');
-    setCalMonth({ year: checkIn.getFullYear(), month: checkIn.getMonth() });
-  }
-
-  function prevMonth() {
-    setCalMonth(({ year, month }) => {
-      if (month === 0) return { year: year - 1, month: 11 };
-      return { year, month: month - 1 };
-    });
-  }
-  function nextMonth() {
-    setCalMonth(({ year, month }) => {
-      if (month === 11) return { year: year + 1, month: 0 };
-      return { year, month: month + 1 };
-    });
   }
 
   function totalGuests() {
@@ -230,12 +118,6 @@ export const HotelBooking = () => {
   function removeRoom(idx: number) {
     setRooms((prev) => prev.filter((_, i) => i !== idx));
   }
-
-  const nights = diffNights(checkIn, checkOut);
-
-  const nextCalMonth = calMonth.month === 11
-    ? { year: calMonth.year + 1, month: 0 }
-    : { year: calMonth.year, month: calMonth.month + 1 };
 
   function handleSearch() {
     if (!destination) {
@@ -280,45 +162,66 @@ export const HotelBooking = () => {
             </div>
           </button>
 
-          {/* Check In */}
-          <button
-            onClick={() => openDatePanel('checkin')}
-            className={[
-              'col-span-1 sm:flex-1 text-left px-5 py-4 border-r border-gray-200 transition-colors',
-              activePanel === 'dates' && dateTab === 'checkin' ? 'bg-blue-50' : 'hover:bg-gray-50',
-            ].join(' ')}
-          >
-            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'dates' && dateTab === 'checkin' ? 'text-blue-600' : 'text-gray-500'}`}>
-              <CalendarDays className="w-3 h-3" />
-              Check In
-              <ChevronDown className="w-3 h-3 ml-0.5" />
-            </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-bold text-gray-900 leading-none">{formatDay(checkIn)}</span>
-              <span className="text-base font-bold text-gray-900">{formatMonthYear(checkIn)}</span>
-            </div>
-            <div className="text-xs text-gray-500 mt-0.5">{formatWeekday(checkIn)}</div>
-          </button>
+          {/* Dates wrapper — relative so the calendar anchors under the date fields */}
+          <div className="col-span-2 grid grid-cols-2 sm:flex sm:flex-[2] relative">
+            {/* Check In */}
+            <button
+              onClick={() => openDatePanel('start')}
+              className={[
+                'sm:flex-1 text-left px-5 py-4 border-r border-gray-200 transition-colors',
+                activePanel === 'dates' && dateTab === 'start' ? 'bg-blue-50' : 'hover:bg-gray-50',
+              ].join(' ')}
+            >
+              <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'dates' && dateTab === 'start' ? 'text-blue-600' : 'text-gray-500'}`}>
+                <CalendarDays className="w-3 h-3" />
+                Check In
+                <ChevronDown className="w-3 h-3 ml-0.5" />
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-bold text-gray-900 leading-none">{formatDay(checkIn)}</span>
+                <span className="text-base font-bold text-gray-900">{formatMonthYear(checkIn)}</span>
+              </div>
+              <div className="text-xs text-gray-500 mt-0.5">{formatWeekday(checkIn)}</div>
+            </button>
 
-          {/* Check Out */}
-          <button
-            onClick={() => openDatePanel('checkout')}
-            className={[
-              'col-span-1 sm:flex-1 text-left px-5 py-4 sm:border-r sm:border-gray-200 transition-colors',
-              activePanel === 'dates' && dateTab === 'checkout' ? 'bg-blue-50' : 'hover:bg-gray-50',
-            ].join(' ')}
-          >
-            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'dates' && dateTab === 'checkout' ? 'text-blue-600' : 'text-gray-500'}`}>
-              <CalendarDays className="w-3 h-3" />
-              Check Out
-              <ChevronDown className="w-3 h-3 ml-0.5" />
-            </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-bold text-gray-900 leading-none">{formatDay(checkOut)}</span>
-              <span className="text-base font-bold text-gray-900">{formatMonthYear(checkOut)}</span>
-            </div>
-            <div className="text-xs text-gray-500 mt-0.5">{formatWeekday(checkOut)}</div>
-          </button>
+            {/* Check Out */}
+            <button
+              onClick={() => openDatePanel('end')}
+              className={[
+                'sm:flex-1 text-left px-5 py-4 sm:border-r sm:border-gray-200 transition-colors',
+                activePanel === 'dates' && dateTab === 'end' ? 'bg-blue-50' : 'hover:bg-gray-50',
+              ].join(' ')}
+            >
+              <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'dates' && dateTab === 'end' ? 'text-blue-600' : 'text-gray-500'}`}>
+                <CalendarDays className="w-3 h-3" />
+                Check Out
+                <ChevronDown className="w-3 h-3 ml-0.5" />
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-bold text-gray-900 leading-none">{formatDay(checkOut)}</span>
+                <span className="text-base font-bold text-gray-900">{formatMonthYear(checkOut)}</span>
+              </div>
+              <div className="text-xs text-gray-500 mt-0.5">{formatWeekday(checkOut)}</div>
+            </button>
+
+            <CalendarPanel
+              isOpen={activePanel === 'dates'}
+              mode="range"
+              startDate={checkIn}
+              endDate={checkOut}
+              activeTab={dateTab}
+              onActiveTabChange={setDateTab}
+              startLabel="Check-in"
+              endLabel="Check-out"
+              minDate={today}
+              onChange={(start, end) => {
+                setCheckIn(start);
+                if (end) setCheckOut(end);
+              }}
+              onClose={() => setActivePanel(null)}
+            />
+
+          </div>
 
           {/* Rooms & Guests — full width on mobile */}
           <button
@@ -381,54 +284,6 @@ export const HotelBooking = () => {
                   <span className="ml-auto text-xs text-gray-400 mt-0.5">{loc.type}</span>
                 </button>
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* Date Picker Dropdown */}
-        {activePanel === 'dates' && (
-          <div className="absolute top-full left-0 right-0 z-50 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 p-4">
-            {/* Tabs */}
-            <div className="flex gap-4 mb-4 border-b border-gray-100">
-              <button
-                onClick={() => { setDateTab('checkin'); setSelectingCheckout(false); }}
-                className={`pb-2 text-sm font-bold border-b-2 transition-colors ${dateTab === 'checkin' ? 'border-[#1a2b6b] text-[#1a2b6b]' : 'border-transparent text-gray-400'}`}
-              >
-                CHECK-IN<br />
-                <span className="text-base font-bold">
-                  {checkIn.toLocaleString('default', { month: 'short' })} {checkIn.getDate()}, {checkIn.getFullYear()}
-                </span>
-              </button>
-              <button
-                onClick={() => { setDateTab('checkout'); setSelectingCheckout(true); }}
-                className={`pb-2 text-sm font-bold border-b-2 transition-colors ${dateTab === 'checkout' ? 'border-[#1a2b6b] text-[#1a2b6b]' : 'border-transparent text-gray-400'}`}
-              >
-                CHECK-OUT<br />
-                <span className="text-base font-bold">
-                  {checkOut.toLocaleString('default', { month: 'short' })} {checkOut.getDate()}, {checkOut.getFullYear()}
-                </span>
-              </button>
-            </div>
-            {/* Calendars: 1 on mobile, 2 on sm+ */}
-            <div className="flex gap-6">
-              <button onClick={prevMonth} className="self-start mt-7 p-1 hover:bg-gray-100 rounded-full text-gray-400">
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <CalendarMonth
-                year={calMonth.year} month={calMonth.month}
-                checkIn={checkIn} checkOut={checkOut} hoverDate={hoverDate}
-                onSelect={handleDateSelect} onHover={setHoverDate} minDate={today}
-              />
-              <div className="hidden sm:flex flex-1">
-                <CalendarMonth
-                  year={nextCalMonth.year} month={nextCalMonth.month}
-                  checkIn={checkIn} checkOut={checkOut} hoverDate={hoverDate}
-                  onSelect={handleDateSelect} onHover={setHoverDate} minDate={today}
-                />
-              </div>
-              <button onClick={nextMonth} className="self-start mt-7 p-1 hover:bg-gray-100 rounded-full text-gray-400">
-                <ChevronRight className="w-5 h-5" />
-              </button>
             </div>
           </div>
         )}

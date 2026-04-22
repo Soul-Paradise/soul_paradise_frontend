@@ -53,6 +53,7 @@ interface PlanDetails {
   };
   highlights: string[];
   specialHighlights: string[];
+  providerSpecificFields: string[];
   isWithSubLimits: boolean;
   planType: string;
   policyType: string;
@@ -60,6 +61,7 @@ interface PlanDetails {
   maxTripDays: number;
   commission: number;
   tds: number;
+  ssrFeeCode: string | null;
 }
 
 // ── Inner Page ─────────────────────────────────────────────────────────────
@@ -75,11 +77,13 @@ function PlanDetailsInner() {
   const startDate = searchParams.get('startDate') || '';
   const endDate = searchParams.get('endDate') || '';
   const tenureInMonths = Number(searchParams.get('tenureInMonths') || '0');
+  const tui = searchParams.get('tui') || '';
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [plan, setPlan] = useState<PlanDetails | null>(null);
   const [activeTab, setActiveTab] = useState<'benefits' | 'notes' | 'questions'>('benefits');
+  const [showAllBenefits, setShowAllBenefits] = useState(false);
 
   useEffect(() => {
     let travellers: Array<{ id: number; birthdate: string; relation: string }> = [];
@@ -87,6 +91,12 @@ function PlanDetailsInner() {
       travellers = JSON.parse(searchParams.get('travellers') || '[]');
     } catch {
       travellers = [];
+    }
+
+    if (!tui) {
+      setError('Search session expired. Please run the search again.');
+      setLoading(false);
+      return;
     }
 
     const fetchPlan = async () => {
@@ -105,6 +115,7 @@ function PlanDetailsInner() {
             isPED: false,
             tenureInMonths,
             travellers,
+            tui,
           }),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -208,13 +219,51 @@ function PlanDetailsInner() {
 
             <div className="text-right">
               <p className="text-xs text-gray-400">Total Premium</p>
-              <p className="text-3xl font-bold text-gray-800">₹{Math.round(plan.premium.total).toLocaleString()}</p>
+              {plan.premium.netTotal > 0 && plan.premium.netTotal < plan.premium.total ? (
+                <>
+                  <div className="flex items-baseline gap-2 justify-end">
+                    <span className="text-base text-gray-400 line-through">
+                      ₹{Math.round(plan.premium.total).toLocaleString()}
+                    </span>
+                    <span className="text-3xl font-bold text-gray-800">
+                      ₹{Math.round(plan.premium.netTotal).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-green-600 font-medium">
+                    You save ₹{Math.round(plan.premium.total - plan.premium.netTotal).toLocaleString()}
+                  </p>
+                </>
+              ) : (
+                <p className="text-3xl font-bold text-gray-800">₹{Math.round(plan.premium.total).toLocaleString()}</p>
+              )}
               <p className="text-xs text-gray-400">incl. ₹{Math.round(plan.premium.tax)} tax</p>
               <p className="text-sm text-gray-500 mt-1">
                 Coverage: <span className="font-semibold">{plan.coverage.currency} {plan.coverage.amount.toLocaleString()}</span>
               </p>
             </div>
           </div>
+
+          {/* Special Highlights (provider-promoted features) */}
+          {plan.specialHighlights?.length > 0 && (
+            <div className="mt-5 pt-5 border-t border-gray-100">
+              <h3 className="text-sm font-semibold text-amber-700 mb-3 flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+                Special Features
+              </h3>
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {plan.specialHighlights.map((h, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-amber-900 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                    <svg className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    {h}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Highlights */}
           {plan.highlights.length > 0 && (
@@ -326,28 +375,60 @@ function PlanDetailsInner() {
 
           {/* Tab Content */}
           <div className="p-5">
-            {activeTab === 'benefits' && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-2.5 pr-4 text-gray-500 font-medium">Benefit</th>
-                      <th className="text-left py-2.5 pr-4 text-gray-500 font-medium">Sum Insured</th>
-                      <th className="text-left py-2.5 text-gray-500 font-medium">Deductible</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {plan.coverageDetails.benefits.map((b, i) => (
-                      <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                        <td className="py-3 pr-4 text-gray-700 font-medium">{b.name}</td>
-                        <td className="py-3 pr-4 text-gray-600">{b.sumInsured || '—'}</td>
-                        <td className="py-3 text-gray-500">{b.deductible || '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            {activeTab === 'benefits' && (() => {
+              const allBenefits = plan.coverageDetails.benefits;
+              const visibleBenefits = showAllBenefits ? allBenefits : allBenefits.slice(0, 5);
+              const hiddenCount = allBenefits.length - visibleBenefits.length;
+              return (
+                <div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100">
+                          <th className="text-left py-2.5 pr-4 text-gray-500 font-medium">Benefit</th>
+                          <th className="text-left py-2.5 pr-4 text-gray-500 font-medium">Sum Insured</th>
+                          <th className="text-left py-2.5 text-gray-500 font-medium">Deductible</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {visibleBenefits.map((b, i) => (
+                          <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                            <td className="py-3 pr-4 text-gray-700 font-medium">{b.name}</td>
+                            <td className="py-3 pr-4 text-gray-600">{b.sumInsured || '—'}</td>
+                            <td className="py-3 text-gray-500">{b.deductible || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {allBenefits.length > 5 && (
+                    <div className="flex justify-center mt-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowAllBenefits((v) => !v)}
+                        className="px-4 py-2 text-sm font-medium text-[var(--color-success)] hover:bg-green-50 rounded-lg transition-colors flex items-center gap-1.5"
+                      >
+                        {showAllBenefits ? (
+                          <>
+                            Show less
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                            </svg>
+                          </>
+                        ) : (
+                          <>
+                            Show {hiddenCount} more
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {activeTab === 'notes' && hasNotes && (
               <ul className="space-y-2">
@@ -387,7 +468,14 @@ function PlanDetailsInner() {
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
           <div>
             <p className="text-xs text-gray-400">Total Premium</p>
-            <p className="text-xl font-bold text-gray-800">₹{Math.round(plan.premium.total).toLocaleString()}</p>
+            {plan.premium.netTotal > 0 && plan.premium.netTotal < plan.premium.total ? (
+              <div className="flex items-baseline gap-2">
+                <span className="text-sm text-gray-400 line-through">₹{Math.round(plan.premium.total).toLocaleString()}</span>
+                <span className="text-xl font-bold text-gray-800">₹{Math.round(plan.premium.netTotal).toLocaleString()}</span>
+              </div>
+            ) : (
+              <p className="text-xl font-bold text-gray-800">₹{Math.round(plan.premium.total).toLocaleString()}</p>
+            )}
           </div>
           <div className="flex gap-3">
             <button
@@ -400,8 +488,9 @@ function PlanDetailsInner() {
               type="button"
               className="px-6 py-2.5 bg-[var(--color-success)] text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors"
               onClick={() => {
-                // Future: navigate to booking form
-                alert('Booking form coming soon!');
+                const params = new URLSearchParams(searchParams);
+                if (tui) params.set('tui', tui);
+                router.push(`/booking/insurance/${planId}/book?${params.toString()}`);
               }}
             >
               Proceed to Book →
