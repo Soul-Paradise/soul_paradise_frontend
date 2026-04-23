@@ -18,12 +18,22 @@ interface StashedBookingContext {
   recommendationId: string;
   priceId: string;
   netAmount: number;
+  destinationCountryCode: string | null;
   searchTracingKey: string;
   checkIn: string; // MM/DD/YYYY (Benzy)
   checkOut: string;
   uiCheckIn: string; // YYYY-MM-DD
   uiCheckOut: string;
   locationName: string | null;
+  roomSlots: Array<{
+    roomId: string;
+    roomGroupId: string;
+    supplierName: string;
+    occupancyId: number;
+    numOfAdults: number;
+    numOfChildren: number;
+    childAges: number[];
+  }>;
 }
 
 interface CancellationRule {
@@ -41,6 +51,7 @@ interface StashedPricing {
   roomName: string;
   totalRate: number;
   baseRate: number;
+  perRoomRates: Array<{ baseRate: number; totalRate: number }>;
   currency: string;
   taxes: Array<{ amount: number; description: string | null }>;
   discounts: Array<{ amount: number; description: string | null }>;
@@ -158,6 +169,8 @@ interface BookingVoucher {
   totalAmount: number;
   grossAmount: number;
   netAmount: number;
+  supplierGrossAmount: number;
+  supplierNetAmount: number;
   currency: string;
   checkInDate: string;
   checkOutDate: string;
@@ -476,6 +489,12 @@ function HotelBookPageInner() {
       setSubmitError(err);
       return;
     }
+    if (bookingContext.roomSlots.length < guestsByRoom.length) {
+      setSubmitError(
+        `Pricing returned ${bookingContext.roomSlots.length} room slots but ${guestsByRoom.length} rooms need booking. Please re-run pricing.`,
+      );
+      return;
+    }
     setSubmitError(null);
     setSubmitting(true);
 
@@ -488,6 +507,7 @@ function HotelBookPageInner() {
       recommendationId: bookingContext.recommendationId,
       hotelCode: bookingContext.hotelCode,
       netAmount: bookingContext.netAmount,
+      destinationCountryCode: bookingContext.destinationCountryCode,
       searchTracingKey: bookingContext.searchTracingKey,
       locationName: bookingContext.locationName,
       checkInDate: bookingContext.uiCheckIn,
@@ -505,21 +525,26 @@ function HotelBookPageInner() {
         gstMobile: gst.enabled ? gst.mobile : '',
         gstEmail: gst.enabled ? gst.email : '',
       },
-      rooms: guestsByRoom.map((guests) => ({
-        roomId: stash.selectedRoom.roomId,
-        roomGroupId: stash.selectedRoom.roomGroupId,
-        supplierName: stash.selectedRoom.supplierName,
-        guests: guests.map((g) => ({
-          title: g.title,
-          firstName: g.firstName,
-          lastName: g.lastName,
-          paxType: g.paxType,
-          age: g.age,
-          email: g.email,
-          mobile: g.mobile,
-          pan: g.pan,
-        })),
-      })),
+      rooms: guestsByRoom.map((guests, roomIdx) => {
+        const slot = bookingContext.roomSlots[roomIdx];
+        return {
+          roomId: slot.roomId,
+          roomGroupId: slot.roomGroupId,
+          supplierName: slot.supplierName,
+          occupancyId: slot.occupancyId,
+          pricingChildAges: slot.childAges,
+          guests: guests.map((g) => ({
+            title: g.title,
+            firstName: g.firstName,
+            lastName: g.lastName,
+            paxType: g.paxType,
+            age: g.age,
+            email: g.email,
+            mobile: g.mobile,
+            pan: g.pan,
+          })),
+        };
+      }),
       specialRequest: showSpecial ? specialRequest : '',
       travelingFor: 'NTF',
     };
@@ -663,15 +688,24 @@ function HotelBookPageInner() {
               </p>
             </div>
 
-            <div className="border-t border-gray-200 px-5 py-3 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-700">{pricing.roomName}</p>
-                {pricing.boardBasis && <p className="text-xs text-gray-500 mt-0.5">{pricing.boardBasis}</p>}
+            {guestsByRoom.map((room, idx) => (
+              <div
+                key={idx}
+                className="border-t border-gray-200 px-5 py-3 flex items-center justify-between"
+              >
+                <div>
+                  <p className="text-sm font-medium text-slate-700">
+                    {totalRooms > 1 ? `Room ${idx + 1}: ` : ''}{pricing.roomName}
+                  </p>
+                  {idx === 0 && pricing.boardBasis && (
+                    <p className="text-xs text-gray-500 mt-0.5">{pricing.boardBasis}</p>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">
+                  {room.length} {room.length === 1 ? 'ADULT' : 'GUESTS'}
+                </p>
               </div>
-              <p className="text-xs text-gray-500">
-                {totalGuests} {totalGuests === 1 ? 'ADULT' : 'GUESTS'}
-              </p>
-            </div>
+            ))}
           </section>
 
           {/* Traveller Details */}
@@ -955,10 +989,12 @@ function HotelBookPageInner() {
               currency={pricing.currency}
               initiallyOpen
             >
-              <div className="flex justify-between text-gray-600">
-                <span>Room 1</span>
-                <span>{fmt(pricing.baseRate, pricing.currency)}</span>
-              </div>
+              {(pricing.perRoomRates?.length ? pricing.perRoomRates : [{ baseRate: pricing.baseRate, totalRate: pricing.totalRate }]).map((r, i) => (
+                <div key={i} className="flex justify-between text-gray-600">
+                  <span>Room {i + 1}</span>
+                  <span>{fmt(r.baseRate, pricing.currency)}</span>
+                </div>
+              ))}
             </DisclosureRow>
 
             <DisclosureRow

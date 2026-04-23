@@ -203,6 +203,7 @@ function HotelCard({
   checkIn,
   checkOut,
   nights,
+  roomsParam,
 }: {
   hotel: Hotel;
   currency: string;
@@ -214,6 +215,7 @@ function HotelCard({
   checkIn: string;
   checkOut: string;
   nights: number;
+  roomsParam: string;
 }) {
   const router = useRouter();
   const total = hotel.rate?.total ?? 0;
@@ -236,6 +238,7 @@ function HotelCard({
       destinationCountryCode,
       benzyCheckIn,
       benzyCheckOut,
+      rooms: roomsParam,
     });
     router.push(`/booking/hotels/rooms?${params.toString()}`);
   }
@@ -1258,6 +1261,7 @@ function HotelResults() {
                       checkIn={checkIn}
                       checkOut={checkOut}
                       nights={nights}
+                      roomsParam={roomsParam}
                     />
                   ))}
                 </div>

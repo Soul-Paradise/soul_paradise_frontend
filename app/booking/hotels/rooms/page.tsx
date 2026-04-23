@@ -72,6 +72,7 @@ interface HotelPricingDetail {
   providerName: string;
   baseRate: number;
   totalRate: number;
+  perRoomRates: Array<{ baseRate: number; totalRate: number }>;
   publishedRate: number;
   tcsOnTotal: number;
   taxes: TaxItem[];
@@ -149,10 +150,20 @@ interface HotelBookingContext {
   recommendationId: string;
   priceId: string;
   netAmount: number;
+  destinationCountryCode: string | null;
   searchTracingKey: string;
   checkIn: string; // MM/DD/YYYY
   checkOut: string;
   locationName: string | null;
+  roomSlots: Array<{
+    roomId: string;
+    roomGroupId: string;
+    supplierName: string;
+    occupancyId: number;
+    numOfAdults: number;
+    numOfChildren: number;
+    childAges: number[];
+  }>;
 }
 
 // ── Helpers ──

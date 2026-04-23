@@ -18,7 +18,11 @@ interface Location {
 interface Room {
   adults: number;
   children: number;
+  childAges: number[];
 }
+
+const DEFAULT_CHILD_AGE = 5;
+const MAX_CHILD_AGE = 12;
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -45,7 +49,7 @@ export const HotelBooking = () => {
   const [destination, setDestination] = useState<Location | null>(null);
   const [checkIn, setCheckIn] = useState<Date>(today);
   const [checkOut, setCheckOut] = useState<Date>(tomorrow);
-  const [rooms, setRooms] = useState<Room[]>([{ adults: 1, children: 0 }]);
+  const [rooms, setRooms] = useState<Room[]>([{ adults: 1, children: 0, childAges: [] }]);
 
   // Panels
   const [activePanel, setActivePanel] = useState<'destination' | 'dates' | 'guests' | null>(null);
@@ -105,14 +109,29 @@ export const HotelBooking = () => {
         const val = r[field] + delta;
         if (field === 'adults' && val < 1) return r;
         if (field === 'children' && val < 0) return r;
+        if (field === 'children') {
+          let childAges = r.childAges.slice(0, val);
+          while (childAges.length < val) childAges = [...childAges, DEFAULT_CHILD_AGE];
+          return { ...r, children: val, childAges };
+        }
         return { ...r, [field]: val };
       });
       return next;
     });
   }
 
+  function updateChildAge(roomIdx: number, childIdx: number, age: number) {
+    setRooms((prev) =>
+      prev.map((r, i) => {
+        if (i !== roomIdx) return r;
+        const childAges = r.childAges.map((a, j) => (j === childIdx ? age : a));
+        return { ...r, childAges };
+      }),
+    );
+  }
+
   function addRoom() {
-    setRooms((prev) => [...prev, { adults: 1, children: 0 }]);
+    setRooms((prev) => [...prev, { adults: 1, children: 0, childAges: [] }]);
   }
 
   function removeRoom(idx: number) {
@@ -131,7 +150,7 @@ export const HotelBooking = () => {
       long: String(destination.coordinates.long),
       checkIn: toDateStr(checkIn),
       checkOut: toDateStr(checkOut),
-      rooms: JSON.stringify(rooms.map((r) => ({ ...r, childAges: [] }))),
+      rooms: JSON.stringify(rooms),
     });
     router.push(`/booking/hotels?${params.toString()}`);
   }
@@ -319,7 +338,7 @@ export const HotelBooking = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="text-sm text-gray-700">Children</span>
-                      <div className="text-xs text-gray-400">0 - 12 Years</div>
+                      <div className="text-xs text-gray-400">0 - {MAX_CHILD_AGE} Years</div>
                     </div>
                     <div className="flex items-center gap-3">
                       <button
@@ -333,6 +352,27 @@ export const HotelBooking = () => {
                       >+</button>
                     </div>
                   </div>
+                  {/* Child ages */}
+                  {room.children > 0 && (
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      {room.childAges.map((age, childIdx) => (
+                        <label key={childIdx} className="flex flex-col gap-1">
+                          <span className="text-xs text-gray-500">Child {childIdx + 1} age</span>
+                          <select
+                            value={age}
+                            onChange={(e) => updateChildAge(idx, childIdx, Number(e.target.value))}
+                            className="border border-gray-300 rounded px-2 py-1 text-sm text-gray-800 focus:border-blue-500 outline-none"
+                          >
+                            {Array.from({ length: MAX_CHILD_AGE + 1 }).map((_, a) => (
+                              <option key={a} value={a}>
+                                {a < 1 ? '< 1 year' : `${a} year${a !== 1 ? 's' : ''}`}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
