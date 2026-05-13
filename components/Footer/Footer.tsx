@@ -81,6 +81,11 @@ export const Footer = () => {
                   Privacy Policy
                 </Link>
               </li>
+              <li>
+                <Link href="/refund-cancellation-policy" className="text-sm opacity-80 hover:opacity-100 hover:text-(--color-links) transition-all">
+                  Refund &amp; Cancellation Policy
+                </Link>
+              </li>
             </ul>
           </div>
 
