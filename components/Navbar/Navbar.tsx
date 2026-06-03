@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { NavbarProps } from './types';
+import { UserMenu } from './UserMenu';
 
 /**
  * Navbar Component
@@ -21,7 +22,7 @@ import { NavbarProps } from './types';
 export const Navbar = ({ items, className = '' }: NavbarProps) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showCertificate, setShowCertificate] = useState(false);
 
@@ -52,18 +53,6 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
   };
 
   /**
-   * Handle logout
-   */
-  const handleLogout = async () => {
-    try {
-      await logout();
-      setIsMobileMenuOpen(false);
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
-  /**
    * Close mobile menu when navigating
    */
   const handleNavClick = () => {
@@ -82,19 +71,43 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Left: Logo */}
-          <div className="shrink-0">
-            <Link
-              href="/"
-              className="flex items-center transition-transform duration-200 hover:scale-105"
-              aria-label="Soul Paradise Home"
+          {/* Left: Hamburger (mobile, hard left) + Logo */}
+          <div className="flex items-center gap-1">
+            {/* Mobile Menu Button - hard left */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="
+                md:hidden p-2 -ml-2 rounded-lg
+                text-(--color-foreground) hover:bg-(--color-background)
+                transition-colors duration-200
+              "
+              aria-label="Toggle mobile menu"
+              aria-expanded={isMobileMenuOpen}
             >
-              <img
-                src="/logo.png"
-                alt="Soul Paradise"
-                className="h-15 w-auto"
-              />
-            </Link>
+              {isMobileMenuOpen ? (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
+
+            <div className="shrink-0">
+              <Link
+                href="/"
+                className="flex items-center transition-transform duration-200 hover:scale-105"
+                aria-label="Soul Paradise Home"
+              >
+                <img
+                  src="/logo.png"
+                  alt="Soul Paradise"
+                  className="h-15 w-auto"
+                />
+              </Link>
+            </div>
           </div>
 
           {/* Center: Desktop Navigation Links */}
@@ -125,21 +138,7 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
           {/* Right: Auth Buttons (Desktop) */}
           <div className="hidden md:flex items-center space-x-3">
             {user ? (
-              <div className="flex items-center space-x-3">
-                <span className="text-sm text-(--color-foreground)">
-                  Hi, <span className="font-semibold">{user.name}</span>
-                </span>
-                <button
-                  onClick={handleLogout}
-                  className="
-                    px-4 py-2 rounded-lg
-                    text-sm font-semibold
-                    bg-(--color-danger) text-(--color-peace)
-                  "
-                >
-                  Logout
-                </button>
-              </div>
+              <UserMenu />
             ) : (
               <>
                 <Link
@@ -172,28 +171,37 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* Right: Mobile user profile (its own account dropdown) */}
           <div className="md:hidden">
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="
-                p-2 rounded-lg
-                text-(--color-foreground) hover:bg-(--color-background)
-                transition-colors duration-200
-              "
-              aria-label="Toggle mobile menu"
-              aria-expanded={isMobileMenuOpen}
-            >
-              {isMobileMenuOpen ? (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
+            {user ? (
+              <UserMenu compact />
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/login"
+                  className="
+                    px-3 py-1.5 rounded-lg
+                    text-sm font-semibold
+                    text-(--color-secondary-button) hover:text-(--color-primary-button)
+                    transition-colors duration-200
+                  "
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  className="
+                    px-3 py-1.5 rounded-lg
+                    text-sm font-semibold
+                    bg-(--color-secondary-button) text-(--color-peace)
+                    hover:bg-(--color-primary-button)
+                    transition-colors duration-200
+                  "
+                >
+                  Register
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -234,58 +242,6 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
                   </Link>
                 );
               })}
-
-              {/* Mobile Auth Buttons */}
-              <div className="pt-4 border-t border-(--color-tertiary-button)">
-                {user ? (
-                  <div className="space-y-2">
-                    <div className="px-4 py-2 text-sm text-(--color-foreground)">
-                      Hi, <span className="font-semibold">{user.name}</span>
-                    </div>
-                    <button
-                      onClick={handleLogout}
-                      className="
-                        w-full px-4 py-3 rounded-lg
-                        text-base font-semibold
-                        bg-(--color-danger) text-(--color-peace)
-                      "
-                    >
-                      Logout
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <Link
-                      href="/login"
-                      onClick={handleNavClick}
-                      className="
-                        flex-1 px-4 py-3 rounded-lg
-                        text-base font-semibold text-center
-                        border border-(--color-tertiary-button)
-                        text-(--color-secondary-button) hover:text-(--color-primary-button)
-                        hover:border-(--color-secondary-button)
-                        bg-transparent
-                        transition-colors duration-200
-                      "
-                    >
-                      Login
-                    </Link>
-                    <Link
-                      href="/register"
-                      onClick={handleNavClick}
-                      className="
-                        flex-1 px-4 py-3 rounded-lg
-                        text-base font-semibold text-center
-                        bg-(--color-secondary-button) text-(--color-peace)
-                        hover:bg-(--color-primary-button)
-                        transition-colors duration-200
-                      "
-                    >
-                      Register
-                    </Link>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useRequireAuth } from '@/contexts/AuthContext';
 import {
   searchFlights,
   type FlightResult,
@@ -44,6 +45,7 @@ function parseDurationMinutes(d: string): number {
 }
 
 function FlightSearchResults() {
+  const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -120,8 +122,9 @@ function FlightSearchResults() {
   }, [from, to, departDate, returnDate, adults, children, infants, cabin, tripType, directOnly, refundableOnly, nearbyAirports]);
 
   useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
     doSearch();
-  }, [doSearch]);
+  }, [authLoading, isAuthenticated, doSearch]);
 
   const applyFiltersAndSort = useCallback((source: FlightResult[]): FlightResult[] => {
     let flights = [...source];

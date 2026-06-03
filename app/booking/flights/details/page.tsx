@@ -12,7 +12,7 @@ import {
   type SSROption,
   type PromoValidationResult,
 } from '@/lib/flights-api';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, useRequireAuth } from '@/contexts/AuthContext';
 import { FlightSegments } from '@/components/FlightBookingDetails/FlightSegments';
 import { FareRulesAccordion } from '@/components/FlightBookingDetails/FareRulesAccordion';
 import { SSRSelector } from '@/components/FlightBookingDetails/SSRSelector';
@@ -52,6 +52,7 @@ function createEmptyContact(): ContactInfo {
 }
 
 function FlightDetailsContent() {
+  useRequireAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();

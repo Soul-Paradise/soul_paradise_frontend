@@ -1,12 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Plane, Hotel, ShieldCheck, X } from 'lucide-react';
 import { FlightBooking } from './FlightBooking';
 import { HotelBooking } from './HotelBooking';
 import { TravelInsurance } from './TravelInsurance';
 
 type TabType = 'flights' | 'hotel' | 'insurance';
+
+const isTabType = (v: string | null): v is TabType =>
+  v === 'flights' || v === 'hotel' || v === 'insurance';
 
 const tabs: { id: TabType; label: string; icon: React.ReactNode; bg: string; iconColor: string }[] = [
   {
@@ -32,8 +36,20 @@ const tabs: { id: TabType; label: string; icon: React.ReactNode; bg: string; ico
   },
 ];
 
-export const MobileBookingTabs = () => {
-  const [activeTab, setActiveTab] = useState<TabType | null>(null);
+const MobileBookingTabsInner = () => {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<TabType | null>(
+    isTabType(tabParam) ? tabParam : null,
+  );
+
+  // Expand to the requested tab when the ?tab= param changes (footer deep links
+  // navigated to while already on the home page keep this mounted).
+  const [prevParam, setPrevParam] = useState(tabParam);
+  if (tabParam !== prevParam) {
+    setPrevParam(tabParam);
+    if (isTabType(tabParam)) setActiveTab(tabParam);
+  }
 
   const handleTabClick = (id: TabType) => {
     setActiveTab((prev) => (prev === id ? null : id));
@@ -109,3 +125,9 @@ export const MobileBookingTabs = () => {
     </div>
   );
 };
+
+export const MobileBookingTabs = () => (
+  <Suspense fallback={<div className="w-full" />}>
+    <MobileBookingTabsInner />
+  </Suspense>
+);

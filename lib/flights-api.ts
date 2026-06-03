@@ -1,3 +1,5 @@
+import { authHeaders } from './api';
+
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -347,7 +349,7 @@ export async function searchFlights(
 ): Promise<FlightSearchResponse> {
   const res = await fetch(`${API_BASE}/flights/search`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(params),
   });
   if (!res.ok) {
@@ -367,7 +369,7 @@ export async function priceAndGetDetails(
 ): Promise<FlightPricingResponse> {
   const res = await fetch(`${API_BASE}/flights/price`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({
       tui,
       flightIndex,
@@ -389,7 +391,7 @@ export async function createBooking(
 ): Promise<BookingResponse> {
   const res = await fetch(`${API_BASE}/flights/book`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(request),
   });
   if (!res.ok) {
@@ -402,7 +404,9 @@ export async function createBooking(
 export async function getBookingDetails(
   transactionId: string,
 ): Promise<BookingDetailsResponse> {
-  const res = await fetch(`${API_BASE}/flights/booking/${transactionId}`);
+  const res = await fetch(`${API_BASE}/flights/booking/${transactionId}`, {
+    headers: { ...authHeaders() },
+  });
   if (!res.ok) {
     const err = await res
       .json()
@@ -415,6 +419,7 @@ export async function getBookingDetails(
 export async function downloadTicketPdf(transactionId: string): Promise<void> {
   const res = await fetch(
     `${API_BASE}/flights/booking/${transactionId}/ticket.pdf`,
+    { headers: { ...authHeaders() } },
   );
   if (!res.ok) {
     const err = await res

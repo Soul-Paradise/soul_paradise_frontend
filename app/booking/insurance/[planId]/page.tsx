@@ -2,6 +2,8 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter, useParams } from 'next/navigation';
+import { authHeaders } from '@/lib/api';
+import { useRequireAuth } from '@/contexts/AuthContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -67,6 +69,7 @@ interface PlanDetails {
 // ── Inner Page ─────────────────────────────────────────────────────────────
 
 function PlanDetailsInner() {
+  const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
   const params = useParams<{ planId: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -86,6 +89,7 @@ function PlanDetailsInner() {
   const [showAllBenefits, setShowAllBenefits] = useState(false);
 
   useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
     let travellers: Array<{ id: number; birthdate: string; relation: string }> = [];
     try {
       travellers = JSON.parse(searchParams.get('travellers') || '[]');
@@ -105,7 +109,7 @@ function PlanDetailsInner() {
       try {
         const res = await fetch(`${API_URL}/insurance/plan-details`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({
             planId,
             policyType,
@@ -129,7 +133,7 @@ function PlanDetailsInner() {
     };
 
     fetchPlan();
-  }, [planId, searchParams]);
+  }, [authLoading, isAuthenticated, planId, searchParams]);
 
   if (loading) {
     return (

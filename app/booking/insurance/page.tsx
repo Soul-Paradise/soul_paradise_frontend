@@ -2,6 +2,8 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { authHeaders } from '@/lib/api';
+import { useRequireAuth } from '@/contexts/AuthContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -326,6 +328,7 @@ function FilterSidebar({
 // ── Inner Page (consumes useSearchParams) ──────────────────────────────────
 
 function InsuranceResultsInner() {
+  const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -343,6 +346,7 @@ function InsuranceResultsInner() {
   const [sortBy, setSortBy] = useState<'price' | 'coverage'>('price');
 
   useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
     const countryCodes = searchParams.get('countryCodes') || '';
     const tenureInMonths = Number(searchParams.get('tenureInMonths') || '0');
     let travellersRaw: Array<{ id: number; birthdate: string; relation: string }> = [];
@@ -360,7 +364,7 @@ function InsuranceResultsInner() {
           fetch(`${API_URL}/insurance/providers`),
           fetch(`${API_URL}/insurance/quotes`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
             body: JSON.stringify({
               policyType,
               countryCodes: countryCodes.split(',').filter(Boolean),
@@ -390,7 +394,7 @@ function InsuranceResultsInner() {
     };
 
     fetchAll();
-  }, [searchParams]);
+  }, [authLoading, isAuthenticated, searchParams]);
 
   const allQuotes = data ? getQuotesList(data) : [];
 

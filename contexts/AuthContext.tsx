@@ -12,6 +12,18 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useRouter, usePathname } from 'next/navigation';
 import { api, type User, type LoginRequest, type RegisterRequest, type ApiError } from '@/lib/api';
 
+/**
+ * Extract a safe ?next= redirect target from the current URL.
+ * Only relative same-origin paths are allowed, to avoid open-redirect.
+ */
+function readSafeNext(): string | null {
+  if (typeof window === 'undefined') return null;
+  const next = new URLSearchParams(window.location.search).get('next');
+  if (!next) return null;
+  if (!next.startsWith('/') || next.startsWith('//')) return null;
+  return next;
+}
+
 // Authentication State Interface
 interface AuthState {
   user: User | null;
@@ -94,8 +106,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const response = await api.login(credentials);
         setUser(response.user as User);
 
-        // Smooth redirect to home
-        router.push('/');
+        // Honor ?next= when present, else home
+        router.push(readSafeNext() || '/');
       } catch (err) {
         const apiError = err as ApiError;
         setError(apiError.message || 'Login failed. Please try again.');
@@ -120,8 +132,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const response = await api.googleAuth(idToken);
         setUser(response.user as User);
 
-        // Smooth redirect to home
-        router.push('/');
+        // Honor ?next= when present, else home
+        router.push(readSafeNext() || '/');
       } catch (err) {
         const apiError = err as ApiError;
         setError(apiError.message || 'Google authentication failed. Please try again.');
@@ -200,7 +212,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!isLoading && isAuthenticated) {
       const authPages = ['/login', '/register', '/forgot-password'];
       if (authPages.includes(pathname)) {
-        router.replace('/');
+        router.replace(readSafeNext() || '/');
       }
     }
   }, [isAuthenticated, isLoading, pathname, router]);
@@ -240,18 +252,28 @@ export function useAuth(): AuthContextType {
 }
 
 /**
- * Helper hook for protected routes
- * Returns loading state while checking auth
+ * Helper hook for protected routes.
+ * Redirects unauthenticated users to /login?next=<current-url> so they
+ * land back on the same page after signing in.
  */
 export function useRequireAuth() {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.replace('/login');
+      const next =
+        typeof window !== 'undefined'
+          ? `${pathname || ''}${window.location.search || ''}`
+          : pathname || '/';
+      const target =
+        next && next !== '/login'
+          ? `/login?next=${encodeURIComponent(next)}`
+          : '/login';
+      router.replace(target);
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, router, pathname]);
 
   return { isAuthenticated, isLoading };
 }

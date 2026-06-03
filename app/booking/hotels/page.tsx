@@ -3,6 +3,8 @@
 import { useEffect, useState, Suspense, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import { authHeaders } from '@/lib/api';
+import { useRequireAuth } from '@/contexts/AuthContext';
 import {
   Car, Trees, CigaretteOff, Waves, Wifi, Utensils, Dumbbell, Sparkles,
   Wind, Coffee, Bath, Tv, Bell, Briefcase, Baby, Dog, Accessibility,
@@ -823,6 +825,7 @@ function Sidebar({
 
 // ── Main Results ──
 function HotelResults() {
+  const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -864,6 +867,7 @@ function HotelResults() {
 
   // Search — single synchronous POST, no polling, no Redis handoff.
   useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
     if (!lat || !long || !checkIn || !checkOut) {
       setError('Missing search parameters.');
       setLoading(false);
@@ -880,7 +884,7 @@ function HotelResults() {
       try {
         const res = await fetch(`${API_URL}/hotels/search`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({
             locationId,
             locationName,
@@ -916,7 +920,7 @@ function HotelResults() {
       cancelled = true;
       controller.abort();
     };
-  }, [locationId, lat, long, checkIn, checkOut, roomsParam, locationName]);
+  }, [authLoading, isAuthenticated, locationId, lat, long, checkIn, checkOut, roomsParam, locationName]);
 
   // Filtered + sorted hotels
   const displayed = useMemo(() => {

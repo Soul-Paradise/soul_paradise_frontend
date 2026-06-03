@@ -3,6 +3,8 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { jsPDF } from 'jspdf';
+import { authHeaders } from '@/lib/api';
+import { useRequireAuth } from '@/contexts/AuthContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -349,6 +351,7 @@ function DisclosureRow({
 // ── Page ──
 
 function HotelBookPageInner() {
+  useRequireAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchId = searchParams.get('searchId') || '';
@@ -552,7 +555,7 @@ function HotelBookPageInner() {
     try {
       const res = await fetch(`${API_URL}/hotels/book`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(body),
       });
       const data = await res.json();

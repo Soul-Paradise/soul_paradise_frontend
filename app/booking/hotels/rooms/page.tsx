@@ -2,6 +2,8 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { authHeaders } from '@/lib/api';
+import { useRequireAuth } from '@/contexts/AuthContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -1389,6 +1391,7 @@ function HotelMapSection({ hotel }: { hotel: HotelDetailInfo }) {
 // ── Main Content ──
 
 function RoomsContent() {
+  const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -1431,6 +1434,7 @@ function RoomsContent() {
   const [pricingError, setPricingError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
     if (!searchId || !hotelId) {
       setError('Missing search or hotel information. Please go back and try again.');
       setLoading(false);
@@ -1440,7 +1444,7 @@ function RoomsContent() {
     setLoading(true);
     fetch(`${API_URL}/hotels/rooms`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ searchId, hotelId, destinationCountryCode }),
     })
       .then(async (res) => {
@@ -1459,7 +1463,7 @@ function RoomsContent() {
         setError(err.message);
         setLoading(false);
       });
-  }, [searchId, hotelId, destinationCountryCode]);
+  }, [authLoading, isAuthenticated, searchId, hotelId, destinationCountryCode]);
 
   // Track which section is in view for active tab highlighting
   useEffect(() => {
@@ -1506,7 +1510,7 @@ function RoomsContent() {
     try {
       const res = await fetch(`${API_URL}/hotels/price`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           searchId,
           hotelId,

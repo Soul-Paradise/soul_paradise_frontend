@@ -2,6 +2,8 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { authHeaders } from '@/lib/api';
+import { useRequireAuth } from '@/contexts/AuthContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -171,6 +173,7 @@ const statusInfo = (s: string): StatusInfo => {
 // ── Inner ──────────────────────────────────────────────────────────────────
 
 function ConfirmationInner() {
+  useRequireAuth();
   const router = useRouter();
   const { transactionId } = useParams<{ transactionId: string }>();
 
@@ -184,7 +187,9 @@ function ConfirmationInner() {
     else setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_URL}/insurance/booking/${transactionId}`);
+      const res = await fetch(`${API_URL}/insurance/booking/${transactionId}`, {
+        headers: { ...authHeaders() },
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json: ItineraryResponse = await res.json();
       setData(json);

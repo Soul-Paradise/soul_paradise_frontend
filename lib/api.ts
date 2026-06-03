@@ -433,3 +433,12 @@ class ApiClient {
 
 // Export singleton instance
 export const api = new ApiClient();
+
+/**
+ * Returns Authorization headers for authenticated requests.
+ * Returns an empty object on the server or when no token is present.
+ */
+export function authHeaders(): Record<string, string> {
+  const token = api.getAccessToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}

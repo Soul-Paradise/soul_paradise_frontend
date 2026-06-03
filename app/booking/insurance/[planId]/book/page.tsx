@@ -2,6 +2,8 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { authHeaders } from '@/lib/api';
+import { useRequireAuth } from '@/contexts/AuthContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -135,6 +137,7 @@ const emptyCustomer = (countryCode: string, countryName: string): CustomerForm =
 // ── Inner ──────────────────────────────────────────────────────────────────
 
 function BookInsuranceInner() {
+  const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
   const router = useRouter();
   const params = useParams<{ planId: string }>();
   const searchParams = useSearchParams();
@@ -174,6 +177,7 @@ function BookInsuranceInner() {
 
   // Fetch plan details (need amount + plan type + questions + provider fields)
   useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
     if (!tui) {
       setPlanError('Search session expired. Please run the search again.');
       setPlanLoading(false);
@@ -185,7 +189,7 @@ function BookInsuranceInner() {
       try {
         const res = await fetch(`${API_URL}/insurance/plan-details`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({
             planId,
             policyType,
@@ -208,7 +212,7 @@ function BookInsuranceInner() {
       }
     };
     fetchPlan();
-  }, [planId, policyType, tui]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [authLoading, isAuthenticated, planId, policyType, tui]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateTraveller = (i: number, patch: Partial<TravellerForm>) => {
     setTravellers((prev) => prev.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
@@ -243,7 +247,7 @@ function BookInsuranceInner() {
     try {
       const res = await fetch(`${API_URL}/insurance/validate-kyc`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           pan: customer.pan,
           name: `${customer.firstName} ${customer.lastName}`.trim(),
@@ -331,7 +335,7 @@ function BookInsuranceInner() {
     try {
       const res = await fetch(`${API_URL}/insurance/book`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           ckyc: '',
           panNo: customer.pan,

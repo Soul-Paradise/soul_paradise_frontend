@@ -77,25 +77,27 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-(--color-background)">
-      {/* ── Mobile Icon View (small screens only) ── */}
-      <section className="sm:hidden bg-white shadow-sm">
-        <MobileBookingTabs />
-      </section>
+      <div id="booking" className="scroll-mt-20">
+        {/* ── Mobile Icon View (small screens only) ── */}
+        <section className="sm:hidden bg-white shadow-sm">
+          <MobileBookingTabs />
+        </section>
 
-      {/* ── Hero Section (sm+ only) ── */}
-      <section
-        className="relative h-[400px] hidden sm:flex items-center pb-10 z-10"
-      >
-        {/* Background image + overlay */}
-        <div className="absolute inset-0 overflow-hidden" style={{ backgroundImage: 'url(/hero_bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-          <div className="absolute inset-0 bg-black/40" />
-        </div>
+        {/* ── Hero Section (sm+ only) ── */}
+        <section
+          className="relative h-[400px] hidden sm:flex items-center pb-10 z-10"
+        >
+          {/* Background image + overlay */}
+          <div className="absolute inset-0 overflow-hidden" style={{ backgroundImage: 'url(/hero_bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+            <div className="absolute inset-0 bg-black/40" />
+          </div>
 
-        {/* Booking card */}
-        <div className="relative z-20 w-full mt-16">
-          <BookingTabs />
-        </div>
-      </section>
+          {/* Booking card */}
+          <div className="relative z-20 w-full mt-16">
+            <BookingTabs />
+          </div>
+        </section>
+      </div>
 
       {/* ── Explore More ── */}
       <section className="bg-white border-b border-gray-200">

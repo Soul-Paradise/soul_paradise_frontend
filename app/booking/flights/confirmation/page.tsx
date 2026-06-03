@@ -7,6 +7,7 @@ import {
   downloadTicketPdf,
   type BookingDetailsResponse,
 } from '@/lib/flights-api';
+import { useRequireAuth } from '@/contexts/AuthContext';
 
 function formatTime(isoString: string) {
   const date = new Date(isoString);
@@ -75,6 +76,7 @@ function getStatusInfo(status: string): {
 }
 
 function ConfirmationContent() {
+  useRequireAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
   const transactionId = searchParams.get('transactionId') || '';

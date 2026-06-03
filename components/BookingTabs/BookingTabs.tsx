@@ -1,12 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Hotel, Plane, ShieldCheck } from 'lucide-react';
 import { FlightBooking } from './FlightBooking';
 import { HotelBooking } from './HotelBooking';
 import { TravelInsurance } from './TravelInsurance';
 
 type TabType = 'flights' | 'hotel' | 'insurance';
+
+const isTabType = (v: string | null): v is TabType =>
+  v === 'flights' || v === 'hotel' || v === 'insurance';
 
 const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
   {
@@ -32,8 +36,20 @@ const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
   },
 ];
 
-export const BookingTabs = () => {
-  const [activeTab, setActiveTab] = useState<TabType>('flights');
+const BookingTabsInner = () => {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<TabType>(
+    isTabType(tabParam) ? tabParam : 'flights',
+  );
+
+  // Sync the active tab when the ?tab= param changes (e.g. footer deep links
+  // navigated to while already on the home page, where this stays mounted).
+  const [prevParam, setPrevParam] = useState(tabParam);
+  if (tabParam !== prevParam) {
+    setPrevParam(tabParam);
+    if (isTabType(tabParam)) setActiveTab(tabParam);
+  }
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-4">
@@ -73,3 +89,9 @@ export const BookingTabs = () => {
     </div>
   );
 };
+
+export const BookingTabs = () => (
+  <Suspense fallback={<div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-4" />}>
+    <BookingTabsInner />
+  </Suspense>
+);
