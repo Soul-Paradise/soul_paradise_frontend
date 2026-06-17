@@ -442,3 +442,57 @@ export function authHeaders(): Record<string, string> {
   const token = api.getAccessToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
+
+// De-duplicate concurrent refreshes: if several requests 401 at once, they all
+// await the same in-flight refresh instead of hammering /auth/refresh.
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function refreshAccessToken(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = api
+      .refreshToken()
+      .then(() => true)
+      .catch(() => {
+        // Refresh token is gone/expired — the session is truly dead.
+        api.clearTokens();
+        return false;
+      })
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+  return refreshInFlight;
+}
+
+/**
+ * fetch() wrapper for authenticated calls that transparently recovers from an
+ * expired access token: on a 401 it refreshes the token once and retries the
+ * request a single time. If the refresh fails, it clears the session and sends
+ * the user to /login. Always attaches the current Authorization header itself —
+ * callers should NOT spread authHeaders() into the request.
+ */
+export async function authFetch(
+  input: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const build = (): RequestInit => ({
+    ...init,
+    headers: { ...(init.headers || {}), ...authHeaders() },
+  });
+
+  const res = await fetch(input, build());
+  if (res.status !== 401) return res;
+
+  // Access token likely expired — try one refresh + retry.
+  const refreshed = await refreshAccessToken();
+  if (!refreshed) {
+    if (
+      typeof window !== 'undefined' &&
+      !window.location.pathname.startsWith('/login')
+    ) {
+      window.location.href = '/login';
+    }
+    return res; // still 401; caller surfaces the error
+  }
+  return fetch(input, build());
+}

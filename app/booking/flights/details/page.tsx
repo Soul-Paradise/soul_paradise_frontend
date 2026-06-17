@@ -263,9 +263,22 @@ function FlightDetailsContent() {
         lastName: firstAdult?.lastName || contactInfo.lastName || 'User',
       };
 
+      // Customer-facing grand total — must match the BookingSummary figure
+      // (gross fare + paid SSRs/seats − promo discount). This is what we charge.
+      const ssrTotal = allSelections.reduce((sum, sel) => {
+        const option = allSSROptions.find((o) => o.id === sel.ssrId);
+        return sum + (option?.charge || 0);
+      }, 0);
+      const promoDiscount = appliedPromo?.valid ? appliedPromo.discountAmount : 0;
+      const payableAmount = Math.max(
+        0,
+        pricing.totalFare.gross + ssrTotal - promoDiscount,
+      );
+
       const result = await createBooking({
         tui: pricing.tui,
         netAmount: pricing.netAmount,
+        payableAmount,
         contactInfo: finalContactInfo,
         travellers,
         selectedSSR: allSelections,
@@ -273,10 +286,10 @@ function FlightDetailsContent() {
         freeSSRs: pricing.freeSSRs,
       });
 
-      // Navigate to confirmation page
-      router.push(
-        `/booking/flights/confirmation?transactionId=${result.transactionId}`,
-      );
+      // Hand off to the ICICI payment gateway. The ticket is issued by the
+      // backend only after payment succeeds; the gateway will redirect the
+      // customer to /booking/payment/result when done.
+      window.location.href = result.redirectUrl;
     } catch (err: any) {
       setBookingError(err.message || 'Booking failed. Please try again.');
       setIsSubmitting(false);

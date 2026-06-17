@@ -1,4 +1,4 @@
-import { authHeaders } from './api';
+import { authFetch } from './api';
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
@@ -249,6 +249,8 @@ export interface SSRSelection {
 export interface BookingRequest {
   tui: string;
   netAmount: number;
+  // Customer-facing grand total we charge through the payment gateway.
+  payableAmount: number;
   contactInfo: ContactInfo;
   travellers: TravellerInfo[];
   selectedSSR: SSRSelection[];
@@ -263,6 +265,23 @@ export interface BookingResponse {
   status: string;
   totalAmount: number;
   currency: string;
+}
+
+/** Returned by createBooking — frontend redirects the browser to redirectUrl. */
+export interface BookingInitiateResponse {
+  bookingId: string;
+  merchantTxnNo: string;
+  redirectUrl: string;
+  amount: number;
+  currency: string;
+}
+
+export interface BookingStatusResponse {
+  bookingId: string;
+  transactionId: string | null;
+  pnr: string | null;
+  status: string;
+  paymentStatus: string;
 }
 
 export interface BookingFlightDetail {
@@ -347,9 +366,9 @@ export async function searchAirports(
 export async function searchFlights(
   params: FlightSearchParams,
 ): Promise<FlightSearchResponse> {
-  const res = await fetch(`${API_BASE}/flights/search`, {
+  const res = await authFetch(`${API_BASE}/flights/search`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
   if (!res.ok) {
@@ -367,9 +386,9 @@ export async function priceAndGetDetails(
   returnFlightIndex?: string,
   returnNetFare?: number,
 ): Promise<FlightPricingResponse> {
-  const res = await fetch(`${API_BASE}/flights/price`, {
+  const res = await authFetch(`${API_BASE}/flights/price`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       tui,
       flightIndex,
@@ -386,12 +405,17 @@ export async function priceAndGetDetails(
   return res.json();
 }
 
+/**
+ * Starts a booking and returns the payment-gateway redirect URL. The ticket is
+ * only issued (by the backend) after the customer completes payment — the
+ * caller should send the browser to `redirectUrl`.
+ */
 export async function createBooking(
   request: BookingRequest,
-): Promise<BookingResponse> {
-  const res = await fetch(`${API_BASE}/flights/book`, {
+): Promise<BookingInitiateResponse> {
+  const res = await authFetch(`${API_BASE}/flights/book`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
   });
   if (!res.ok) {
@@ -401,12 +425,26 @@ export async function createBooking(
   return res.json();
 }
 
+/** Poll booking/ticketing status by the payment's merchantTxnNo. */
+export async function getBookingStatusByTxn(
+  merchantTxnNo: string,
+): Promise<BookingStatusResponse> {
+  const res = await authFetch(
+    `${API_BASE}/flights/booking-status/${encodeURIComponent(merchantTxnNo)}`,
+  );
+  if (!res.ok) {
+    const err = await res
+      .json()
+      .catch(() => ({ message: 'Failed to fetch booking status' }));
+    throw new Error(err.message || 'Failed to fetch booking status');
+  }
+  return res.json();
+}
+
 export async function getBookingDetails(
   transactionId: string,
 ): Promise<BookingDetailsResponse> {
-  const res = await fetch(`${API_BASE}/flights/booking/${transactionId}`, {
-    headers: { ...authHeaders() },
-  });
+  const res = await authFetch(`${API_BASE}/flights/booking/${transactionId}`);
   if (!res.ok) {
     const err = await res
       .json()
@@ -417,9 +455,8 @@ export async function getBookingDetails(
 }
 
 export async function downloadTicketPdf(transactionId: string): Promise<void> {
-  const res = await fetch(
+  const res = await authFetch(
     `${API_BASE}/flights/booking/${transactionId}/ticket.pdf`,
-    { headers: { ...authHeaders() } },
   );
   if (!res.ok) {
     const err = await res
