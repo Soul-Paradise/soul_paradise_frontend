@@ -256,6 +256,13 @@ export interface BookingRequest {
   selectedSSR: SSRSelection[];
   ssrChargeMap: Record<string, number>;
   freeSSRs: FreeSSR[];
+  // Route summary persisted for the orders list display.
+  tripSummary?: {
+    fromCode: string;
+    toCode: string;
+    departureDate: string;
+    airline: string;
+  };
 }
 
 export interface BookingResponse {

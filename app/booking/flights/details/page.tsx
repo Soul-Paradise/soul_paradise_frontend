@@ -284,6 +284,13 @@ function FlightDetailsContent() {
         selectedSSR: allSelections,
         ssrChargeMap: pricing.ssrChargeMap,
         freeSSRs: pricing.freeSSRs,
+        tripSummary: {
+          fromCode: pricing.segments[0]?.from || '',
+          toCode:
+            pricing.segments[pricing.segments.length - 1]?.to || '',
+          departureDate: pricing.segments[0]?.departureTime || '',
+          airline: pricing.segments[0]?.airline || '',
+        },
       });
 
       // Hand off to the ICICI payment gateway. The ticket is issued by the
