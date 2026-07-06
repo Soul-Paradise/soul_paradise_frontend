@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { searchAirports, type Airport } from '@/lib/flights-api';
 
 interface AirportPickerProps {
@@ -22,8 +23,33 @@ export const AirportPicker = ({
   const [loading, setLoading] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [mounted, setMounted] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  useEffect(() => setMounted(true), []);
+
+  // Position the portalled dropdown right under the trigger. Recomputed on
+  // open and while open on any scroll/resize so it tracks the field even when
+  // the field lives inside a scrollable container (e.g. the multi-city list).
+  useEffect(() => {
+    if (!isOpen) return;
+    const updatePosition = () => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) {
+        setDropdownPos({ top: rect.bottom, left: rect.left, width: rect.width });
+      }
+    };
+    updatePosition();
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [isOpen]);
 
   const handleSearch = useCallback((q: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -48,9 +74,11 @@ export const AirportPicker = ({
   // Click outside to close
   useEffect(() => {
     const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
       if (
         containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
+        !containerRef.current.contains(target) &&
+        !(dropdownRef.current && dropdownRef.current.contains(target))
       ) {
         setIsOpen(false);
       }
@@ -113,9 +141,19 @@ export const AirportPicker = ({
         )}
       </button>
 
-      {/* Dropdown */}
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 z-50 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden">
+      {/* Dropdown — portalled to <body> and fixed-positioned so it is never
+          clipped by a scrollable ancestor (e.g. the multi-city leg list). */}
+      {isOpen && mounted && dropdownPos && createPortal(
+        <div
+          ref={dropdownRef}
+          style={{
+            position: 'fixed',
+            top: dropdownPos.top + 4,
+            left: dropdownPos.left,
+            width: dropdownPos.width,
+          }}
+          className="z-[100] bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden"
+        >
           {/* Search input */}
           <div className="p-3 border-b border-gray-100">
             <input
@@ -177,7 +215,8 @@ export const AirportPicker = ({
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

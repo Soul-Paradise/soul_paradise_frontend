@@ -78,6 +78,53 @@ export interface FlightSearchParams {
   nearbyAirports: boolean;
 }
 
+// ========== Multi-City Types ==========
+
+export interface MultiCitySegmentInput {
+  from: string;
+  to: string;
+  departDate: string;
+}
+
+export interface MultiCitySearchParams {
+  segments: MultiCitySegmentInput[];
+  adults: number;
+  children: number;
+  infants: number;
+  cabin: 'E' | 'PE' | 'B' | 'F';
+  directOnly: boolean;
+  refundableOnly: boolean;
+  nearbyAirports: boolean;
+}
+
+export interface MultiCityLeg {
+  legIndex: number;
+  from: string;
+  to: string;
+  fromName: string;
+  toName: string;
+  departDate: string;
+  flights: FlightResult[];
+}
+
+export interface MultiCitySearchResponse {
+  tui: string;
+  // Benzy multi-city FareType used ('DM' domestic / 'IM' international);
+  // echoed back at pricing time as the SmartPricer TripType.
+  tripType: 'DM' | 'IM';
+  completed: boolean;
+  currency: string;
+  legs: MultiCityLeg[];
+  notices: Array<{ notice: string; link: string }>;
+  totalResults: number;
+}
+
+/** One selected leg for multi-city pricing. */
+export interface MultiCityPriceLeg {
+  flightIndex: string;
+  netFare: number;
+}
+
 // ========== Pricing & Booking Types ==========
 
 export interface SegmentDetail {
@@ -104,6 +151,9 @@ export interface SegmentDetail {
   equipmentType?: string;
   seatsAvailable?: number;
   direction?: 'ONWARD' | 'RETURN';
+  // Zero-based index of the leg/journey this segment belongs to. Used to group
+  // segments per hop for multi-city itineraries.
+  legIndex?: number;
 }
 
 export interface FareBreakdownItem {
@@ -404,6 +454,38 @@ export async function priceAndGetDetails(
       returnFlightIndex,
       returnNetFare,
     }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Pricing failed' }));
+    throw new Error(err.message || 'Flight pricing failed');
+  }
+  return res.json();
+}
+
+export async function searchMultiCityFlights(
+  params: MultiCitySearchParams,
+): Promise<MultiCitySearchResponse> {
+  const res = await authFetch(`${API_BASE}/flights/search-multicity`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Search failed' }));
+    throw new Error(err.message || 'Flight search failed');
+  }
+  return res.json();
+}
+
+export async function priceMultiCityAndGetDetails(
+  tui: string,
+  tripType: 'DM' | 'IM',
+  legs: MultiCityPriceLeg[],
+): Promise<FlightPricingResponse> {
+  const res = await authFetch(`${API_BASE}/flights/price-multicity`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tui, tripType, legs }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Pricing failed' }));

@@ -84,8 +84,12 @@ export default function Home() {
         </section>
 
         {/* ── Hero Section (sm+ only) ── */}
+        {/* min-h (not fixed h) so a taller card — e.g. multi-city with several
+            legs — grows the hero and pushes the next section down instead of
+            overflowing it. One-way/round-trip are shorter than 400px, so their
+            layout is unchanged. */}
         <section
-          className="relative h-[400px] hidden sm:flex items-center pb-10 z-10"
+          className="relative min-h-[400px] hidden sm:flex items-center pb-10 z-10"
         >
           {/* Background image + overlay */}
           <div className="absolute inset-0 overflow-hidden" style={{ backgroundImage: 'url(/hero_bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
