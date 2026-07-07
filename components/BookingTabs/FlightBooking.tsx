@@ -238,6 +238,80 @@ export const FlightBooking = () => {
   const departDateObj = parseDate(departDate);
   const returnDateObj = parseDate(returnDate);
 
+  // One multi-city leg row. The traveller & class selector is rendered only on
+  // the first leg (i === 0); every other leg gets an empty spacer of the same
+  // width so the columns stay aligned.
+  const renderLegRow = (leg: MultiLeg, i: number) => {
+    const minDate = i > 0 ? legs[i - 1].date : toDateStr(today);
+    return (
+      <div
+        key={i}
+        className="border-2 border-gray-200 rounded-xl bg-white overflow-visible"
+      >
+        <div className="grid grid-cols-2 sm:flex sm:items-stretch divide-y divide-gray-200 sm:divide-y-0">
+          {/* Leg number */}
+          <div className="hidden sm:flex items-center justify-center w-11 flex-shrink-0 border-r border-gray-200">
+            <span className="w-6 h-6 rounded-full bg-[#1F7AC4]/10 text-[#1F7AC4] text-xs font-bold flex items-center justify-center">
+              {i + 1}
+            </span>
+          </div>
+          <div className="col-span-2 sm:flex-[2] min-w-0 sm:border-r sm:border-gray-200">
+            <AirportPicker
+              label="From"
+              value={leg.from}
+              onChange={(a) => updateLeg(i, { from: a })}
+              placeholder="City or Airport"
+            />
+          </div>
+          <div className="col-span-2 sm:flex-[2] min-w-0 sm:border-r sm:border-gray-200">
+            <AirportPicker
+              label="To"
+              value={leg.to}
+              onChange={(a) => updateLeg(i, { to: a })}
+              placeholder="City or Airport"
+            />
+          </div>
+          <div className="col-span-2 sm:flex-[1.6] min-w-0 px-6 flex flex-col justify-center py-3 sm:border-r sm:border-gray-200">
+            <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">
+              Departure
+            </label>
+            <input
+              type="date"
+              value={leg.date}
+              min={minDate}
+              onChange={(e) => updateLeg(i, { date: e.target.value })}
+              className="w-full text-base font-bold text-gray-900 bg-transparent outline-none"
+            />
+          </div>
+          {/* Travellers & class — first leg only; empty spacer on the rest */}
+          <div className="col-span-2 sm:flex-[1.5] min-w-0">
+            {i === 0 && (
+              <TravellerSelector
+                travellers={travellers}
+                cabinClass={cabinClass}
+                onTravellersChange={setTravellers}
+                onCabinChange={setCabinClass}
+              />
+            )}
+          </div>
+          {/* Remove leg */}
+          {legs.length > 1 && (
+            <button
+              type="button"
+              onClick={() => removeLeg(i)}
+              aria-label={`Remove flight ${i + 1}`}
+              className="col-span-2 sm:w-11 flex-shrink-0 flex items-center justify-center py-2 sm:py-0 text-gray-300 hover:text-red-500 border-t sm:border-t-0 sm:border-l border-gray-200"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-5">
       {/* Trip Type + subtitle row */}
@@ -377,74 +451,24 @@ export const FlightBooking = () => {
           same card. */}
       {tripType === 'multicity' && (
         <div className="space-y-2.5">
-          {/* Fixed-height scroll region: shows one full leg plus a peek of the
-              next so the card stays the same footprint as one-way / round-trip
-              while signalling there's more underneath. Extra legs scroll inside
-              instead of growing the card. The airport dropdowns are portalled
-              (see AirportPicker) so they are not clipped by this overflow. */}
-          <div ref={legsScrollRef} className="max-h-[118px] overflow-y-auto space-y-2.5 pr-1 -mr-1">
-          {legs.map((leg, i) => {
-            const minDate = i > 0 ? legs[i - 1].date : toDateStr(today);
-            return (
-              <div
-                key={i}
-                className="border-2 border-gray-200 rounded-xl bg-white overflow-visible"
-              >
-                <div className="grid grid-cols-2 sm:flex sm:items-stretch divide-y divide-gray-200 sm:divide-y-0">
-                  {/* Leg number */}
-                  <div className="hidden sm:flex items-center justify-center w-11 flex-shrink-0 border-r border-gray-200">
-                    <span className="w-6 h-6 rounded-full bg-[#1F7AC4]/10 text-[#1F7AC4] text-xs font-bold flex items-center justify-center">
-                      {i + 1}
-                    </span>
-                  </div>
-                  <div className="col-span-2 sm:flex-[2] min-w-0 sm:border-r sm:border-gray-200">
-                    <AirportPicker
-                      label="From"
-                      value={leg.from}
-                      onChange={(a) => updateLeg(i, { from: a })}
-                      placeholder="City or Airport"
-                    />
-                  </div>
-                  <div className="col-span-2 sm:flex-[2] min-w-0 sm:border-r sm:border-gray-200">
-                    <AirportPicker
-                      label="To"
-                      value={leg.to}
-                      onChange={(a) => updateLeg(i, { to: a })}
-                      placeholder="City or Airport"
-                    />
-                  </div>
-                  <div className="col-span-2 sm:flex-[1.6] min-w-0 px-6 flex flex-col justify-center py-3">
-                    <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">
-                      Departure
-                    </label>
-                    <input
-                      type="date"
-                      value={leg.date}
-                      min={minDate}
-                      onChange={(e) => updateLeg(i, { date: e.target.value })}
-                      className="w-full text-base font-bold text-gray-900 bg-transparent outline-none"
-                    />
-                  </div>
-                  {/* Remove leg */}
-                  {legs.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeLeg(i)}
-                      aria-label={`Remove flight ${i + 1}`}
-                      className="col-span-2 sm:w-11 flex-shrink-0 flex items-center justify-center py-2 sm:py-0 text-gray-300 hover:text-red-500 border-t sm:border-t-0 sm:border-l border-gray-200"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-          </div>
+          {/* First leg is pinned above the scroll region: it carries the
+              Travellers & Class selector, whose popup opens downward and would
+              be clipped by the scroll region's overflow. Keeping it out here
+              lets the popup show in full. */}
+          {renderLegRow(legs[0], 0)}
 
-          {/* Footer: add city (left) + travellers & search (right), one row */}
+          {/* Extra legs (2+) scroll inside a fixed-height region so the card
+              keeps the same footprint as one-way / round-trip. The airport
+              dropdowns are portalled (see AirportPicker) so they aren't clipped
+              by this overflow. Added legs have an empty spacer where the first
+              leg's traveller selector sits. */}
+          {legs.length > 1 && (
+            <div ref={legsScrollRef} className="max-h-[118px] overflow-y-auto space-y-2.5 pr-1 -mr-1">
+              {legs.slice(1).map((leg, idx) => renderLegRow(leg, idx + 1))}
+            </div>
+          )}
+
+          {/* Footer: add city (left) + search (right), one row */}
           <div className="flex flex-col sm:flex-row sm:items-stretch gap-3 pt-1">
             <div className="flex items-center">
               {legs.length < MAX_LEGS ? (
@@ -462,15 +486,7 @@ export const FlightBooking = () => {
                 <span className="text-xs text-gray-400">Maximum {MAX_LEGS} flights</span>
               )}
             </div>
-            <div className="sm:ml-auto flex items-center gap-3">
-              <div className="border-2 border-gray-200 rounded-xl bg-white min-w-0">
-                <TravellerSelector
-                  travellers={travellers}
-                  cabinClass={cabinClass}
-                  onTravellersChange={setTravellers}
-                  onCabinChange={setCabinClass}
-                />
-              </div>
+            <div className="sm:ml-auto flex items-center">
               <button
                 type="button"
                 onClick={handleMultiCitySearch}
