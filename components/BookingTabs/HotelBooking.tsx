@@ -272,7 +272,7 @@ export const HotelBooking = () => {
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Enter City/Hotel/Area/building"
+                  placeholder="Enter area or hotel name..."
                   className="flex-1 outline-none text-sm text-gray-800 placeholder-gray-400"
                 />
               </div>
@@ -282,8 +282,8 @@ export const HotelBooking = () => {
                 <div className="px-4 py-3 text-sm text-gray-400">Searching...</div>
               )}
               {!loading && searchTerm.length < 2 && (
-                <div className="px-4 py-3 text-sm text-gray-400 flex items-center gap-2">
-                  <span>😊</span> Type your destination
+                <div className="px-4 py-3 text-sm text-gray-400">
+                  Start typing to search hotels
                 </div>
               )}
               {!loading && searchTerm.length >= 2 && suggestions.length === 0 && (

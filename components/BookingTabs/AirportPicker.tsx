@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { MapPin, Search } from 'lucide-react';
 import { searchAirports, type Airport } from '@/lib/flights-api';
 
 interface AirportPickerProps {
@@ -34,8 +35,13 @@ export const AirportPicker = ({
   // Position the portalled dropdown right under the trigger. Recomputed on
   // open and while open on any scroll/resize so it tracks the field even when
   // the field lives inside a scrollable container (e.g. the multi-city list).
-  useEffect(() => {
-    if (!isOpen) return;
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      // Clear the stale position so the portal never renders a frame at the
+      // previous field's coordinates (which read as an overlap on reopen).
+      setDropdownPos(null);
+      return;
+    }
     const updatePosition = () => {
       const rect = containerRef.current?.getBoundingClientRect();
       if (rect) {
@@ -87,12 +93,14 @@ export const AirportPicker = ({
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Focus input when opened
+  // Focus the search input once the portalled dropdown has actually mounted.
+  // (A plain [isOpen] effect fires before the portal renders, so inputRef is
+  // still null and the focus is silently dropped.)
   useEffect(() => {
-    if (isOpen && inputRef.current) {
+    if (isOpen && dropdownPos && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [isOpen]);
+  }, [isOpen, dropdownPos]);
 
   const handleSelect = (airport: Airport) => {
     onChange(airport);
@@ -152,22 +160,25 @@ export const AirportPicker = ({
             left: dropdownPos.left,
             width: dropdownPos.width,
           }}
-          className="z-[100] bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden"
+          className="z-[100] bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden"
         >
           {/* Search input */}
           <div className="p-3 border-b border-gray-100">
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                handleSearch(e.target.value);
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder="Type city or airport name..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-(--color-links) focus:border-(--color-links) outline-none"
-            />
+            <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg">
+              <Search className="w-4 h-4 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  handleSearch(e.target.value);
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder="Enter city or airport name..."
+                className="flex-1 outline-none text-sm text-gray-800 placeholder-gray-400"
+              />
+            </div>
           </div>
 
           {/* Results */}
@@ -189,23 +200,22 @@ export const AirportPicker = ({
                 key={airport.code}
                 type="button"
                 onClick={() => handleSelect(airport)}
-                className={`w-full text-left px-4 py-3 flex items-center gap-3 transition-colors ${
-                  index === highlightIndex
-                    ? 'bg-blue-50'
-                    : 'hover:bg-gray-50'
+                className={`w-full text-left px-4 py-3 flex items-start gap-3 border-b border-gray-50 last:border-0 ${
+                  index === highlightIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
                 }`}
               >
-                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600 flex-shrink-0">
-                  {airport.code}
-                </div>
+                <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-gray-900 truncate">
+                  <div className="text-sm font-semibold text-gray-800 truncate">
                     {airport.cityName}, {airport.country}
                   </div>
-                  <div className="text-xs text-gray-500 truncate">
+                  <div className="text-xs text-gray-400 truncate">
                     {airport.name}
                   </div>
                 </div>
+                {airport.code && (
+                  <span className="ml-auto text-xs text-gray-400 mt-0.5">{airport.code}</span>
+                )}
               </button>
             ))}
 
