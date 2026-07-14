@@ -103,54 +103,7 @@ export default function Home() {
         </section>
       </div>
 
-      {/* ── Explore More ── */}
-      <section className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <button
-            onClick={() => setShowExplore(!showExplore)}
-            className="flex items-center gap-2 w-full justify-center py-3 text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            <svg
-              className={`w-4 h-4 transition-transform ${showExplore ? 'rotate-180' : ''}`}
-              fill="none" stroke="currentColor" viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-            <span className="text-sm font-semibold uppercase tracking-widest">Explore More</span>
-            <svg
-              className={`w-4 h-4 transition-transform ${showExplore ? 'rotate-180' : ''}`}
-              fill="none" stroke="currentColor" viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
 
-          {showExplore && (
-            <div className="pb-4 flex flex-wrap gap-2 justify-center">
-              {exploreLinks.map((item) => (
-                <button
-                  key={item.label}
-                  className="flex items-center gap-3 px-5 py-3 rounded-full border border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all group whitespace-nowrap"
-                >
-                  <div className="text-left">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-semibold text-gray-700 group-hover:text-blue-600">
-                        {item.label}
-                      </span>
-                      {item.badge && (
-                        <span className="text-[10px] font-bold bg-purple-600 text-white px-1.5 py-0.5 rounded-full uppercase">
-                          {item.badge}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xs text-gray-500">{item.desc}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
 
       {/* ── Offers Section ── */}
       <section className="py-10">
