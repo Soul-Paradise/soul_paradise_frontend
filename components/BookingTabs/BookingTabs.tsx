@@ -29,7 +29,7 @@ const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: 'insurance',
-    label: 'Travel\nInsurance',
+    label: 'Insurance',
     icon: (
       <ShieldCheck className="w-5 h-5" />
     ),

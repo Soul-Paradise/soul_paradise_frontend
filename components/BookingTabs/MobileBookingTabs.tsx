@@ -29,7 +29,7 @@ const tabs: { id: TabType; label: string; icon: React.ReactNode; bg: string; ico
   },
   {
     id: 'insurance',
-    label: 'Travel Insurance',
+    label: 'Insurance',
     icon: <ShieldCheck className="w-8 h-8" strokeWidth={1.5} />,
     bg: 'bg-purple-50',
     iconColor: 'text-purple-600',
