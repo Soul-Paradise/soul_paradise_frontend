@@ -7,6 +7,14 @@ interface GoogleSignInButtonProps {
   disabled?: boolean;
   onSuccess?: () => void;
   onError?: (error: string) => void;
+  /**
+   * Intercept the raw Google credential instead of signing the user in.
+   *
+   * Agent registration needs this: it must prove the Google identity WITHOUT
+   * creating a session, because an agent has no session until an admin approves
+   * their KYC. Left unset, the button behaves as before and logs the user in.
+   */
+  onCredential?: (credential: string) => Promise<void> | void;
 }
 
 // Extend Window interface for Google Identity Services
@@ -43,6 +51,7 @@ export default function GoogleSignInButton({
   disabled = false,
   onSuccess,
   onError,
+  onCredential,
 }: GoogleSignInButtonProps) {
   const { googleAuth } = useAuth();
   const isInitialized = useRef(false);
@@ -56,7 +65,13 @@ export default function GoogleSignInButton({
     const handleCredentialResponse = async (response: { credential: string }) => {
       try {
         setIsLoading(true);
-        await googleAuth(response.credential);
+
+        if (onCredential) {
+          // Caller takes over — no sign-in, no redirect.
+          await onCredential(response.credential);
+        } else {
+          await googleAuth(response.credential);
+        }
 
         if (onSuccess) {
           onSuccess();
@@ -127,7 +142,7 @@ export default function GoogleSignInButton({
 
       return () => clearInterval(checkInterval);
     }
-  }, [disabled, googleAuth, onSuccess, onError]);
+  }, [disabled, googleAuth, onSuccess, onError, onCredential]);
 
   return (
     <div

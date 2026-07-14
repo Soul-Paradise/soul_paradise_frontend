@@ -11,6 +11,7 @@ import GoogleSignInButton from '@/components/GoogleSignInButton';
 import Logo from '@/components/Logo';
 import BackgroundVideo from '@/components/BackgroundVideo';
 import FormInput from '@/components/FormInput';
+import AccountTypeLink from '@/components/AccountTypeLink';
 
 export default function SignupPage() {
   const { register: registerUser, isLoading, clearError } = useAuth();
@@ -168,8 +169,9 @@ export default function SignupPage() {
               </button>
             </form>
 
-            {/* Login Link */}
-            <div className="text-center pt-2">
+            {/* Login link + the B2B cross-link. Agents register on a separate
+                page because they submit KYC documents. */}
+            <div className="text-center pt-2 space-y-1">
               <p className="text-sm text-(--color-foreground)">
                 Already have an account?{' '}
                 <Link
@@ -179,6 +181,8 @@ export default function SignupPage() {
                   Sign in
                 </Link>
               </p>
+
+              <AccountTypeLink current="customer" />
             </div>
           </div>
         </div>
