@@ -71,7 +71,16 @@ function LoginForm() {
           {/* Form Container */}
           <div className="space-y-3.5">
             {/* Google Login Button */}
-            <GoogleSignInButton disabled={isLoading || isSubmitting} />
+            <GoogleSignInButton
+              disabled={isLoading || isSubmitting}
+              onError={(message) =>
+                showToast({
+                  title: 'Login Failed',
+                  body: message || 'Could not sign in with Google. Please try again.',
+                  type: 'error',
+                })
+              }
+            />
 
             {/* Divider */}
             <div className="relative py-2">

@@ -32,13 +32,16 @@ type Step = 1 | 2 | 3;
  * step validates on its own schema, so a mistake on step 1 surfaces immediately
  * rather than after the user has photographed their Aadhaar card.
  *
- * On success the agent CANNOT log in — an admin must approve them first — so the
- * flow ends on a confirmation screen rather than a redirect to the dashboard.
+ * On success the agent's account is active immediately (a password signup must
+ * confirm its email first), so the flow ends on a confirmation screen that points
+ * them at sign-in rather than redirecting straight into a session they don't have.
  */
 export default function AgentRegisterPage() {
   const [step, setStep] = useState<Step>(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  // Whether the applicant still has to click an email link before they can log in.
+  const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
 
   const [account, setAccount] = useState<AgentAccountData | null>(null);
   const [agency, setAgency] = useState<AgentAgencyData | null>(null);
@@ -84,7 +87,7 @@ export default function AgentRegisterPage() {
     setSubmitting(true);
 
     try {
-      await registerAgent({
+      const result = await registerAgent({
         // Exactly one of these two identity shapes goes up. With Google we send
         // only the credential: the backend derives email and name from the
         // verified token, so there is nothing here for a client to spoof.
@@ -113,6 +116,8 @@ export default function AgentRegisterPage() {
         gstCertificate: kyc.gstCertificate,
       });
 
+      // Google signups are verified already; password signups get an email link.
+      setNeedsEmailVerification(Boolean(result.emailVerificationRequired));
       setSubmitted(true);
     } catch (error: any) {
       // A Google credential is short-lived, and photographing documents takes
@@ -147,7 +152,12 @@ export default function AgentRegisterPage() {
   };
 
   if (submitted) {
-    return <ApplicationSubmitted email={google?.email ?? account?.email ?? ''} />;
+    return (
+      <ApplicationSubmitted
+        email={google?.email ?? account?.email ?? ''}
+        needsEmailVerification={needsEmailVerification}
+      />
+    );
   }
 
   return (
@@ -519,7 +529,13 @@ function StepNav({
   );
 }
 
-function ApplicationSubmitted({ email }: { email: string }) {
+function ApplicationSubmitted({
+  email,
+  needsEmailVerification,
+}: {
+  email: string;
+  needsEmailVerification: boolean;
+}) {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-(--color-background)">
       <div className="w-full max-w-[460px] text-center">
@@ -541,26 +557,29 @@ function ApplicationSubmitted({ email }: { email: string }) {
         </div>
 
         <h1 className="text-2xl font-bold text-(--color-foreground)">
-          Application submitted
+          {needsEmailVerification
+            ? 'Almost there — verify your email'
+            : 'Your account is ready'}
         </h1>
 
-        <p className="mt-3 text-sm leading-relaxed text-(--color-foreground)">
-          Thanks — we&apos;ve received your documents. Our team reviews new booking
-          partners within <strong>2 business days</strong>.
-        </p>
-
-        {/* Set the expectation explicitly. Without this, an agent tries to log in,
-            gets refused, and assumes the signup silently failed. */}
-        <p className="mt-3 text-sm leading-relaxed text-(--color-foreground) opacity-80">
-          You won&apos;t be able to sign in until your account is approved. We&apos;ll
-          email {email ? <strong>{email}</strong> : 'you'} as soon as it is.
-        </p>
+        {needsEmailVerification ? (
+          <p className="mt-3 text-sm leading-relaxed text-(--color-foreground)">
+            Your booking-partner account has been created. We&apos;ve sent a
+            verification link to {email ? <strong>{email}</strong> : 'your inbox'}.
+            Click it to confirm your email, then sign in and start booking.
+          </p>
+        ) : (
+          <p className="mt-3 text-sm leading-relaxed text-(--color-foreground)">
+            Your booking-partner account is ready. You can sign in and start booking
+            on behalf of your customers right away.
+          </p>
+        )}
 
         <Link
-          href="/"
+          href="/login"
           className="inline-block mt-8 px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors duration-200 bg-(--color-primary-button) text-(--color-peace) hover:bg-(--color-secondary-button)"
         >
-          Back to home
+          Go to sign in
         </Link>
       </div>
     </div>

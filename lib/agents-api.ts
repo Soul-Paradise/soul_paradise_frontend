@@ -3,8 +3,8 @@
  *
  * These endpoints are multipart, not JSON, so they bypass the shared ApiClient
  * (which sets Content-Type: application/json). They are also all unauthenticated
- * — an agent has no session until an admin approves them — so there is no token
- * handling here either.
+ * — the agent has no session yet at signup time — so there is no token handling
+ * here either.
  */
 
 const API_BASE_URL =
@@ -14,6 +14,9 @@ export type AgentStatus = 'PENDING' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED';
 
 export interface AgentRegistrationResponse {
   status: AgentStatus;
+  // true for password signups — they must confirm their email before first login.
+  // Absent/false for Google signups, which can sign in immediately.
+  emailVerificationRequired?: boolean;
   message: string;
 }
 
