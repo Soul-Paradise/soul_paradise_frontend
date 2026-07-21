@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { MapPin, CalendarDays, ChevronDown, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CalendarPanel } from './CalendarPanel';
+import { usePersistentSearch, notBeforeToday } from '@/lib/hooks/useSearchPersistence';
 
 interface Location {
   id: string;
@@ -19,6 +20,13 @@ interface Room {
   adults: number;
   children: number;
   childAges: number[];
+}
+
+interface HotelSearchSnapshot {
+  destination: Location | null;
+  checkIn: string; // 'YYYY-MM-DD'
+  checkOut: string;
+  rooms: Room[];
 }
 
 const DEFAULT_CHILD_AGE = 5;
@@ -50,6 +58,27 @@ export const HotelBooking = () => {
   const [checkIn, setCheckIn] = useState<Date>(today);
   const [checkOut, setCheckOut] = useState<Date>(tomorrow);
   const [rooms, setRooms] = useState<Room[]>([{ adults: 1, children: 0, childAges: [] }]);
+
+  // Remember the last search on this device and pre-fill it on the next visit.
+  // Dates live in state as Date objects, so they are stored/restored as strings.
+  usePersistentSearch<HotelSearchSnapshot>(
+    'hotels',
+    { destination, checkIn: toDateStr(checkIn), checkOut: toDateStr(checkOut), rooms },
+    (s) => {
+      if (s.destination) setDestination(s.destination);
+      const ci = notBeforeToday(s.checkIn, toDateStr(today));
+      const ciDate = new Date(ci + 'T00:00:00');
+      setCheckIn(ciDate);
+      let coDate = new Date(notBeforeToday(s.checkOut, toDateStr(tomorrow)) + 'T00:00:00');
+      if (coDate <= ciDate) {
+        // Keep check-out after check-in even if the stored gap collapsed.
+        coDate = new Date(ciDate);
+        coDate.setDate(coDate.getDate() + 1);
+      }
+      setCheckOut(coDate);
+      if (Array.isArray(s.rooms) && s.rooms.length > 0) setRooms(s.rooms);
+    },
+  );
 
   // Panels
   const [activePanel, setActivePanel] = useState<'destination' | 'dates' | 'guests' | null>(null);

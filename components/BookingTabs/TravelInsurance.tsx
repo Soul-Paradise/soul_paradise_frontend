@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { MapPin, CalendarDays, Search, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CalendarPanel } from './CalendarPanel';
+import { usePersistentSearch, notBeforeToday } from '@/lib/hooks/useSearchPersistence';
 
 type PolicyType = 'INDIVIDUAL' | 'FAMILY' | 'FRIENDS' | 'STUDENT' | 'ANNUAL MULTITRIP';
 
@@ -18,6 +19,15 @@ interface SelectedLocation {
   displayName: string;
   countryName: string;
   countryCode: string;
+}
+
+interface InsuranceSearchSnapshot {
+  policyType: PolicyType;
+  destinations: SelectedLocation[];
+  startDate: string;
+  endDate: string;
+  tenureInMonths: number;
+  travellers: Traveller[];
 }
 
 interface NominatimResult {
@@ -114,9 +124,37 @@ export const TravelInsurance = () => {
   const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
   const [searching, setSearching] = useState(false);
 
+  // When restoring a saved search, we set policyType AND its travellers together;
+  // this lets us skip the one reset the policyType effect would otherwise fire
+  // (which would wipe the restored travellers).
+  const skipPolicyReset = useRef(false);
+
   useEffect(() => {
+    if (skipPolicyReset.current) {
+      skipPolicyReset.current = false;
+      return;
+    }
     setTravellers(defaultTravellersForPolicy(policyType));
   }, [policyType]);
+
+  // Remember the last search on this device and pre-fill it on the next visit.
+  usePersistentSearch<InsuranceSearchSnapshot>(
+    'insurance',
+    { policyType, destinations, startDate, endDate, tenureInMonths, travellers },
+    (s) => {
+      const hasTravellers = Array.isArray(s.travellers) && s.travellers.length > 0;
+      // Only a real policy change re-triggers the reset effect we need to skip.
+      if (s.policyType && s.policyType !== policyType) {
+        if (hasTravellers) skipPolicyReset.current = true;
+        setPolicyType(s.policyType);
+      }
+      if (Array.isArray(s.destinations)) setDestinations(s.destinations);
+      setStartDate(notBeforeToday(s.startDate, todayStr()));
+      setEndDate(notBeforeToday(s.endDate, tomorrowStr()));
+      if (s.tenureInMonths) setTenureInMonths(s.tenureInMonths);
+      if (hasTravellers) setTravellers(s.travellers);
+    },
+  );
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {

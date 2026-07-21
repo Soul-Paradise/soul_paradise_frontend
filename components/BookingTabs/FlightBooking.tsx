@@ -11,6 +11,7 @@ import {
   type CabinClass,
 } from './TravellerSelector';
 import type { Airport } from '@/lib/flights-api';
+import { usePersistentSearch, notBeforeToday } from '@/lib/hooks/useSearchPersistence';
 
 type TripType = 'oneway' | 'roundtrip' | 'multicity';
 
@@ -18,6 +19,17 @@ interface MultiLeg {
   from: Airport | null;
   to: Airport | null;
   date: string;
+}
+
+interface FlightSearchSnapshot {
+  tripType: TripType;
+  fromAirport: Airport | null;
+  toAirport: Airport | null;
+  departDate: string;
+  returnDate: string;
+  travellers: TravellerCounts;
+  cabinClass: CabinClass;
+  legs: MultiLeg[];
 }
 
 const MAX_LEGS = 6;
@@ -66,6 +78,24 @@ export const FlightBooking = () => {
   const [legs, setLegs] = useState<MultiLeg[]>(() => [
     { from: null, to: null, date: defaultToday() },
   ]);
+
+  // Remember the last search on this device and pre-fill it on the next visit.
+  usePersistentSearch<FlightSearchSnapshot>(
+    'flights',
+    { tripType, fromAirport, toAirport, departDate, returnDate, travellers, cabinClass, legs },
+    (s) => {
+      if (s.tripType) setTripType(s.tripType);
+      if (s.fromAirport) setFromAirport(s.fromAirport);
+      if (s.toAirport) setToAirport(s.toAirport);
+      setDepartDate(notBeforeToday(s.departDate, defaultToday()));
+      setReturnDate(notBeforeToday(s.returnDate, defaultTomorrow()));
+      if (s.travellers) setTravellers(s.travellers);
+      if (s.cabinClass) setCabinClass(s.cabinClass);
+      if (Array.isArray(s.legs) && s.legs.length > 0) {
+        setLegs(s.legs.map((l) => ({ ...l, date: notBeforeToday(l.date, defaultToday()) })));
+      }
+    },
+  );
 
   // Date panel state
   const [datePanelOpen, setDatePanelOpen] = useState(false);
