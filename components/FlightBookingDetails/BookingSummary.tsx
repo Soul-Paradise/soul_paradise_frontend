@@ -46,22 +46,21 @@ export const BookingSummary = ({
   const totalTravellers =
     passengerCounts.adults + passengerCounts.children + passengerCounts.infants;
 
-  // Calculate base fare and taxes from the fareBreakdown items
-  const baseFareItem = fareBreakdown.find((item) =>
-    item.label.toLowerCase().includes('base'),
-  );
-  const taxItems = fareBreakdown.filter((item) => {
-    const label = item.label.toLowerCase();
-    return !label.includes('base') && !label.includes('total');
-  });
+  // Aggregate each per-passenger breakdown line across the whole party
+  // (per-pax amount × count for each type) so the rows sum exactly to the fare
+  // total for any passenger mix — not just a single traveller.
+  const aggregate = (item: FareBreakdownItem) =>
+    item.adultAmount * passengerCounts.adults +
+    item.childAmount * passengerCounts.children +
+    item.infantAmount * passengerCounts.infants;
 
-  const baseFareTotal = baseFareItem
-    ? baseFareItem.adultAmount + baseFareItem.childAmount + baseFareItem.infantAmount
-    : 0;
-  const taxTotal = taxItems.reduce(
-    (sum, item) => sum + item.adultAmount + item.childAmount + item.infantAmount,
-    0,
-  );
+  // Show every itemised line the backend sends (Base Fare — commission already
+  // folded in — Taxes & Fees, Service Charge, …). Nothing is hidden: whatever is
+  // in the total appears as a line, and the lines add up to the total.
+  const fareLines = fareBreakdown
+    .map((item) => ({ label: item.label, amount: aggregate(item) }))
+    .filter((line) => line.amount > 0);
+  const fareLinesTotal = fareLines.reduce((sum, line) => sum + line.amount, 0);
 
   // SSR add-ons total
   const ssrTotal = selectedSSR.reduce((total, sel) => {
@@ -72,8 +71,9 @@ export const BookingSummary = ({
   // Promo discount
   const promoDiscount = appliedPromo?.valid ? appliedPromo.discountAmount : 0;
 
-  // Grand total
-  const grandTotal = totalFare.gross + ssrTotal - promoDiscount;
+  // Grand total — derived from the visible lines so the breakdown always
+  // reconciles with the Total Amount shown to (and paid by) the customer.
+  const grandTotal = fareLinesTotal + ssrTotal - promoDiscount;
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden sticky top-4">
@@ -88,23 +88,15 @@ export const BookingSummary = ({
       </div>
 
       <div className="p-4 sm:p-5 space-y-2.5">
-        {/* Base Fare */}
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-600">Base Fare</span>
-          <span className="text-gray-900 font-medium">
-            {formatCurrency(baseFareTotal, totalFare.currency)}
-          </span>
-        </div>
-
-        {/* Tax & Charges */}
-        {taxTotal > 0 && (
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Tax & Charges</span>
+        {/* Itemised fare lines — Base Fare, Taxes & Fees, Service Charge, … */}
+        {fareLines.map((line) => (
+          <div key={line.label} className="flex justify-between text-sm">
+            <span className="text-gray-600">{line.label}</span>
             <span className="text-gray-900 font-medium">
-              {formatCurrency(taxTotal, totalFare.currency)}
+              {formatCurrency(line.amount, totalFare.currency)}
             </span>
           </div>
-        )}
+        ))}
 
         {/* Add-ons */}
         {ssrTotal > 0 && (
