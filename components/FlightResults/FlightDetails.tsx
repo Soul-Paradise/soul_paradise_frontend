@@ -58,6 +58,24 @@ function formatDuration(duration: string) {
   return `${h} Hr.  ${m} Min.`;
 }
 
+/** Normalise a layover/gap string (PT.., "2h 30m", raw) into "2h 30m". */
+function formatGap(duration: string) {
+  if (!duration) return '';
+  if (duration.startsWith('PT')) {
+    const h = duration.match(/(\d+)H/)?.[1] || '0';
+    const m = duration.match(/(\d+)M/)?.[1] || '0';
+    return `${h}h ${m}m`;
+  }
+  const h = duration.match(/(\d+)\s*h/i)?.[1];
+  const m = duration.match(/(\d+)\s*m/i)?.[1];
+  if (h || m) return `${h || '0'}h ${m || '0'}m`;
+  return duration;
+}
+
+function cityName(name: string, code: string) {
+  return (name || code).split('|')[0].trim();
+}
+
 function formatCurrency(amount: number, currency: string) {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -134,17 +152,58 @@ function FlightInfoTab({
   flight: FlightResult;
   colors: { bg: string; text: string; border: string };
 }) {
+  const airline = flight.airlineName.split('|')[0].trim();
+  const cabin = getCabinName(flight.cabin);
+  const stopsCount = flight.connections?.length || 0;
+  const stopsText =
+    stopsCount === 0 ? 'Non Stop' : `${stopsCount} Stop${stopsCount > 1 ? 's' : ''}`;
+
+  // Build the ordered list of stops: origin → each halt → destination.
+  // Only the origin and destination carry times (search data has no
+  // per-segment times); halts carry the layover duration instead.
+  type Stop = {
+    code: string;
+    name: string;
+    time?: string;
+    terminal?: string;
+    layover?: string;
+    kind: 'origin' | 'halt' | 'dest';
+  };
+  const stops: Stop[] = [
+    {
+      code: flight.from,
+      name: cityName(flight.fromName, flight.from),
+      time: flight.departureTime,
+      terminal: flight.departureTerminal,
+      kind: 'origin',
+    },
+    ...(flight.connections || []).map<Stop>((c) => ({
+      code: c.airport,
+      name: cityName(c.airportName, c.airport),
+      layover: c.duration,
+      kind: 'halt',
+    })),
+    {
+      code: flight.to,
+      name: cityName(flight.toName, flight.to),
+      time: flight.arrivalTime,
+      terminal: flight.arrivalTerminal,
+      kind: 'dest',
+    },
+  ];
+
   return (
     <div>
       {/* Route header */}
-      <div className="bg-gray-700 text-white rounded-t-lg px-4 py-2.5 text-sm font-semibold flex items-center gap-2">
-        <span>{flight.fromName || flight.from}</span>
+      <div className="bg-gray-700 text-white rounded-t-lg px-4 py-2.5 text-sm font-semibold flex items-center flex-wrap gap-x-2 gap-y-1">
+        <span>{flight.from}</span>
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
         </svg>
-        <span>{flight.toName || flight.to}</span>
-        <span className="ml-2 text-gray-300">,</span>
-        <span className="text-gray-300 ml-1">{formatRouteDate(flight.departureTime)}</span>
+        <span>{flight.to}</span>
+        <span className="text-gray-300 font-normal">· {formatRouteDate(flight.departureTime)}</span>
+        <span className="text-gray-300 font-normal">· {formatDuration(flight.duration)}</span>
+        <span className="text-gray-300 font-normal">· {stopsText}</span>
       </div>
 
       {/* Flight detail card */}
@@ -171,62 +230,76 @@ function FlightInfoTab({
             )}
             <div className="text-center">
               <div className="text-[10px] text-gray-400 uppercase font-medium">Travel Class</div>
-              <div className="text-xs font-semibold text-gray-700">{getCabinName(flight.cabin)}</div>
+              <div className="text-xs font-semibold text-gray-700">{cabin}</div>
             </div>
           </div>
         </div>
 
-        {/* Departure → Duration → Arrival */}
-        <div className="flex items-start gap-4">
-          {/* Departure */}
-          <div className="flex-1">
-            <div className="text-2xl font-bold text-gray-900">{formatTime(flight.departureTime)}</div>
-            <div className="text-xs text-gray-500 mt-0.5">{formatFullDate(flight.departureTime)}</div>
-            <div className="text-sm font-semibold text-gray-800 mt-2">
-              {flight.fromName || flight.from} [<span className="font-bold">{flight.from}</span>]
-            </div>
-            {flight.departureTerminal && (
-              <div className="text-xs text-gray-400 mt-0.5">Terminal {flight.departureTerminal}</div>
-            )}
-          </div>
+        {/* Itinerary — one journey per hop (origin → halt → destination) */}
+        <ol className="relative">
+          {stops.map((s, i) => {
+            const last = i === stops.length - 1;
+            return (
+              <li key={i} className="flex gap-3">
+                {/* Timeline rail */}
+                <div className="flex flex-col items-center pt-1.5">
+                  <span
+                    className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                      s.kind === 'halt'
+                        ? 'bg-white border-2 border-orange-400'
+                        : 'bg-blue-500 border-2 border-blue-500'
+                    }`}
+                  />
+                  {!last && <span className="w-px flex-1 bg-gray-200 my-1" />}
+                </div>
 
-          {/* Duration visual */}
-          <div className="flex flex-col items-center px-4 pt-1 min-w-[120px]">
-            <div className="text-xs text-gray-400 mb-1.5">{formatDuration(flight.duration)}</div>
-            <div className="w-full flex items-center">
-              <div className="h-[2px] flex-1 border-t-2 border-dashed border-blue-300" />
-              <svg className="w-4 h-4 text-blue-400 -ml-1" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0011.5 2 1.5 1.5 0 0010 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" />
-              </svg>
-            </div>
-          </div>
+                {/* Stop content */}
+                <div className={`flex-1 min-w-0 ${last ? '' : 'pb-5'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-gray-800">
+                        {s.name} [<span className="font-bold">{s.code}</span>]
+                      </div>
+                      {s.terminal && (
+                        <div className="text-xs text-gray-400 mt-0.5">Terminal {s.terminal}</div>
+                      )}
+                      {s.kind === 'halt' && (
+                        <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-md bg-orange-50 border border-orange-200 px-2 py-0.5 text-[11px] font-medium text-orange-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+                          Layover {formatGap(s.layover || '')} · Change planes
+                        </div>
+                      )}
+                    </div>
+                    {s.time && (
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-lg font-bold text-gray-900 leading-tight">
+                          {formatTime(s.time)}
+                        </div>
+                        <div className="text-[11px] text-gray-500">{formatFullDate(s.time)}</div>
+                      </div>
+                    )}
+                  </div>
 
-          {/* Arrival */}
-          <div className="flex-1 text-right">
-            <div className="text-2xl font-bold text-gray-900">{formatTime(flight.arrivalTime)}</div>
-            <div className="text-xs text-gray-500 mt-0.5">{formatFullDate(flight.arrivalTime)}</div>
-            <div className="text-sm font-semibold text-gray-800 mt-2">
-              {flight.toName || flight.to} [<span className="font-bold">{flight.to}</span>]
-            </div>
-            {flight.arrivalTerminal && (
-              <div className="text-xs text-gray-400 mt-0.5">Terminal {flight.arrivalTerminal}</div>
-            )}
-          </div>
-        </div>
-
-        {/* Connection info for multi-stop */}
-        {flight.connections && flight.connections.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-dashed border-gray-200">
-            <div className="text-xs text-gray-500 font-medium mb-1">Connections</div>
-            {flight.connections.map((conn, i) => (
-              <div key={i} className="text-xs text-gray-600 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
-                <span className="font-medium">{conn.airportName || conn.airport}</span>
-                {conn.duration && <span className="text-gray-400">({conn.duration} layover)</span>}
-              </div>
-            ))}
-          </div>
-        )}
+                  {/* Flight leg to the next stop */}
+                  {!last && (
+                    <div className="mt-3 flex items-center gap-2 text-[11px] text-gray-500">
+                      <div
+                        className={`w-6 h-6 rounded ${colors.bg} ${colors.border} border flex items-center justify-center flex-shrink-0`}
+                      >
+                        <span className={`text-[9px] font-bold ${colors.text}`}>
+                          {flight.airlineCode}
+                        </span>
+                      </div>
+                      <span className="font-medium text-gray-700">{airline}</span>
+                      <span className="text-gray-300">·</span>
+                      <span>{cabin}</span>
+                    </div>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
 
         {/* Info notice */}
         <div className="mt-5 flex items-center gap-1.5 text-xs">

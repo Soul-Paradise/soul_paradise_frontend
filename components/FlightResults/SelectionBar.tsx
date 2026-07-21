@@ -78,12 +78,8 @@ const FlightPane = ({ flight, label, currency }: PaneProps) => {
     flight.stops === 0
       ? 'Non stop'
       : `${flight.stops} stop${flight.stops > 1 ? 's' : ''}`;
-  const via =
-    flight.connections?.length > 0
-      ? `, Via ${flight.connections.map((c) => c.airportName || c.airport).join(', ')}`
-      : '';
-  const fromCity = (flight.fromName || flight.from).split('|')[0].trim();
-  const toCity = (flight.toName || flight.to).split('|')[0].trim();
+  const fromCity = flight.from.split('|')[0].trim();
+  const toCity = flight.to.split('|')[0].trim();
   const flightCode = `${flight.airlineCode}-${flight.flightNo.replace(flight.airlineCode, '').trim()}`;
   const airline = flight.airlineName.split('|')[0];
 
@@ -132,7 +128,6 @@ const FlightPane = ({ flight, label, currency }: PaneProps) => {
           </div>
           <div className="text-[11px] text-gray-500 leading-tight whitespace-nowrap">
             {stopsText}
-            {via}
           </div>
         </div>
 
