@@ -322,9 +322,7 @@ class ApiClient {
 
     const response = await this.request<AuthResponse>('/auth/refresh', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${refreshToken}`,
-      },
+      body: JSON.stringify({ refreshToken }),
     });
 
     // Update tokens
