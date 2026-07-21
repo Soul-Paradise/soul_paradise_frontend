@@ -76,14 +76,6 @@ function cityName(name: string, code: string) {
   return (name || code).split('|')[0].trim();
 }
 
-function formatCurrency(amount: number, currency: string) {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: currency || 'INR',
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
 function getCabinName(cabin: string) {
   const map: Record<string, string> = {
     E: 'Economy',
@@ -94,7 +86,7 @@ function getCabinName(cabin: string) {
   return map[cabin] || cabin || 'Economy';
 }
 
-export const FlightDetails = ({ flight, currency }: FlightDetailsProps) => {
+export const FlightDetails = ({ flight }: FlightDetailsProps) => {
   const [activeTab, setActiveTab] = useState<Tab>('flight');
   const colors = AIRLINE_COLORS[flight.airlineCode] || DEFAULT_COLOR;
 
@@ -133,7 +125,7 @@ export const FlightDetails = ({ flight, currency }: FlightDetailsProps) => {
           <FlightInfoTab flight={flight} colors={colors} />
         )}
         {activeTab === 'fare' && (
-          <FareSummaryTab flight={flight} currency={currency} />
+          <FareSummaryTab flight={flight} />
         )}
         {activeTab === 'baggage' && (
           <BaggageTab flight={flight} />
@@ -315,86 +307,54 @@ function FlightInfoTab({
 
 /* ─── Fare Summary & Rules Tab ─── */
 
-function FareSummaryTab({
-  flight,
-  currency,
-}: {
-  flight: FlightResult;
-  currency: string;
-}) {
+function FareSummaryTab({ flight }: { flight: FlightResult }) {
   return (
-    <div className="flex flex-col md:flex-row gap-5">
+    <div className="max-w-xl">
       {/* Fare attributes */}
-      <div className="flex-1">
-        <div className="bg-sky-50 rounded-lg border border-sky-100 p-4">
-          <div className="text-sm font-semibold text-gray-800 mb-3">
-            {flight.from} - {flight.to}
-          </div>
-          <table className="w-full text-sm">
-            <tbody>
-              <tr className="border-b border-sky-100">
-                <td className="py-2 text-gray-500">Fare Class</td>
-                <td className="py-2 text-right font-medium text-gray-700">
-                  {flight.fareClass || '-'}
-                </td>
-              </tr>
-              <tr className="border-b border-sky-100">
-                <td className="py-2 text-gray-500">Fare Type</td>
-                <td className="py-2 text-right font-medium text-gray-700">
-                  {flight.fareType || '-'}
-                </td>
-              </tr>
-              <tr>
-                <td className="py-2 text-gray-500">Refundable</td>
-                <td className="py-2 text-right">
-                  <span
-                    className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                      flight.refundable
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-600'
-                    }`}
-                  >
-                    {flight.refundable ? 'Yes' : 'No'}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      <div className="bg-sky-50 rounded-lg border border-sky-100 p-4">
+        <div className="text-sm font-semibold text-gray-800 mb-3">
+          {flight.from} - {flight.to}
         </div>
-
-        <div className="mt-3 text-xs text-gray-400 space-y-1">
-          <p>
-            * Fare rules and detailed breakdown (change fee, cancellation fee) will be shown on the booking page.
-          </p>
-          <p>
-            * The above data is indicatory, fare rules are subject to changes by the airline.
-          </p>
-        </div>
+        <table className="w-full text-sm">
+          <tbody>
+            <tr className="border-b border-sky-100">
+              <td className="py-2 text-gray-500">Travel Class</td>
+              <td className="py-2 text-right font-medium text-gray-700">
+                {getCabinName(flight.cabin)}
+              </td>
+            </tr>
+            <tr className="border-b border-sky-100">
+              <td className="py-2 text-gray-500">Check-in Baggage</td>
+              <td className="py-2 text-right font-medium text-gray-700">
+                {flight.baggage || 'As per airline policy'}
+              </td>
+            </tr>
+            <tr>
+              <td className="py-2 text-gray-500">Refundable</td>
+              <td className="py-2 text-right">
+                <span
+                  className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                    flight.refundable
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-red-100 text-red-600'
+                  }`}
+                >
+                  {flight.refundable ? 'Yes' : 'No'}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      {/* Fare total card */}
-      <div className="w-full md:w-64 flex-shrink-0">
-        <div className="bg-sky-50 rounded-lg border border-sky-100 p-4">
-          <div className="text-sm font-semibold text-gray-800 mb-3 flex items-center justify-between">
-            <span>Fare Details</span>
-          </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between text-gray-600">
-              <span>Fare</span>
-              <span>{formatCurrency(flight.grossFare, currency)}</span>
-            </div>
-            {flight.grossFare !== flight.netFare && flight.netFare > 0 && (
-              <div className="flex justify-between text-green-600 text-xs">
-                <span>Discount</span>
-                <span>- {formatCurrency(flight.grossFare - flight.netFare, currency)}</span>
-              </div>
-            )}
-          </div>
-          <div className="mt-3 pt-3 border-t border-sky-200 flex justify-between font-bold text-gray-900">
-            <span>Total Amount:</span>
-            <span>{formatCurrency(flight.grossFare, currency)}</span>
-          </div>
-        </div>
+      <div className="mt-3 text-xs text-gray-400 space-y-1">
+        <p>
+          * The full fare breakdown (base fare, taxes &amp; fees, service charge) and
+          fare rules (change fee, cancellation fee) are shown on the booking page.
+        </p>
+        <p>
+          * The above data is indicatory, fare rules are subject to changes by the airline.
+        </p>
       </div>
     </div>
   );
