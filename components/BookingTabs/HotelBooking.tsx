@@ -180,6 +180,8 @@ export const HotelBooking = () => {
       checkIn: toDateStr(checkIn),
       checkOut: toDateStr(checkOut),
       rooms: JSON.stringify(rooms),
+      // 2-letter ISO country code from the autosuggest result — drives destinationCountryCode / commission
+      destinationCountryCode: destination.country || 'IN',
     });
     router.push(`/booking/hotels?${params.toString()}`);
   }

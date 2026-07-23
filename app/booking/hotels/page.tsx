@@ -836,6 +836,7 @@ function HotelResults() {
   const checkIn = searchParams.get('checkIn') || '';
   const checkOut = searchParams.get('checkOut') || '';
   const roomsParam = searchParams.get('rooms') || '[{"adults":1,"children":0,"childAges":[]}]';
+  const destinationCountryCode = searchParams.get('destinationCountryCode') || 'IN';
 
   const [results, setResults] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -895,7 +896,7 @@ function HotelResults() {
             rooms,
             nationality: 'IN',
             countryOfResidence: 'IN',
-            destinationCountryCode: 'IN',
+            destinationCountryCode,
           }),
           signal: controller.signal,
         });
@@ -920,7 +921,7 @@ function HotelResults() {
       cancelled = true;
       controller.abort();
     };
-  }, [authLoading, isAuthenticated, locationId, lat, long, checkIn, checkOut, roomsParam, locationName]);
+  }, [authLoading, isAuthenticated, locationId, lat, long, checkIn, checkOut, roomsParam, locationName, destinationCountryCode]);
 
   // Filtered + sorted hotels
   const displayed = useMemo(() => {
