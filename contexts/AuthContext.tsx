@@ -84,7 +84,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const currentUser = await api.getCurrentUser();
       setUser(currentUser);
     } catch (err) {
-      console.error('Auth check failed:', err);
+      // A failed /auth/me on startup is EXPECTED when the stored token is
+      // missing/expired (401) or the backend is unreachable (statusCode 0):
+      // it just means "not signed in". Only log genuinely unexpected failures,
+      // and log the actual fields (the thrown ApiError is a plain object, so
+      // logging it directly serializes to "{}").
+      const apiError = err as ApiError;
+      const status = apiError?.statusCode;
+      if (status !== 401 && status !== 0) {
+        console.error(
+          `Auth check failed (${status ?? 'unknown'}):`,
+          apiError?.message ?? err
+        );
+      }
       // Clear invalid tokens
       api.clearTokens();
       setUser(null);
