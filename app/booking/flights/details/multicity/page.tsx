@@ -58,7 +58,11 @@ function parseLegs(raw: string): MultiCityPriceLeg[] {
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter((l) => l && typeof l.flightIndex === 'string')
-      .map((l) => ({ flightIndex: l.flightIndex, netFare: Number(l.netFare) || 0 }));
+      .map((l) => ({
+        tui: String(l.tui || ''),
+        flightIndex: l.flightIndex,
+        netFare: Number(l.netFare) || 0,
+      }));
   } catch {
     return [];
   }
@@ -70,7 +74,6 @@ function MultiCityDetailsContent() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const tui = searchParams.get('tui') || '';
   const tripType = (searchParams.get('tripType') === 'IM' ? 'IM' : 'DM') as 'DM' | 'IM';
   const legsRaw = searchParams.get('legs') || '';
 
@@ -102,7 +105,7 @@ function MultiCityDetailsContent() {
     if (pricingLoadedRef.current) return;
 
     const legs = parseLegs(legsRaw);
-    if (!tui || legs.length < 2) {
+    if (legs.length < 2 || legs.some((l) => !l.tui)) {
       setError('Missing itinerary. Please go back and search again.');
       setLoading(false);
       return;
@@ -112,7 +115,7 @@ function MultiCityDetailsContent() {
     setLoading(true);
     setError('');
 
-    priceMultiCityAndGetDetails(tui, tripType, legs)
+    priceMultiCityAndGetDetails(tripType, legs)
       .then((data) => {
         setPricing(data);
         const paxList: TravellerInfo[] = [];
@@ -125,7 +128,7 @@ function MultiCityDetailsContent() {
         setError(err.message || 'Failed to load flight pricing.');
       })
       .finally(() => setLoading(false));
-  }, [tui, tripType, legsRaw]);
+  }, [tripType, legsRaw]);
 
   const updateTraveller = (index: number, updated: TravellerInfo) => {
     setTravellers((prev) => prev.map((t, i) => (i === index ? updated : t)));
@@ -241,6 +244,9 @@ function MultiCityDetailsContent() {
         selectedSSR: allSelections,
         ssrChargeMap: pricing.ssrChargeMap,
         freeSSRs: pricing.freeSSRs,
+        // DM: one { tui, netAmount } per leg — the backend splits the flat SSR
+        // selections per leg by FUID namespace and tickets each leg separately.
+        multiCitySessions: pricing.multiCitySessions,
         tripSummary: {
           fromCode: pricing.segments[0]?.from || '',
           toCode: pricing.segments[pricing.segments.length - 1]?.to || '',

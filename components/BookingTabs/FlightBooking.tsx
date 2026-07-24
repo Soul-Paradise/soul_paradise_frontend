@@ -242,6 +242,31 @@ export const FlightBooking = () => {
       }
     }
 
+    // A single-leg "multi-city" is just a one-way trip. Route it into the
+    // existing, production-tested one-way flow (one ExpressSearch, FareType ON)
+    // rather than the DM/IM multi-city pipeline. Params mirror handleSearch()
+    // exactly so the results page behaves identically to a normal one-way.
+    if (legs.length === 1) {
+      const leg = legs[0];
+      const params = new URLSearchParams({
+        from: leg.from!.code,
+        to: leg.to!.code,
+        fromName: leg.from!.cityName,
+        toName: leg.to!.cityName,
+        departDate: leg.date,
+        adults: travellers.adults.toString(),
+        children: travellers.children.toString(),
+        infants: travellers.infants.toString(),
+        cabin: cabinClass,
+        tripType: 'oneway',
+        directOnly: 'false',
+        refundableOnly: 'false',
+        nearbyAirports: 'true',
+      });
+      router.push(`/booking/flights?${params.toString()}`);
+      return;
+    }
+
     const segments = legs.map((l) => ({
       from: l.from!.code,
       to: l.to!.code,

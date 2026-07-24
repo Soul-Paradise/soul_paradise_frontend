@@ -160,8 +160,34 @@ class ApiClient {
     }
   }
 
+  // De-duplicate concurrent refreshes: if several authenticated calls 401 at
+  // once, they all await the same in-flight refresh instead of each hitting
+  // /auth/refresh (which would rotate the stored refresh token repeatedly).
+  private refreshInFlight: Promise<boolean> | null = null;
+
+  private async tryRefresh(): Promise<boolean> {
+    if (!this.getRefreshToken()) return false;
+    if (!this.refreshInFlight) {
+      this.refreshInFlight = this.refreshToken()
+        .then(() => true)
+        .catch(() => {
+          // Refresh token is gone/expired — the session is truly dead.
+          this.clearTokens();
+          return false;
+        })
+        .finally(() => {
+          this.refreshInFlight = null;
+        });
+    }
+    return this.refreshInFlight;
+  }
+
   /**
-   * Authenticated request with access token
+   * Authenticated request with access token.
+   * Transparently recovers from an expired access token: on a 401 it refreshes
+   * the token once and retries the request a single time. This is what keeps a
+   * user signed in across the (long-lived) refresh-token window instead of
+   * being logged out the moment the short-lived access token expires.
    */
   private async authenticatedRequest<T>(
     endpoint: string,
@@ -173,13 +199,35 @@ class ApiClient {
       throw new ApiError('Not authenticated', 401);
     }
 
-    return this.request<T>(endpoint, {
+    const withAuth = (token: string): RequestInit => ({
       ...options,
       headers: {
         ...options.headers,
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${token}`,
       },
     });
+
+    try {
+      return await this.request<T>(endpoint, withAuth(accessToken));
+    } catch (err) {
+      // Only an expired/invalid access token is retryable here.
+      if (!(err instanceof ApiError) || err.statusCode !== 401) {
+        throw err;
+      }
+
+      const refreshed = await this.tryRefresh();
+      if (!refreshed) {
+        throw err;
+      }
+
+      const newToken = this.getAccessToken();
+      if (!newToken) {
+        throw err;
+      }
+
+      // Retry exactly once with the fresh access token.
+      return this.request<T>(endpoint, withAuth(newToken));
+    }
   }
 
   // Token Management

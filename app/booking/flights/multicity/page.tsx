@@ -269,13 +269,13 @@ function MultiCityResults() {
   const handleBook = useCallback(() => {
     if (!results) return;
     if (selected.some((f) => !f)) return;
-    // All legs share the single multi-city search TUI (official flow).
-    const legs = selected.map((f) => ({
+    // Each leg carries its OWN search TUI (DM: distinct per leg; IM: shared).
+    const legs = selected.map((f, i) => ({
+      tui: results.legs[i].tui,
       flightIndex: f!.index,
       netFare: f!.netFare,
     }));
     const params = new URLSearchParams({
-      tui: results.tui,
       tripType: results.tripType,
       legs: JSON.stringify(legs),
     });

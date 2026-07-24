@@ -104,6 +104,9 @@ export interface MultiCityLeg {
   fromName: string;
   toName: string;
   departDate: string;
+  // The search-session TUI this leg belongs to (DM: unique per leg; IM: shared).
+  // Echoed back per-leg at pricing time.
+  tui: string;
   flights: FlightResult[];
 }
 
@@ -119,8 +122,9 @@ export interface MultiCitySearchResponse {
   totalResults: number;
 }
 
-/** One selected leg for multi-city pricing. */
+/** One selected leg for multi-city pricing (its own search TUI + selection). */
 export interface MultiCityPriceLeg {
+  tui: string;
   flightIndex: string;
   netFare: number;
 }
@@ -253,6 +257,9 @@ export interface FlightPricingResponse {
   };
   ssrChargeMap: Record<string, number>;
   freeSSRs: FreeSSR[];
+  // Multi-city only: one { tui, netAmount } per priced leg (DM: N, IM: 1).
+  // Echoed back on booking so the backend can ticket each leg.
+  multiCitySessions?: Array<{ tui: string; netAmount: number }>;
 }
 
 export interface ContactInfo {
@@ -306,6 +313,9 @@ export interface BookingRequest {
   selectedSSR: SSRSelection[];
   ssrChargeMap: Record<string, number>;
   freeSSRs: FreeSSR[];
+  // Multi-city (DM) only: echoed straight back from the pricing response. When
+  // length > 1 the backend tickets each leg as its own itinerary.
+  multiCitySessions?: Array<{ tui: string; netAmount: number }>;
   // Route summary persisted for the orders list display.
   tripSummary?: {
     fromCode: string;
@@ -478,14 +488,13 @@ export async function searchMultiCityFlights(
 }
 
 export async function priceMultiCityAndGetDetails(
-  tui: string,
   tripType: 'DM' | 'IM',
   legs: MultiCityPriceLeg[],
 ): Promise<FlightPricingResponse> {
   const res = await authFetch(`${API_BASE}/flights/price-multicity`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tui, tripType, legs }),
+    body: JSON.stringify({ tripType, legs }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Pricing failed' }));
