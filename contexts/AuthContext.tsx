@@ -10,7 +10,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { api, type User, type LoginRequest, type RegisterRequest, type ApiError } from '@/lib/api';
+import { api, ApiError, type User, type LoginRequest, type RegisterRequest } from '@/lib/api';
 
 /**
  * Extract a safe ?next= redirect target from the current URL.
@@ -86,15 +86,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (err) {
       // A failed /auth/me on startup is EXPECTED when the stored token is
       // missing/expired (401) or the backend is unreachable (statusCode 0):
-      // it just means "not signed in". Only log genuinely unexpected failures,
-      // and log the actual fields (the thrown ApiError is a plain object, so
-      // logging it directly serializes to "{}").
-      const apiError = err as ApiError;
-      const status = apiError?.statusCode;
+      // it just means "not signed in". Only log genuinely unexpected failures.
+      const status = err instanceof ApiError ? err.statusCode : undefined;
       if (status !== 401 && status !== 0) {
         console.error(
           `Auth check failed (${status ?? 'unknown'}):`,
-          apiError?.message ?? err
+          err instanceof Error ? err.message : err
         );
       }
       // Clear invalid tokens

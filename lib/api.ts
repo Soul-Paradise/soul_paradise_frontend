@@ -3,12 +3,25 @@
  * Handles all HTTP requests with proper error handling and token management
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
-export interface ApiError {
-  message: string;
+/**
+ * A real Error subclass so failures always carry a message + stack and never
+ * serialize to "{}" in the console. Consumers can read `.statusCode`/`.error`
+ * or use `instanceof ApiError`.
+ */
+export class ApiError extends Error {
   statusCode: number;
   error?: string;
+
+  constructor(message: string, statusCode: number, error?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.statusCode = statusCode;
+    this.error = error;
+    // Restore the prototype chain (needed when targeting ES5/older runtimes).
+    Object.setPrototypeOf(this, ApiError.prototype);
+  }
 }
 
 export interface LoginRequest {
@@ -129,24 +142,21 @@ class ApiClient {
 
       if (!response.ok) {
         // Backend returns error in format: { message, statusCode, error }
-        throw {
-          message: data.message || 'An error occurred',
-          statusCode: response.status,
-          error: data.error,
-        } as ApiError;
+        throw new ApiError(
+          data.message || 'An error occurred',
+          response.status,
+          data.error
+        );
       }
 
       return data as T;
     } catch (error) {
-      if ((error as ApiError).statusCode) {
+      if (error instanceof ApiError) {
         // Re-throw API errors
         throw error;
       }
-      // Network or other errors
-      throw {
-        message: 'Network error. Please check your connection.',
-        statusCode: 0,
-      } as ApiError;
+      // Network or other errors (fetch rejected, non-JSON body, etc.)
+      throw new ApiError('Network error. Please check your connection.', 0);
     }
   }
 
@@ -160,10 +170,7 @@ class ApiClient {
     const accessToken = this.getAccessToken();
 
     if (!accessToken) {
-      throw {
-        message: 'Not authenticated',
-        statusCode: 401,
-      } as ApiError;
+      throw new ApiError('Not authenticated', 401);
     }
 
     return this.request<T>(endpoint, {
@@ -314,10 +321,7 @@ class ApiClient {
     const refreshToken = this.getRefreshToken();
 
     if (!refreshToken) {
-      throw {
-        message: 'No refresh token available',
-        statusCode: 401,
-      } as ApiError;
+      throw new ApiError('No refresh token available', 401);
     }
 
     const response = await this.request<AuthResponse>('/auth/refresh', {
