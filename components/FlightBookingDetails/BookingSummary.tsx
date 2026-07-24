@@ -62,9 +62,14 @@ export const BookingSummary = ({
     .filter((line) => line.amount > 0);
   const fareLinesTotal = fareLines.reduce((sum, line) => sum + line.amount, 0);
 
-  // SSR add-ons total
+  // SSR add-ons total. Match on BOTH fuid and id: multi-city (and round-trip)
+  // legs can share an ssrId across segments, so an id-only match would pick the
+  // wrong leg's charge. This keys exactly like the backend's ssrChargeMap
+  // (`${fuid}:${id}`), so the customer total reconciles with what's sent to Benzy.
   const ssrTotal = selectedSSR.reduce((total, sel) => {
-    const option = allSSROptions.find((o) => o.id === sel.ssrId);
+    const option = allSSROptions.find(
+      (o) => o.id === sel.ssrId && o.fuid === sel.fuid,
+    );
     return total + (option?.charge || 0);
   }, 0);
 

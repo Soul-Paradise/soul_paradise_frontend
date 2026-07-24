@@ -228,8 +228,13 @@ function MultiCityDetailsContent() {
         lastName: firstAdult?.lastName || contactInfo.lastName || 'User',
       };
 
+      // Match SSR charges on BOTH fuid and id (keyed like the backend's
+      // ssrChargeMap `${fuid}:${id}`). DM legs namespace their FUIDs, so an
+      // id-only match could pick another leg's charge and mis-total the payable.
       const ssrTotal = allSelections.reduce((sum, sel) => {
-        const option = allSSROptions.find((o) => o.id === sel.ssrId);
+        const option = allSSROptions.find(
+          (o) => o.id === sel.ssrId && o.fuid === sel.fuid,
+        );
         return sum + (option?.charge || 0);
       }, 0);
       const promoDiscount = appliedPromo?.valid ? appliedPromo.discountAmount : 0;

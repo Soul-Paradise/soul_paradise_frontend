@@ -265,8 +265,12 @@ function FlightDetailsContent() {
 
       // Customer-facing grand total — must match the BookingSummary figure
       // (gross fare + paid SSRs/seats − promo discount). This is what we charge.
+      // Match on BOTH fuid and id (keyed like the backend's ssrChargeMap) so a
+      // shared ssrId across segments can't pick the wrong charge.
       const ssrTotal = allSelections.reduce((sum, sel) => {
-        const option = allSSROptions.find((o) => o.id === sel.ssrId);
+        const option = allSSROptions.find(
+          (o) => o.id === sel.ssrId && o.fuid === sel.fuid,
+        );
         return sum + (option?.charge || 0);
       }, 0);
       const promoDiscount = appliedPromo?.valid ? appliedPromo.discountAmount : 0;
