@@ -102,12 +102,18 @@ export const FlightBooking = () => {
   const [dateTab, setDateTab] = useState<'start' | 'end'>('start');
   const datesWrapperRef = useRef<HTMLDivElement>(null);
 
-  // Multi-city scroll region — auto-scroll to the newest leg when one is added.
+  // Multi-city — bring the newest leg into view when one is added. Legs render
+  // stacked (no inner scroll region), so scroll the new row into the viewport.
   const legsScrollRef = useRef<HTMLDivElement>(null);
   const prevLegCount = useRef(legs.length);
   useEffect(() => {
     if (legs.length > prevLegCount.current && legsScrollRef.current) {
-      legsScrollRef.current.scrollTo({ top: legsScrollRef.current.scrollHeight, behavior: 'smooth' });
+      // Children are the leg rows followed by the footer; the last leg row is
+      // at index legs.length - 1.
+      const newestRow = legsScrollRef.current.children[legs.length - 1] as
+        | HTMLElement
+        | undefined;
+      newestRow?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     prevLegCount.current = legs.length;
   }, [legs.length]);
@@ -502,26 +508,11 @@ export const FlightBooking = () => {
       )}
 
       {/* Multi-city leg editor — each leg is one compact row (same height as
-          the one-way/round-trip fields row) so all three modes read as the
-          same card. */}
+          the one-way/round-trip fields row). All legs render fully stacked so
+          every hop is visible; the card grows with the leg count (max 6). */}
       {tripType === 'multicity' && (
-        <div className="space-y-2.5">
-          {/* First leg is pinned above the scroll region: it carries the
-              Travellers & Class selector, whose popup opens downward and would
-              be clipped by the scroll region's overflow. Keeping it out here
-              lets the popup show in full. */}
-          {renderLegRow(legs[0], 0)}
-
-          {/* Extra legs (2+) scroll inside a fixed-height region so the card
-              keeps the same footprint as one-way / round-trip. The airport
-              dropdowns are portalled (see AirportPicker) so they aren't clipped
-              by this overflow. Added legs have an empty spacer where the first
-              leg's traveller selector sits. */}
-          {legs.length > 1 && (
-            <div ref={legsScrollRef} className="max-h-[118px] overflow-y-auto space-y-2.5 pr-1 -mr-1">
-              {legs.slice(1).map((leg, idx) => renderLegRow(leg, idx + 1))}
-            </div>
-          )}
+        <div ref={legsScrollRef} className="space-y-2.5">
+          {legs.map((leg, i) => renderLegRow(leg, i))}
 
           {/* Footer: add city (left) + search (right), one row */}
           <div className="flex flex-col sm:flex-row sm:items-stretch gap-3 pt-1">
