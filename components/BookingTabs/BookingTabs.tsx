@@ -55,7 +55,7 @@ const BookingTabsInner = () => {
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-4">
       <div className="bg-white rounded-2xl overflow-visible" style={{ boxShadow: '0 25px 60px rgba(0,0,0,0.45)' }}>
         {/* Tabs Navigation — MMT style: icons above labels, blue underline for active */}
-        <div className="border-b border-gray-100 overflow-x-auto scrollbar-hide">
+        <div className="border-b border-gray-100 overflow-x-auto scrollbar-hide rounded-t-2xl">
           <div className="flex">
             {tabs.map((tab) => (
               <button
