@@ -290,7 +290,10 @@ export const FlightCard = ({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span className="truncate">
-              Meal, Seat are chargeable.{' '}
+              {flight.mealsIncluded ? 'Meal included' : 'Meal, Seat are chargeable.'}
+              {flight.pieceDescription && (
+                <span className="text-gray-500"> · {flight.pieceDescription}</span>
+              )}{' '}
               <button
                 type="button"
                 onClick={(e) => {
@@ -304,6 +307,11 @@ export const FlightCard = ({
             </span>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+            {flight.isBusStation && (
+              <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+                Bus
+              </span>
+            )}
             {selectionMode && (
               <button
                 type="button"
@@ -321,6 +329,16 @@ export const FlightCard = ({
             )}
           </div>
         </div>
+
+        {/* Per-flight advisory notice */}
+        {flight.notice && (
+          <div className="mt-1.5 flex items-start gap-1 text-[11px] text-amber-700">
+            <svg className="w-3 h-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            <span>{flight.notice}</span>
+          </div>
+        )}
       </div>
       {showDetails && <FlightDetails flight={flight} currency={currency} />}
     </div>

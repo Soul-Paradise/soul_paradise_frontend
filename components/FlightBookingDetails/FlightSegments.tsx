@@ -216,13 +216,26 @@ const LegDetailed = ({ segments, label, refundable }: LegDetailedProps) => {
                 {seg.baggage && (
                   <div className="px-3 py-1.5 border-r border-gray-200">
                     <div className="text-gray-400 uppercase tracking-wide">Check-In Baggage</div>
-                    <div className="text-gray-800 font-medium">{seg.baggage}</div>
+                    <div className="text-gray-800 font-medium">
+                      {seg.baggage}
+                      {seg.pieceDescription && (
+                        <span className="block text-[10px] text-gray-400 font-normal normal-case">
+                          {seg.pieceDescription}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
                 <div className="px-3 py-1.5">
                   <div className="text-gray-400 uppercase tracking-wide">Cabin Baggage</div>
                   <div className="text-gray-800 font-medium">Adult · 7Kg</div>
                 </div>
+                {seg.mealsIncluded && (
+                  <div className="px-3 py-1.5 border-l border-gray-200">
+                    <div className="text-gray-400 uppercase tracking-wide">Meal</div>
+                    <div className="text-emerald-700 font-medium">Meal included</div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -273,6 +286,41 @@ const LegDetailed = ({ segments, label, refundable }: LegDetailedProps) => {
                 )}
               </div>
             </div>
+
+            {/* Intermediate technical stops (hops) */}
+            {seg.hops && seg.hops.length > 0 && (
+              <div className="mb-4 space-y-1.5">
+                {seg.hops.map((hop, hi) => (
+                  <div
+                    key={hi}
+                    className="flex items-center gap-2 rounded-md bg-amber-50 border border-amber-100 px-3 py-1.5 text-[11px] text-amber-800"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                    <span>
+                      Technical stop at{' '}
+                      <span className="font-semibold">
+                        {cityOf(hop.arrivalName, hop.arrivalCode)} [{hop.arrivalCode}]
+                      </span>
+                      {hop.arrivalTime && (
+                        <>
+                          {' '}· Arrives {formatTime(hop.arrivalTime)}
+                        </>
+                      )}
+                      {hop.departureTime && (
+                        <>
+                          , Departs {formatTime(hop.departureTime)}
+                        </>
+                      )}
+                      {hop.duration && (
+                        <>
+                          {' '}· {formatDuration(hop.duration)}
+                        </>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Connection banner */}

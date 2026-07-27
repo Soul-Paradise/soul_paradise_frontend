@@ -7,11 +7,11 @@ interface FareRulesAccordionProps {
   fareRules: FareRule[];
 }
 
-function formatAmount(amount: number): string {
+function formatAmount(amount: number, currency?: string): string {
   if (!amount) return 'N/A';
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
-    currency: 'INR',
+    currency: currency || 'INR',
     maximumFractionDigits: 0,
   }).format(amount);
 }
@@ -36,8 +36,13 @@ export const FareRulesAccordion = ({ fareRules }: FareRulesAccordionProps) => {
               onClick={() => setOpenIndex(openIndex === i ? null : i)}
               className="w-full flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors"
             >
-              <span className="text-sm font-medium text-gray-800">
+              <span className="text-sm font-medium text-gray-800 flex items-center gap-2">
                 {rule.category}
+                {rule.sector && (
+                  <span className="text-[11px] font-normal text-gray-400">
+                    {rule.sector}
+                  </span>
+                )}
               </span>
               <svg
                 className={`w-4 h-4 text-gray-400 transition-transform ${
@@ -73,18 +78,23 @@ export const FareRulesAccordion = ({ fareRules }: FareRulesAccordionProps) => {
                           {charge.description}
                         </td>
                         <td className="py-1.5 text-right text-gray-900">
-                          {formatAmount(charge.adultAmount)}
+                          {formatAmount(charge.adultAmount, charge.currency)}
                         </td>
                         <td className="py-1.5 text-right text-gray-900">
-                          {formatAmount(charge.childAmount)}
+                          {formatAmount(charge.childAmount, charge.currency)}
                         </td>
                         <td className="py-1.5 text-right text-gray-900">
-                          {formatAmount(charge.infantAmount)}
+                          {formatAmount(charge.infantAmount, charge.currency)}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                {rule.text && (
+                  <p className="mt-3 text-xs text-gray-500 leading-relaxed whitespace-pre-line">
+                    {rule.text}
+                  </p>
+                )}
               </div>
             )}
           </div>

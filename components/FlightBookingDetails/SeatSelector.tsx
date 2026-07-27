@@ -510,6 +510,13 @@ export const SeatSelector = ({
                             const color = getSeatStyle(seat);
                             const showAisle = aisleGapX > 0 && idx > 0 && seats[idx - 1]?.x <= aisleGapX && seat.x > aisleGapX;
 
+                            // Multi-cell seats: span extra grid cells via width/height
+                            // (default 1×1 when the airline doesn't provide them).
+                            const spanW = seat.width && seat.width > 0 ? seat.width : 1;
+                            const spanH = seat.height && seat.height > 0 ? seat.height : 1;
+                            const cellW = SEAT_SIZE * spanW + SEAT_GAP * (spanW - 1);
+                            const cellH = SEAT_SIZE * spanH + SEAT_GAP * (spanH - 1);
+
                             let seatBg: string, seatBorder: string, textColor: string;
                             let cursor = 'pointer', shadow = '', transform = '';
 
@@ -542,7 +549,7 @@ export const SeatSelector = ({
                                   onMouseLeave={() => setHoveredSeat(null)}
                                   title={!seat.available ? 'Booked' : isOtherPax ? `Passenger ${owner}` : `${seat.seatNumber} · ${color.label}${seat.fare > 0 ? ` · ${formatCurrency(seat.fare + seat.tax)}` : ' · Free'}`}
                                   style={{
-                                    width: SEAT_SIZE, height: SEAT_SIZE, backgroundColor: seatBg, borderColor: seatBorder,
+                                    width: cellW, height: cellH, backgroundColor: seatBg, borderColor: seatBorder,
                                     color: textColor, cursor, boxShadow: shadow, transform,
                                     zIndex: isMySelection || isHovered ? 10 : 1, position: 'relative',
                                     transition: 'all 150ms cubic-bezier(.4,0,.2,1)',

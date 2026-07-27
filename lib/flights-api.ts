@@ -51,6 +51,10 @@ export interface FlightResult {
   fareType: string;
   recommended: boolean;
   aircraft: string;
+  mealsIncluded?: string | null;
+  pieceDescription?: string | null;
+  notice?: string; // per-flight travel/visa advisory
+  isBusStation?: boolean; // surface/bus segment
 }
 
 export interface FlightSearchResponse {
@@ -148,12 +152,22 @@ export interface SegmentDetail {
   aircraft: string;
   cabin: string;
   fareClass: string;
+  rbd?: string;
   stops: number;
   baggage?: string | null;
+  mealsIncluded?: string | null;
+  pieceDescription?: string | null;
   refundable?: string;
   amenities?: string;
   equipmentType?: string;
   seatsAvailable?: number;
+  hops?: Array<{
+    arrivalCode: string;
+    arrivalName: string;
+    arrivalTime: string;
+    departureTime: string;
+    duration: string;
+  }>;
   direction?: 'ONWARD' | 'RETURN';
   // Zero-based index of the leg/journey this segment belongs to. Used to group
   // segments per hop for multi-city itineraries.
@@ -173,11 +187,14 @@ export interface FareRuleCharge {
   adultAmount: number;
   childAmount: number;
   infantAmount: number;
+  currency?: string;
 }
 
 export interface FareRule {
   category: string;
   charges: FareRuleCharge[];
+  sector?: string; // which O&D/leg the rule applies to
+  text?: string | null; // free-text narrative of the fare rule
 }
 
 export interface SSROption {
@@ -185,8 +202,12 @@ export interface SSROption {
   code: string;
   description: string;
   charge: number;
+  vat?: number;
   type: 'baggage' | 'meal' | 'priority' | 'seat' | 'sports' | 'fastForward' | 'other';
   mealImage?: string;
+  pieceDescription?: string | null;
+  isFreeMeal?: boolean;
+  multiSelect?: boolean;
   fuid: number;
 }
 
@@ -200,6 +221,8 @@ export interface SeatInfo {
   tax: number;
   x: number;
   y: number;
+  height?: number;
+  width?: number;
   seatGroup: string;
 }
 
@@ -230,6 +253,22 @@ export interface FreeSSR {
   ptc: string;
 }
 
+export interface FnuLnuSetting {
+  airlineCode: string;
+  titleMandatory: boolean;
+  fnuMessage: string;
+  lnuMessage: string;
+}
+
+export interface BookingRequirements {
+  baggageMandatory: boolean;
+  gstMandatory: boolean;
+  panMandatory: boolean;
+  fareMaskingRequired: boolean;
+  seatLayoutAvailable: boolean;
+  ssrAvailable: boolean;
+}
+
 export interface FlightPricingResponse {
   tui: string;
   netAmount: number;
@@ -250,6 +289,9 @@ export interface FlightPricingResponse {
   };
   seatMaps: SegmentSeatMap[];
   travelChecklist: TravelChecklist;
+  fnuLnuSettings: FnuLnuSetting[];
+  bookingRequirements: BookingRequirements;
+  fareNotices: string[];
   passengerCounts: {
     adults: number;
     children: number;
@@ -313,6 +355,8 @@ export interface BookingRequest {
   selectedSSR: SSRSelection[];
   ssrChargeMap: Record<string, number>;
   freeSSRs: FreeSSR[];
+  // Echo of bookingRequirements.fareMaskingRequired — sets EnableFareMasking.
+  enableFareMasking?: boolean;
   // Multi-city (DM) only: echoed straight back from the pricing response. When
   // length > 1 the backend tickets each leg as its own itinerary.
   multiCitySessions?: Array<{ tui: string; netAmount: number }>;
@@ -374,13 +418,28 @@ export interface BookingFlightDetail {
   pnr: string;
   crsPnr?: string;
   webCheckinUrl: string;
+  airlineContact?: string;
+  refundable?: boolean;
 }
 
 export interface BookingPassenger {
   name: string;
   paxType: string;
   ticketNumber: string;
+  ticketStatus?: string;
   gender: string;
+  age?: number;
+  nationality?: string;
+  passportNo?: string;
+  passportPlaceOfIssue?: string;
+  passportExpiry?: string;
+}
+
+export interface BookingCrossSell {
+  code: string;
+  amount: number;
+  status: string;
+  transactionId: string;
 }
 
 export interface BookingFareBreakdown {
@@ -406,15 +465,32 @@ export interface BookingDetailsResponse {
   bookingId: string;
   transactionId: string;
   status: string;
+  paymentStatus?: string;
+  sectorType?: 'DOMESTIC' | 'INTERNATIONAL' | '';
+  invoice?: string;
+  cumulativeNetAmount?: number;
+  cancellationId?: string;
+  refundAmount?: number;
+  cancellationCharge?: number;
   bookingDate?: string;
   flights: BookingFlightDetail[];
   journeys?: BookingJourneySummary[];
   passengers: BookingPassenger[];
+  crossSell?: BookingCrossSell[];
   totalAmount: number;
   currency: string;
   fareBreakdown?: BookingFareBreakdown;
   contactEmail: string;
   contactMobile: string;
+}
+
+export interface CancelFlightResponse {
+  transactionId: string;
+  cancellationId: string;
+  status: string;
+  message: string;
+  refundAmount: number;
+  cancellationCharge: number;
 }
 
 // ========== API Functions ==========
@@ -548,6 +624,27 @@ export async function getBookingDetails(
       .json()
       .catch(() => ({ message: 'Failed to fetch booking details' }));
     throw new Error(err.message || 'Failed to fetch booking details');
+  }
+  return res.json();
+}
+
+export async function cancelBooking(
+  transactionId: string,
+  remarks?: string,
+): Promise<CancelFlightResponse> {
+  const res = await authFetch(
+    `${API_BASE}/flights/booking/${transactionId}/cancel`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(remarks ? { remarks } : {}),
+    },
+  );
+  if (!res.ok) {
+    const err = await res
+      .json()
+      .catch(() => ({ message: 'Failed to cancel booking' }));
+    throw new Error(err.message || 'Failed to cancel booking');
   }
   return res.json();
 }

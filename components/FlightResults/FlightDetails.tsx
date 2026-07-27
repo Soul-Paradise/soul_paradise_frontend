@@ -298,8 +298,21 @@ function FlightInfoTab({
           <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">
             Info
           </span>
-          <span className="text-gray-500">Meal, Seat are chargeable.</span>
+          <span className="text-gray-500">
+            {flight.mealsIncluded ? 'Meal included' : 'Meal, Seat are chargeable.'}
+            {flight.pieceDescription ? ` · ${flight.pieceDescription}` : ''}
+          </span>
         </div>
+
+        {/* Per-flight advisory */}
+        {flight.notice && (
+          <div className="mt-2 flex items-start gap-1.5 text-xs">
+            <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase flex-shrink-0">
+              Note
+            </span>
+            <span className="text-gray-500">{flight.notice}</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -327,6 +340,11 @@ function FareSummaryTab({ flight }: { flight: FlightResult }) {
               <td className="py-2 text-gray-500">Check-in Baggage</td>
               <td className="py-2 text-right font-medium text-gray-700">
                 {flight.baggage || 'As per airline policy'}
+                {flight.pieceDescription && (
+                  <span className="block text-xs text-gray-400 font-normal">
+                    {flight.pieceDescription}
+                  </span>
+                )}
               </td>
             </tr>
             <tr>
@@ -387,6 +405,11 @@ function BaggageTab({ flight }: { flight: FlightResult }) {
               </td>
               <td className="px-4 py-3 text-center text-gray-600 border border-gray-100">
                 {flight.baggage || 'As per airline policy'}
+                {flight.pieceDescription && (
+                  <span className="block text-xs text-gray-400">
+                    {flight.pieceDescription}
+                  </span>
+                )}
               </td>
               <td className="px-4 py-3 text-center text-gray-600 border border-gray-100">
                 7Kg (Adult)

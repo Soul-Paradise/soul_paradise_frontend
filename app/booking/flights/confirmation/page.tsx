@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import {
   getBookingDetails,
   downloadTicketPdf,
+  cancelBooking,
   type BookingDetailsResponse,
 } from '@/lib/flights-api';
 import { useRequireAuth } from '@/contexts/AuthContext';
@@ -85,6 +86,8 @@ function ConfirmationContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelMessage, setCancelMessage] = useState('');
 
   const handleDownload = useCallback(async () => {
     if (!transactionId || downloading) return;
@@ -115,6 +118,29 @@ function ConfirmationContent() {
       setLoading(false);
     }
   }, [transactionId]);
+
+  const handleCancel = useCallback(async () => {
+    if (!transactionId || cancelling) return;
+    if (
+      !window.confirm(
+        'Are you sure you want to cancel this booking? This action cannot be undone.',
+      )
+    )
+      return;
+    setCancelling(true);
+    setError('');
+    setCancelMessage('');
+    try {
+      const result = await cancelBooking(transactionId);
+      setCancelMessage(result.message || 'Cancellation request submitted.');
+      await loadBooking();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Cancellation failed';
+      setError(msg);
+    } finally {
+      setCancelling(false);
+    }
+  }, [transactionId, cancelling, loadBooking]);
 
   useEffect(() => {
     loadBooking();
@@ -169,6 +195,20 @@ function ConfirmationContent() {
 
   const statusInfo = getStatusInfo(booking.status);
   const isSuccess = ['BO0', 'TO0'].includes(booking.status);
+  const isCancelled = Boolean(
+    booking.cancellationId ||
+      booking.refundAmount != null ||
+      booking.paymentStatus?.toLowerCase().includes('cancel'),
+  );
+  const canCancel = isSuccess && !isCancelled;
+
+  const showTicketStatus = booking.passengers.some(
+    (p) => p.ticketStatus && p.ticketStatus !== booking.status,
+  );
+  const showPassport = booking.passengers.some(
+    (p) => p.passportNo || p.nationality || p.passportExpiry,
+  );
+  const showAge = booking.passengers.some((p) => p.age != null);
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -244,6 +284,43 @@ function ConfirmationContent() {
               </div>
             </div>
           </div>
+
+          {(booking.paymentStatus ||
+            booking.sectorType ||
+            booking.invoice) && (
+            <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+              {booking.paymentStatus && (
+                <div>
+                  <div className="text-xs text-gray-500 uppercase font-medium mb-1">
+                    Payment Status
+                  </div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    {booking.paymentStatus}
+                  </div>
+                </div>
+              )}
+              {booking.sectorType && (
+                <div>
+                  <div className="text-xs text-gray-500 uppercase font-medium mb-1">
+                    Sector
+                  </div>
+                  <div className="text-sm font-semibold text-gray-900 capitalize">
+                    {booking.sectorType.toLowerCase()}
+                  </div>
+                </div>
+              )}
+              {booking.invoice && (
+                <div>
+                  <div className="text-xs text-gray-500 uppercase font-medium mb-1">
+                    Invoice
+                  </div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    {booking.invoice}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Flight Details */}
@@ -268,15 +345,34 @@ function ConfirmationContent() {
                       {flight.flightNo}
                     </div>
                   </div>
-                  {flight.pnr && (
-                    <div className="ml-auto text-right">
-                      <div className="text-xs text-gray-500">PNR</div>
-                      <div className="text-sm font-bold text-(--color-links)">
-                        {flight.pnr}
+                  <div className="ml-auto flex items-center gap-2">
+                    {flight.refundable != null && (
+                      <span
+                        className={`inline-block px-2 py-0.5 text-[10px] font-semibold border rounded-full ${
+                          flight.refundable
+                            ? 'bg-green-50 border-green-200 text-green-700'
+                            : 'bg-red-50 border-red-200 text-red-700'
+                        }`}
+                      >
+                        {flight.refundable ? 'Refundable' : 'Non-refundable'}
+                      </span>
+                    )}
+                    {flight.pnr && (
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500">PNR</div>
+                        <div className="text-sm font-bold text-(--color-links)">
+                          {flight.pnr}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
+
+                {flight.airlineContact && (
+                  <div className="text-xs text-gray-500 mb-3">
+                    Airline care: {flight.airlineContact}
+                  </div>
+                )}
 
                 <div className="flex items-center gap-4">
                   <div className="text-center">
@@ -380,9 +476,22 @@ function ConfirmationContent() {
                 <tr className="text-xs text-gray-500 uppercase border-b border-gray-100">
                   <th className="text-left px-5 py-2 font-medium">Name</th>
                   <th className="text-left px-5 py-2 font-medium">Type</th>
+                  {showAge && (
+                    <th className="text-left px-5 py-2 font-medium">Age</th>
+                  )}
                   <th className="text-left px-5 py-2 font-medium">
                     Ticket Number
                   </th>
+                  {showTicketStatus && (
+                    <th className="text-left px-5 py-2 font-medium">
+                      Ticket Status
+                    </th>
+                  )}
+                  {showPassport && (
+                    <th className="text-left px-5 py-2 font-medium">
+                      Passport
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -398,15 +507,134 @@ function ConfirmationContent() {
                           ? 'Child'
                           : 'Infant'}
                     </td>
+                    {showAge && (
+                      <td className="px-5 py-3 text-gray-600">
+                        {pax.age != null ? pax.age : '—'}
+                      </td>
+                    )}
                     <td className="px-5 py-3 text-gray-600">
                       {pax.ticketNumber || 'Pending'}
                     </td>
+                    {showTicketStatus && (
+                      <td className="px-5 py-3 text-gray-600">
+                        {pax.ticketStatus &&
+                        pax.ticketStatus !== booking.status
+                          ? pax.ticketStatus
+                          : '—'}
+                      </td>
+                    )}
+                    {showPassport && (
+                      <td className="px-5 py-3 text-gray-600">
+                        {pax.passportNo || pax.nationality ? (
+                          <div className="space-y-0.5">
+                            {pax.passportNo && (
+                              <div className="font-medium text-gray-900">
+                                {pax.passportNo}
+                              </div>
+                            )}
+                            {pax.nationality && (
+                              <div className="text-xs text-gray-500">
+                                {pax.nationality}
+                              </div>
+                            )}
+                            {pax.passportExpiry && (
+                              <div className="text-xs text-gray-400">
+                                Exp: {pax.passportExpiry}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
+
+        {/* Cross-sell add-ons */}
+        {booking.crossSell && booking.crossSell.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div className="px-5 py-3 bg-gray-50 border-b border-gray-200">
+              <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                Add-ons
+              </h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-gray-500 uppercase border-b border-gray-100">
+                    <th className="text-left px-5 py-2 font-medium">Item</th>
+                    <th className="text-left px-5 py-2 font-medium">Status</th>
+                    <th className="text-right px-5 py-2 font-medium">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {booking.crossSell.map((item, i) => (
+                    <tr key={i}>
+                      <td className="px-5 py-3 text-gray-900 font-medium">
+                        {item.code}
+                      </td>
+                      <td className="px-5 py-3 text-gray-600">{item.status}</td>
+                      <td className="px-5 py-3 text-right text-gray-900">
+                        {formatCurrency(item.amount, booking.currency)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Refund / Cancellation summary */}
+        {(booking.cancellationId ||
+          booking.refundAmount != null ||
+          booking.cancellationCharge != null) && (
+          <div className="bg-white border border-red-200 rounded-lg p-5">
+            <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">
+              Cancellation & Refund
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+              {booking.cancellationId && (
+                <div>
+                  <div className="text-xs text-gray-500 uppercase font-medium mb-1">
+                    Cancellation ID
+                  </div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    {booking.cancellationId}
+                  </div>
+                </div>
+              )}
+              {booking.refundAmount != null && (
+                <div>
+                  <div className="text-xs text-gray-500 uppercase font-medium mb-1">
+                    Refund Amount
+                  </div>
+                  <div className="text-sm font-semibold text-green-700">
+                    {formatCurrency(booking.refundAmount, booking.currency)}
+                  </div>
+                </div>
+              )}
+              {booking.cancellationCharge != null && (
+                <div>
+                  <div className="text-xs text-gray-500 uppercase font-medium mb-1">
+                    Cancellation Charge
+                  </div>
+                  <div className="text-sm font-semibold text-red-700">
+                    {formatCurrency(
+                      booking.cancellationCharge,
+                      booking.currency,
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Contact Info */}
         {(booking.contactEmail || booking.contactMobile) && (
@@ -431,6 +659,12 @@ function ConfirmationContent() {
           </div>
         )}
 
+        {cancelMessage && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center text-sm text-green-700">
+            {cancelMessage}
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button
@@ -440,6 +674,15 @@ function ConfirmationContent() {
           >
             {downloading ? 'Preparing…' : 'Download Ticket (PDF)'}
           </button>
+          {canCancel && (
+            <button
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="px-6 py-2.5 bg-white border border-red-300 text-red-700 text-sm font-semibold rounded-md hover:bg-red-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {cancelling ? 'Cancelling…' : 'Cancel Booking'}
+            </button>
+          )}
           <button
             onClick={() => router.push('/')}
             className="px-6 py-2.5 bg-(--color-links) text-white text-sm font-semibold rounded-md hover:opacity-90 transition-opacity"
