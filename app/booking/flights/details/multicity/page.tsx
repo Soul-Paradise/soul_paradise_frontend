@@ -140,9 +140,6 @@ function MultiCityDetailsContent() {
 
     // Fare-level booking requirements (from Benzy pricing).
     const req = pricing?.bookingRequirements;
-    if (req?.gstMandatory && !contactInfo.gstTin) {
-      return 'This fare requires a GST number. Please enter your GSTIN in the contact section.';
-    }
 
     for (let i = 0; i < travellers.length; i++) {
       const t = travellers[i];
@@ -419,7 +416,6 @@ function MultiCityDetailsContent() {
                 <ContactInfoForm
                   contactInfo={contactInfo}
                   onChange={setContactInfo}
-                  gstMandatory={pricing.bookingRequirements?.gstMandatory}
                 />
               </>
             )}

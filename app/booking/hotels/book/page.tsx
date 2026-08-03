@@ -127,14 +127,6 @@ interface ContactForm {
   email: string;
 }
 
-interface GSTForm {
-  enabled: boolean;
-  companyName: string;
-  tin: string;
-  mobile: string;
-  email: string;
-}
-
 interface VoucherGuest {
   title: string;
   firstName: string;
@@ -391,7 +383,6 @@ function HotelBookPageInner() {
   });
 
   const [guestsByRoom, setGuestsByRoom] = useState<GuestForm[][]>([]);
-  const [gst, setGst] = useState<GSTForm>({ enabled: false, companyName: '', tin: '', mobile: '', email: '' });
   const [specialRequest, setSpecialRequest] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
@@ -403,7 +394,6 @@ function HotelBookPageInner() {
   }, [stash]);
 
   const showAllGuests = pricing?.allGuestsInfoRequired ?? false;
-  const showGST = pricing?.gstAllowed ?? false;
   const showSpecial = pricing?.specialRequestSupported ?? false;
 
   const totalGuests = useMemo(
@@ -475,11 +465,6 @@ function HotelBookPageInner() {
       }
     }
 
-    if (showGST && gst.enabled) {
-      if (!gst.companyName.trim() || !gst.tin.trim()) return 'Please enter GST company name and TIN.';
-      if (gst.email && !isEmail(gst.email)) return 'Please enter a valid GST email.';
-    }
-
     return null;
   }
 
@@ -523,10 +508,10 @@ function HotelBookPageInner() {
         email: contact.email,
         countryCode: 'IN',
         mobileCountryCode: '+91',
-        gstCompanyName: gst.enabled ? gst.companyName : '',
-        gstTin: gst.enabled ? gst.tin : '',
-        gstMobile: gst.enabled ? gst.mobile : '',
-        gstEmail: gst.enabled ? gst.email : '',
+        gstCompanyName: '',
+        gstTin: '',
+        gstMobile: '',
+        gstEmail: '',
       },
       rooms: guestsByRoom.map((guests, roomIdx) => {
         const slot = bookingContext.roomSlots[roomIdx];
@@ -849,63 +834,6 @@ function HotelBookPageInner() {
                 </div>
               </div>
 
-              {showGST && (
-                <div className="border-t border-gray-200 pt-5">
-                  <div className="bg-gray-50 border border-gray-200 rounded px-4 py-3 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0">
-                      GST
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800">
-                        Use GSTIN for this booking <span className="font-normal text-gray-500">(Optional)</span>
-                      </p>
-                      <p className="text-xs text-gray-600 mt-0.5">
-                        Claim credit of GST charges. Your taxes may get updated post submitting your GST details
-                      </p>
-                    </div>
-                    <label className="flex items-center gap-2 shrink-0 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={gst.enabled}
-                        onChange={(e) => setGst((g) => ({ ...g, enabled: e.target.checked }))}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-sm text-slate-700 whitespace-nowrap">Include my GST number</span>
-                    </label>
-                  </div>
-
-                  {gst.enabled && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                      <input
-                        value={gst.companyName}
-                        onChange={(e) => setGst((g) => ({ ...g, companyName: e.target.value }))}
-                        placeholder="Company name"
-                        className="border border-gray-300 rounded px-3 py-2.5 text-sm sm:col-span-2"
-                      />
-                      <input
-                        value={gst.tin}
-                        onChange={(e) => setGst((g) => ({ ...g, tin: e.target.value.toUpperCase() }))}
-                        placeholder="GSTIN"
-                        className="border border-gray-300 rounded px-3 py-2.5 text-sm"
-                      />
-                      <input
-                        type="tel"
-                        value={gst.mobile}
-                        onChange={(e) => setGst((g) => ({ ...g, mobile: e.target.value.replace(/\D/g, '') }))}
-                        placeholder="GST mobile"
-                        className="border border-gray-300 rounded px-3 py-2.5 text-sm"
-                      />
-                      <input
-                        type="email"
-                        value={gst.email}
-                        onChange={(e) => setGst((g) => ({ ...g, email: e.target.value }))}
-                        placeholder="GST email"
-                        className="border border-gray-300 rounded px-3 py-2.5 text-sm sm:col-span-2"
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </section>
 

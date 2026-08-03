@@ -1,25 +1,16 @@
 'use client';
 
-import { useState } from 'react';
 import type { ContactInfo } from '@/lib/flights-api';
 
 interface ContactInfoFormProps {
   contactInfo: ContactInfo;
   onChange: (updated: ContactInfo) => void;
-  gstMandatory?: boolean;
 }
 
 export const ContactInfoForm = ({
   contactInfo,
   onChange,
-  gstMandatory,
 }: ContactInfoFormProps) => {
-  const [showGst, setShowGst] = useState(!!gstMandatory);
-
-  // When the fare mandates GST, the section is always visible and cannot be
-  // toggled off; GST TIN becomes required.
-  const gstVisible = showGst || !!gstMandatory;
-
   const update = (field: keyof ContactInfo, value: string) => {
     onChange({ ...contactInfo, [field]: value });
   };
@@ -93,103 +84,6 @@ export const ContactInfoForm = ({
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links)"
             />
           </div>
-        </div>
-
-        {/* GSTIN Section */}
-        <div className="border-t border-gray-200 pt-4">
-          <div
-            className={`flex items-center justify-between rounded-lg px-4 py-3 ${
-              gstVisible ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0">
-                <span className="text-xs font-bold text-blue-700">GST</span>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">
-                  Use GSTIN for this booking{' '}
-                  {gstMandatory ? (
-                    <span className="text-red-500 font-normal">(Required)</span>
-                  ) : (
-                    <span className="text-gray-500 font-normal">(Optional)</span>
-                  )}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {gstMandatory
-                    ? 'This fare requires a GST number to complete the booking.'
-                    : 'Claim credit of GST charges. Your taxes may get updated post submitting your GST details'}
-                </p>
-              </div>
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer flex-shrink-0">
-              <input
-                type="checkbox"
-                checked={gstVisible}
-                disabled={!!gstMandatory}
-                onChange={(e) => {
-                  setShowGst(e.target.checked);
-                  if (!e.target.checked) {
-                    onChange({
-                      ...contactInfo,
-                      gstCompanyName: undefined,
-                      gstTin: undefined,
-                      gstMobile: undefined,
-                    });
-                  }
-                }}
-                className="w-4 h-4 accent-(--color-links) disabled:opacity-60"
-              />
-              <span className="text-xs text-gray-600 whitespace-nowrap">
-                Include my GST number
-              </span>
-            </label>
-          </div>
-
-          {/* GST Fields (shown when checked or mandatory) */}
-          {gstVisible && (
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  GSTIN <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={contactInfo.gstTin || ''}
-                  onChange={(e) =>
-                    update('gstTin', e.target.value.toUpperCase())
-                  }
-                  placeholder="e.g. 22AAAAA0000A1Z5"
-                  maxLength={15}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links)"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Company Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={contactInfo.gstCompanyName || ''}
-                  onChange={(e) => update('gstCompanyName', e.target.value)}
-                  placeholder="Registered company name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links)"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  GST Contact Mobile
-                </label>
-                <input
-                  type="tel"
-                  value={contactInfo.gstMobile || ''}
-                  onChange={(e) => update('gstMobile', e.target.value)}
-                  placeholder="Mobile number"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links)"
-                />
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
