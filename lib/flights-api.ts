@@ -596,6 +596,65 @@ export async function getFareRules(
   return res.json();
 }
 
+/** Free check-in allowance included in the fare, for one flown sector. */
+export interface BaggageAllowance {
+  fuid: number;
+  flightNo: string;
+  airlineCode: string;
+  from: string;
+  to: string;
+  checkIn: string | null;
+  pieceDescription: string | null;
+}
+
+/** Purchasable extra baggage for one sector of the itinerary. */
+export interface BaggageSectorOptions {
+  /** null when the airline's catalogue is not scoped to a priced segment. */
+  fuid: number | null;
+  /** "CCU - BOM", or null when the group maps to no specific sector. */
+  sector: string | null;
+  flightNo: string | null;
+  airlineCode: string | null;
+  /** Airline bills the add-on on another sector and carries the bag through. */
+  carriedThrough: boolean;
+  options: SSROption[];
+}
+
+export interface BaggageLookupResponse {
+  allowances: BaggageAllowance[];
+  /** Purchasable extra baggage. Charges are what the add-ons step will bill. */
+  extraBaggage: BaggageSectorOptions[];
+  unavailable: boolean;
+}
+
+/**
+ * Fetch the per-sector baggage allowance and paid-baggage catalogue for one
+ * searched flight.
+ *
+ * Search carries only one journey-level allowance string and nothing about
+ * add-ons, so this prices the fare against Benzy and pulls SSR. Billable
+ * upstream — only invoke when the customer opens the baggage view, never
+ * eagerly across a list of results.
+ */
+export async function getBaggage(
+  tui: string,
+  flightIndex: string,
+  netFare: number,
+): Promise<BaggageLookupResponse> {
+  const res = await authFetch(`${API_BASE}/flights/baggage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tui, flightIndex, netFare }),
+  });
+  if (!res.ok) {
+    const err = await res
+      .json()
+      .catch(() => ({ message: 'Could not load baggage details' }));
+    throw new Error(err.message || 'Could not load baggage details');
+  }
+  return res.json();
+}
+
 export async function searchMultiCityFlights(
   params: MultiCitySearchParams,
 ): Promise<MultiCitySearchResponse> {

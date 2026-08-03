@@ -1,8 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { getFareRules } from '@/lib/flights-api';
-import type { FareRule, FlightResult } from '@/lib/flights-api';
+import { getBaggage, getFareRules } from '@/lib/flights-api';
+import type {
+  BaggageLookupResponse,
+  FareRule,
+  FlightResult,
+} from '@/lib/flights-api';
 import { FareRulesAccordion } from '@/components/FlightBookingDetails/FareRulesAccordion';
 
 interface FlightDetailsProps {
@@ -199,7 +203,7 @@ export const FlightDetails = ({ flight, tui }: FlightDetailsProps) => {
           <FareSummaryTab flight={flight} tui={tui} />
         )}
         {activeTab === 'baggage' && (
-          <BaggageTab flight={flight} />
+          <BaggageTab flight={flight} tui={tui} />
         )}
       </div>
     </div>
@@ -564,7 +568,65 @@ function FareSummaryTab({ flight, tui }: { flight: FlightResult; tui: string }) 
 
 /* ─── Baggage Information Tab ─── */
 
-function BaggageTab({ flight }: { flight: FlightResult }) {
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function BaggageTab({ flight, tui }: { flight: FlightResult; tui: string }) {
+  const [data, setData] = useState<BaggageLookupResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Same rule as the fare tab: pricing the fare upstream is billable, so this
+  // only runs once the customer has actually opened this tab.
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setData(await getBaggage(tui, flight.index, flight.netFare));
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : 'Could not load baggage details.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [tui, flight.index, flight.netFare]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Until the per-sector allowance arrives (or if it never does), fall back to
+  // the single journey-level string search already gave us, so the panel is
+  // never empty.
+  const allowances = data?.allowances.length
+    ? data.allowances
+    : [
+        {
+          fuid: 0,
+          flightNo: flight.flightNo,
+          airlineCode: flight.airlineCode,
+          from: flight.from,
+          to: flight.to,
+          checkIn: flight.baggage,
+          pieceDescription: flight.pieceDescription ?? null,
+        },
+      ];
+
+  // Already grouped and de-duplicated per sector by the backend.
+  const groups = data?.extraBaggage ?? [];
+  const chargedGroups = groups.filter((g) => !g.carriedThrough);
+  const carriedGroups = groups.filter((g) => g.carriedThrough);
+  // Which sector the customer actually pays on — named in the carried-through
+  // line so "charged here, not there" is explicit rather than implied.
+  const chargedSectorName =
+    chargedGroups.find((g) => g.sector)?.sector ?? 'the charged sector';
+
   return (
     <div className="space-y-4">
       <Panel
@@ -583,29 +645,156 @@ function BaggageTab({ flight }: { flight: FlightResult }) {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td className="px-5 py-2.5 text-gray-500 align-top">
-                  {flight.from} - {flight.to}
-                </td>
-                <td className="px-5 py-2.5 text-right font-medium text-gray-700">
-                  {flight.baggage || 'As per airline policy'}
-                  {flight.pieceDescription && (
-                    <span className="block text-xs text-gray-400 font-normal">
-                      {flight.pieceDescription}
-                    </span>
-                  )}
-                </td>
-                {/* Benzy's search response carries no cabin-baggage field —
-                    Inclusions.Baggage is check-in only. Printing a fixed weight
-                    here would be inventing airline policy. */}
-                <td className="px-5 py-2.5 text-right font-medium text-gray-700">
-                  As per airline policy
-                </td>
-              </tr>
+              {allowances.map((a, i) => (
+                <tr key={`${a.fuid}-${i}`} className="border-b border-gray-100 last:border-b-0">
+                  <td className="px-5 py-2.5 text-gray-500 align-top">
+                    {a.from} - {a.to}
+                    {a.flightNo && (
+                      <span className="block text-xs text-gray-400">
+                        {a.airlineCode} {a.flightNo}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-5 py-2.5 text-right font-medium text-gray-700 align-top">
+                    {a.checkIn || 'As per airline policy'}
+                    {a.pieceDescription && (
+                      <span className="block text-xs text-gray-400 font-normal">
+                        {a.pieceDescription}
+                      </span>
+                    )}
+                  </td>
+                  {/* Benzy carries no cabin-baggage field at any stage —
+                      Inclusions.Baggage is check-in only. Printing a fixed
+                      weight here would be inventing airline policy. */}
+                  <td className="px-5 py-2.5 text-right font-medium text-gray-700 align-top">
+                    As per airline policy
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       </Panel>
+
+      {loading && (
+        <div className="flex items-center gap-2 text-sm text-gray-500 py-3">
+          <span className="w-4 h-4 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+          Checking the airline&apos;s per-sector allowance and extra baggage
+          prices…
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="flex items-start justify-between gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+          <p className="text-xs text-red-600">{error}</p>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="text-xs font-semibold text-red-700 underline flex-shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && chargedGroups.length > 0 && (
+        <Panel
+          title="Additional Baggage"
+          subtitle={
+            allowances.length > 1
+              ? 'Charged once per passenger, on the sector named below.'
+              : 'Prices are per passenger. Add these during booking.'
+          }
+        >
+          <div className="divide-y divide-gray-100">
+            {chargedGroups.map((group, gi) => (
+              <div key={group.fuid ?? `unmapped-${gi}`} className="px-5 py-3">
+                {/* On a connecting itinerary the customer has to know which leg
+                    the charge attaches to, so always name it — even when there
+                    is only one charging group. */}
+                {allowances.length > 1 && (
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-2">
+                    {group.sector ? (
+                      <>
+                        {group.sector}
+                        {group.flightNo && (
+                          <span className="text-gray-400 font-normal">
+                            {' · '}
+                            {group.airlineCode} {group.flightNo}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      /* The airline sent no segment scope, so attributing this
+                         to a leg would be a guess. */
+                      <>
+                        Whole journey ({flight.from} - {flight.to})
+                      </>
+                    )}
+                  </p>
+                )}
+                <ul className="space-y-1.5">
+                  {group.options.map((opt) => {
+                    const total = (opt.charge || 0) + (opt.vat || 0);
+                    return (
+                      <li
+                        key={opt.id}
+                        className="flex items-baseline justify-between gap-4 text-sm"
+                      >
+                        <span className="text-gray-700">
+                          {opt.description}
+                          {opt.pieceDescription && (
+                            <span className="block text-xs text-gray-400">
+                              {opt.pieceDescription}
+                            </span>
+                          )}
+                        </span>
+                        <span className="font-semibold text-gray-800 tabular-nums flex-shrink-0">
+                          {/* VAT is billed on top of the base charge, so quote
+                              the total the customer will actually pay. */}
+                          {total > 0 ? formatCurrency(total) : 'Free'}
+                          {opt.vat ? (
+                            <span className="text-[9px] font-normal text-gray-400">
+                              {' '}
+                              incl. VAT
+                            </span>
+                          ) : null}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      )}
+
+      {/* The connecting sector(s) the airline does NOT bill separately. Stated
+          in words instead of a second ₹0 price list, which read as a rival
+          price for the same bag. */}
+      {!loading && !error && carriedGroups.length > 0 && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 text-xs text-emerald-800">
+          No separate baggage charge on{' '}
+          <span className="font-semibold">
+            {carriedGroups
+              .map(
+                (g, i) =>
+                  g.sector ?? `connecting sector ${g.fuid ?? i + 1}`,
+              )
+              .join(', ')}
+          </span>
+          . Baggage bought on {chargedSectorName} is carried through to your
+          final destination.
+        </div>
+      )}
+
+      {!loading && !error && data && groups.length === 0 && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-xs text-gray-500">
+          The airline is not offering pre-purchasable extra baggage on this
+          fare. Excess baggage will be charged at the airport.
+        </div>
+      )}
 
       {/* Same amber treatment the Fare tab uses for airline-side caveats */}
       <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-xs text-amber-700">
