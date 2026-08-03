@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import type { FlightResult } from '@/lib/flights-api';
+import { useCallback, useEffect, useState } from 'react';
+import { getFareRules } from '@/lib/flights-api';
+import type { FareRule, FlightResult } from '@/lib/flights-api';
+import { FareRulesAccordion } from '@/components/FlightBookingDetails/FareRulesAccordion';
 
 interface FlightDetailsProps {
   flight: FlightResult;
   currency: string;
+  tui: string;
 }
 
 const AIRLINE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -86,7 +89,7 @@ function getCabinName(cabin: string) {
   return map[cabin] || cabin || 'Economy';
 }
 
-export const FlightDetails = ({ flight }: FlightDetailsProps) => {
+export const FlightDetails = ({ flight, tui }: FlightDetailsProps) => {
   const [activeTab, setActiveTab] = useState<Tab>('flight');
   const colors = AIRLINE_COLORS[flight.airlineCode] || DEFAULT_COLOR;
 
@@ -125,7 +128,7 @@ export const FlightDetails = ({ flight }: FlightDetailsProps) => {
           <FlightInfoTab flight={flight} colors={colors} />
         )}
         {activeTab === 'fare' && (
-          <FareSummaryTab flight={flight} />
+          <FareSummaryTab flight={flight} tui={tui} />
         )}
         {activeTab === 'baggage' && (
           <BaggageTab flight={flight} />
@@ -310,7 +313,19 @@ function FlightInfoTab({
             <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase flex-shrink-0">
               Note
             </span>
-            <span className="text-gray-500">{flight.notice}</span>
+            <span className="text-gray-500">
+              {flight.notice}
+              {flight.noticeLink && (
+                <a
+                  href={flight.noticeLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-1 text-red-600 underline font-medium"
+                >
+                  Read more
+                </a>
+              )}
+            </span>
           </div>
         )}
       </div>
@@ -320,58 +335,173 @@ function FlightInfoTab({
 
 /* ─── Fare Summary & Rules Tab ─── */
 
-function FareSummaryTab({ flight }: { flight: FlightResult }) {
+/** Decode Benzy's HoldInfo ("E|01:00|1.00|SE|EE") into its hold duration. */
+function holdDuration(holdInfo?: string | null): string | null {
+  if (!holdInfo) return null;
+  const parts = holdInfo.split('|');
+  const hhmm = parts[1]?.trim();
+  if (!hhmm || !/^\d{1,2}:\d{2}$/.test(hhmm)) return null;
+  const [h, m] = hhmm.split(':').map(Number);
+  if (!h && !m) return null;
+  return [h ? `${h} hr` : '', m ? `${m} min` : ''].filter(Boolean).join(' ');
+}
+
+function FareSummaryTab({ flight, tui }: { flight: FlightResult; tui: string }) {
+  const [rules, setRules] = useState<FareRule[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Rules are only fetched when this tab is actually mounted (i.e. the customer
+  // clicked it). Pricing the fare upstream is a billable call, so it must never
+  // fire while merely browsing results.
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await getFareRules(tui, flight.index, flight.netFare);
+      setRules(res.fareRules);
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : 'Could not load fare rules.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [tui, flight.index, flight.netFare]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const hold = holdDuration(flight.holdInfo);
+
   return (
-    <div className="max-w-xl">
-      {/* Fare attributes */}
-      <div className="bg-sky-50 rounded-lg border border-sky-100 p-4">
-        <div className="text-sm font-semibold text-gray-800 mb-3">
-          {flight.from} - {flight.to}
-        </div>
-        <table className="w-full text-sm">
-          <tbody>
-            <tr className="border-b border-sky-100">
-              <td className="py-2 text-gray-500">Travel Class</td>
-              <td className="py-2 text-right font-medium text-gray-700">
-                {getCabinName(flight.cabin)}
-              </td>
-            </tr>
-            <tr className="border-b border-sky-100">
-              <td className="py-2 text-gray-500">Check-in Baggage</td>
-              <td className="py-2 text-right font-medium text-gray-700">
-                {flight.baggage || 'As per airline policy'}
-                {flight.pieceDescription && (
-                  <span className="block text-xs text-gray-400 font-normal">
-                    {flight.pieceDescription}
+    <div className="space-y-4">
+      <div className="max-w-xl">
+        {/* Fare attributes */}
+        <div className="bg-sky-50 rounded-lg border border-sky-100 p-4">
+          <div className="text-sm font-semibold text-gray-800 mb-3">
+            {flight.from} - {flight.to}
+          </div>
+          <table className="w-full text-sm">
+            <tbody>
+              <tr className="border-b border-sky-100">
+                <td className="py-2 text-gray-500">Travel Class</td>
+                <td className="py-2 text-right font-medium text-gray-700">
+                  {getCabinName(flight.cabin)}
+                  {flight.rbd && (
+                    <span className="text-xs text-gray-400 font-normal">
+                      {' '}
+                      · Booking class {flight.rbd}
+                    </span>
+                  )}
+                </td>
+              </tr>
+              {(flight.fareHead || flight.fareBasisCode) && (
+                <tr className="border-b border-sky-100">
+                  <td className="py-2 text-gray-500">Fare Type</td>
+                  <td className="py-2 text-right font-medium text-gray-700">
+                    {flight.fareHead || '—'}
+                    {flight.fareBasisCode && (
+                      <span className="block text-xs text-gray-400 font-normal">
+                        Fare basis {flight.fareBasisCode}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              )}
+              <tr className="border-b border-sky-100">
+                <td className="py-2 text-gray-500">Check-in Baggage</td>
+                <td className="py-2 text-right font-medium text-gray-700">
+                  {flight.baggage || 'As per airline policy'}
+                  {flight.pieceDescription && (
+                    <span className="block text-xs text-gray-400 font-normal">
+                      {flight.pieceDescription}
+                    </span>
+                  )}
+                </td>
+              </tr>
+              {flight.promo && (
+                <tr className="border-b border-sky-100">
+                  <td className="py-2 text-gray-500">Promo Applied</td>
+                  <td className="py-2 text-right font-medium text-emerald-700">
+                    {flight.promo}
+                  </td>
+                </tr>
+              )}
+              {hold && (
+                <tr className="border-b border-sky-100">
+                  <td className="py-2 text-gray-500">Hold Available</td>
+                  <td className="py-2 text-right font-medium text-gray-700">
+                    Up to {hold}
+                  </td>
+                </tr>
+              )}
+              <tr>
+                <td className="py-2 text-gray-500">Refundable</td>
+                <td className="py-2 text-right">
+                  {/* Benzy's flag only says whether the fare is refundable at
+                      all — refundable fares still carry a cancellation penalty,
+                      so never present this as a full refund. */}
+                  <span
+                    className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                      flight.refundable
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-red-100 text-red-600'
+                    }`}
+                  >
+                    {flight.refundable
+                      ? 'Refundable with penalty'
+                      : 'Non-Refundable'}
                   </span>
-                )}
-              </td>
-            </tr>
-            <tr>
-              <td className="py-2 text-gray-500">Refundable</td>
-              <td className="py-2 text-right">
-                <span
-                  className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                    flight.refundable
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-red-100 text-red-600'
-                  }`}
-                >
-                  {flight.refundable ? 'Yes' : 'No'}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="mt-3 text-xs text-gray-400 space-y-1">
+      {/* Real cancellation / change penalties from the airline */}
+      {loading && (
+        <div className="flex items-center gap-2 text-sm text-gray-500 py-3">
+          <span className="w-4 h-4 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+          Fetching the airline&apos;s latest cancellation and change charges…
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="flex items-start justify-between gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+          <p className="text-xs text-red-600">{error}</p>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="text-xs font-semibold text-red-700 underline flex-shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && rules && rules.length > 0 && (
+        <FareRulesAccordion fareRules={rules} />
+      )}
+
+      {!loading && !error && rules && rules.length === 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-xs text-amber-700">
+          The airline has not published structured cancellation and change
+          charges for this fare. They will be confirmed on the booking page
+          before you pay.
+        </div>
+      )}
+
+      <div className="text-xs text-gray-400 space-y-1">
         <p>
-          * The full fare breakdown (base fare, taxes &amp; fees, service charge) and
-          fare rules (change fee, cancellation fee) are shown on the booking page.
+          * Charges are levied by the airline per passenger, per journey, and are
+          in addition to any applicable service charge.
         </p>
         <p>
-          * The above data is indicatory, fare rules are subject to changes by the airline.
+          * Fare rules are subject to change by the airline. The amounts
+          confirmed at the time of booking apply.
         </p>
       </div>
     </div>
@@ -411,8 +541,11 @@ function BaggageTab({ flight }: { flight: FlightResult }) {
                   </span>
                 )}
               </td>
+              {/* Benzy's search response carries no cabin-baggage field —
+                  Inclusions.Baggage is check-in only. Printing a fixed weight
+                  here would be inventing airline policy. */}
               <td className="px-4 py-3 text-center text-gray-600 border border-gray-100">
-                7Kg (Adult)
+                As per airline policy
               </td>
             </tr>
           </tbody>

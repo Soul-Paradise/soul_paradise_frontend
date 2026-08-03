@@ -49,11 +49,21 @@ export interface FlightResult {
   seats: number;
   fareClass: string;
   fareType: string;
+  // Fare identity — what the airline's rules attach to.
+  rbd?: string; // reservation booking class letter
+  fareBasisCode?: string; // Benzy FBC
+  fareHead?: string; // Benzy FCType, e.g. "PUBLISHED"
+  fareGroup?: string; // Benzy FCGroup
+  promo?: string;
+  alliances?: string;
+  hold?: boolean; // fare can be held before payment
+  holdInfo?: string; // raw Benzy HoldInfo, e.g. "E|01:00|1.00|SE|EE"
   recommended: boolean;
   aircraft: string;
   mealsIncluded?: string | null;
   pieceDescription?: string | null;
   notice?: string; // per-flight travel/visa advisory
+  noticeLink?: string; // source link backing the advisory
   isBusStation?: boolean; // surface/bus segment
 }
 
@@ -182,11 +192,18 @@ export interface FareBreakdownItem {
   currency: string;
 }
 
+/**
+ * Benzy penalty amounts are not always numeric — "Non Refundable" is a valid
+ * value and must reach the customer verbatim. `null` means the airline defined
+ * no amount for that pax type, which is NOT the same as a zero-rupee fee.
+ */
+export type FareRuleAmount = number | string | null;
+
 export interface FareRuleCharge {
   description: string;
-  adultAmount: number;
-  childAmount: number;
-  infantAmount: number;
+  adultAmount: FareRuleAmount;
+  childAmount: FareRuleAmount;
+  infantAmount: FareRuleAmount;
   currency?: string;
 }
 
@@ -544,6 +561,37 @@ export async function priceAndGetDetails(
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Pricing failed' }));
     throw new Error(err.message || 'Flight pricing failed');
+  }
+  return res.json();
+}
+
+export interface FareRulesLookupResponse {
+  fareRules: FareRule[];
+  unavailable: boolean;
+}
+
+/**
+ * Fetch real cancellation/change penalties for one searched flight.
+ *
+ * Search results carry no rule data, so this prices the fare against Benzy to
+ * obtain it. It is a billable upstream call — only invoke it when the customer
+ * actually asks to see the rules, never eagerly for a list of results.
+ */
+export async function getFareRules(
+  tui: string,
+  flightIndex: string,
+  netFare: number,
+): Promise<FareRulesLookupResponse> {
+  const res = await authFetch(`${API_BASE}/flights/fare-rules`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tui, flightIndex, netFare }),
+  });
+  if (!res.ok) {
+    const err = await res
+      .json()
+      .catch(() => ({ message: 'Could not load fare rules' }));
+    throw new Error(err.message || 'Could not load fare rules');
   }
   return res.json();
 }

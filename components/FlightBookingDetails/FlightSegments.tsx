@@ -228,7 +228,9 @@ const LegDetailed = ({ segments, label, refundable }: LegDetailedProps) => {
                 )}
                 <div className="px-3 py-1.5">
                   <div className="text-gray-400 uppercase tracking-wide">Cabin Baggage</div>
-                  <div className="text-gray-800 font-medium">Adult · 7Kg</div>
+                  {/* Benzy exposes no cabin-allowance field — do not assert a
+                      weight the airline never gave us. */}
+                  <div className="text-gray-800 font-medium">As per airline policy</div>
                 </div>
                 {seg.mealsIncluded && (
                   <div className="px-3 py-1.5 border-l border-gray-200">

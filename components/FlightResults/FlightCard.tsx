@@ -340,7 +340,9 @@ export const FlightCard = ({
           </div>
         )}
       </div>
-      {showDetails && <FlightDetails flight={flight} currency={currency} />}
+      {showDetails && (
+        <FlightDetails flight={flight} currency={currency} tui={tui} />
+      )}
     </div>
   );
 };
