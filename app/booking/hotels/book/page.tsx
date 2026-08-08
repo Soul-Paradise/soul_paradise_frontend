@@ -420,14 +420,9 @@ function HotelBookPageInner() {
     .filter(Boolean)
     .join(', ');
 
-  const taxTotal = useMemo(
-    () => (pricing?.taxes ?? []).reduce((s, t) => s + (t.amount || 0), 0) + (pricing?.tcsOnTotal || 0),
-    [pricing],
-  );
-  const discountTotal = useMemo(
-    () => (pricing?.discounts ?? []).reduce((s, d) => s + (d.amount || 0), 0),
-    [pricing],
-  );
+  // Fare summary shows a single all-inclusive room rate — taxes, TCS and
+  // discounts are already folded into pricing.totalRate and are not itemised.
+  const roomCount = pricing?.perRoomRates?.length || 1;
 
   function updateContact<K extends keyof ContactForm>(key: K, value: ContactForm[K]) {
     setContact((c) => ({ ...c, [key]: value }));
@@ -915,53 +910,19 @@ function HotelBookPageInner() {
             <h3 className="font-bold text-slate-800 text-base mb-3 pb-3 border-b border-gray-200">Fare Summary</h3>
 
             <DisclosureRow
-              label="Room Rates"
-              amount={pricing.baseRate}
+              label="Room Rate"
+              amount={pricing.totalRate}
               currency={pricing.currency}
-              initiallyOpen
-            >
-              {(pricing.perRoomRates?.length ? pricing.perRoomRates : [{ baseRate: pricing.baseRate, totalRate: pricing.totalRate }]).map((r, i) => (
-                <div key={i} className="flex justify-between text-gray-600">
-                  <span>Room {i + 1}</span>
-                  <span>{fmt(r.baseRate, pricing.currency)}</span>
-                </div>
-              ))}
-            </DisclosureRow>
+            />
 
-            <DisclosureRow
-              label="Tax & Charges"
-              amount={taxTotal}
-              currency={pricing.currency}
-            >
-              {pricing.taxes.map((t, i) => (
-                <div key={i} className="flex justify-between text-gray-600">
-                  <span>{t.description || 'Tax'}</span>
-                  <span>{fmt(t.amount, pricing.currency)}</span>
-                </div>
-              ))}
-              {pricing.tcsOnTotal > 0 && (
-                <div className="flex justify-between text-gray-600">
-                  <span>TCS</span>
-                  <span>{fmt(pricing.tcsOnTotal, pricing.currency)}</span>
-                </div>
-              )}
-            </DisclosureRow>
-
-            {discountTotal > 0 && (
-              <DisclosureRow
-                label="Discount"
-                amount={discountTotal}
-                currency={pricing.currency}
-                valueClassName="font-medium text-green-600"
-              >
-                {pricing.discounts.map((d, i) => (
-                  <div key={i} className="flex justify-between text-green-600">
-                    <span>{d.description || 'Discount'}</span>
-                    <span>{fmt(d.amount, pricing.currency)}</span>
-                  </div>
-                ))}
-              </DisclosureRow>
+            {roomCount > 1 && (
+              <div className="flex justify-between text-sm py-1.5">
+                <span className="text-gray-700">No. of Rooms</span>
+                <span className="font-medium text-gray-900">{roomCount}</span>
+              </div>
             )}
+
+            <p className="text-xs text-gray-400 pb-1">Inclusive of all taxes &amp; fees</p>
 
             <div className="flex justify-between items-baseline mt-3 pt-3 border-t border-gray-200">
               <span className="font-bold text-slate-800">Total Amount:</span>

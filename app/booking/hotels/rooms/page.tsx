@@ -916,8 +916,8 @@ function PricingPanel({
   nights: number;
   onBook: () => void;
 }) {
-  const totalTaxes = pricing.taxes.reduce((sum, t) => sum + t.amount, 0);
   const hasSavings = pricing.publishedRate > pricing.totalRate && pricing.publishedRate > 0;
+  const roomCount = pricing.perRoomRates?.length || 1;
 
   return (
     <div className="bg-white rounded-lg border border-blue-200 shadow-md p-5 sticky top-4">
@@ -950,7 +950,7 @@ function PricingPanel({
 
       <div className="border-t border-gray-100 my-3" />
 
-      {/* Price breakdown */}
+      {/* Price — single all-inclusive line, taxes/fees are not itemised */}
       <div className="space-y-1.5 text-sm">
         {hasSavings && (
           <div className="flex justify-between text-gray-400">
@@ -960,47 +960,15 @@ function PricingPanel({
         )}
         <div className="flex justify-between text-gray-700">
           <span>Room Rate</span>
-          <span>{fmt(pricing.baseRate, pricing.currency)}</span>
+          <span>{fmt(pricing.totalRate, pricing.currency)}</span>
         </div>
-        {pricing.dailyRates && pricing.dailyRates.length > 1 && (
-          <details className="text-xs text-gray-500">
-            <summary className="cursor-pointer hover:text-gray-700">Per-night breakdown</summary>
-            <div className="mt-1 space-y-0.5 pl-2">
-              {pricing.dailyRates.map((d, i) => (
-                <div key={i} className="flex justify-between">
-                  <span>{formatDate(d.date)}</span>
-                  <span>{fmt(d.amount - (d.discount || 0), pricing.currency)}</span>
-                </div>
-              ))}
-            </div>
-          </details>
-        )}
-        {pricing.discounts.map((d, i) => (
-          <div key={i} className="flex justify-between text-green-600 text-xs">
-            <span>{d.description || 'Discount'}</span>
-            <span>-{fmt(d.amount, pricing.currency)}</span>
-          </div>
-        ))}
-        {pricing.taxes.length > 0 && (
-          pricing.taxes.map((tax, i) => (
-            <div key={i} className="flex justify-between text-gray-500 text-xs">
-              <span>{tax.description || 'Tax & Fees'}</span>
-              <span>{fmt(tax.amount, pricing.currency)}</span>
-            </div>
-          ))
-        )}
-        {pricing.tcsOnTotal > 0 && (
+        {roomCount > 1 && (
           <div className="flex justify-between text-gray-500 text-xs">
-            <span>TCS</span>
-            <span>{fmt(pricing.tcsOnTotal, pricing.currency)}</span>
+            <span>No. of Rooms</span>
+            <span>{roomCount}</span>
           </div>
         )}
-        {totalTaxes === 0 && (
-          <div className="flex justify-between text-gray-500 text-xs">
-            <span>Taxes & Fees</span>
-            <span className="italic text-gray-400">Included</span>
-          </div>
-        )}
+        <p className="text-xs text-gray-400">Inclusive of all taxes &amp; fees</p>
       </div>
 
       <div className="border-t border-gray-200 my-3" />
