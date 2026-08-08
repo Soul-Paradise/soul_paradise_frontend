@@ -280,6 +280,10 @@ export interface FnuLnuSetting {
 export interface BookingRequirements {
   baggageMandatory: boolean;
   gstMandatory: boolean;
+  // PAN can be collected for this itinerary — shown as an optional field unless
+  // panMandatory is also set.
+  panApplicable?: boolean;
+  // PAN must be supplied: only for journeys arriving into India from abroad.
   panMandatory: boolean;
   fareMaskingRequired: boolean;
   seatLayoutAvailable: boolean;

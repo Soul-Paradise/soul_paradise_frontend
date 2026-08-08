@@ -44,9 +44,13 @@ export const PassengerForm = ({
   const fnuNote = fnuLnuSettings?.find((s) => s.fnuMessage)?.fnuMessage;
   const lnuNote = fnuLnuSettings?.find((s) => s.lnuMessage)?.lnuMessage;
 
-  // PAN can be required by fare-level booking requirements even if the
-  // per-passenger travel checklist doesn't flag it.
-  const panRequired = travelChecklist.panNo || !!bookingRequirements?.panMandatory;
+  // PAN is only *mandatory* on journeys arriving into India from abroad — the
+  // backend has already applied that direction check to panMandatory. Whenever
+  // PAN is merely applicable (fare-level flag or the per-passenger checklist),
+  // the field is still offered, just optional.
+  const panMandatory = !!bookingRequirements?.panMandatory;
+  const panVisible =
+    panMandatory || travelChecklist.panNo || !!bookingRequirements?.panApplicable;
 
   const titleOptions =
     paxType === 'CHD' || paxType === 'INF'
@@ -255,10 +259,15 @@ export const PassengerForm = ({
           )}
 
           {/* PAN Number */}
-          {panRequired && (
+          {panVisible && (
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                PAN Number <span className="text-red-500">*</span>
+                PAN Number{' '}
+                {panMandatory ? (
+                  <span className="text-red-500">*</span>
+                ) : (
+                  <span className="text-gray-400 font-normal">(Optional)</span>
+                )}
               </label>
               <input
                 type="text"
