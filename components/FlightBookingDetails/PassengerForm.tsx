@@ -23,6 +23,37 @@ const paxTypeLabels: Record<string, string> = {
   INF: 'Infant',
 };
 
+/**
+ * Our own cross-airline reference table (served from /public). It covers every
+ * carrier and their sector-specific variants, so it stands in wherever Benzy
+ * returns no FnuLnuSettings rule for the operating airline.
+ */
+const NAME_FORMAT_GUIDE_URL =
+  '/Airline-Name-Format-Guide-Soul-Paradise-Travels.pdf';
+
+/**
+ * Benzy embeds bare URLs in the FNU/LNU prose (e.g. "[https://…name-format.html]"),
+ * so render those as real links rather than making the passenger copy them out.
+ * Splitting on a capturing group keeps every other character intact — the airline's
+ * wording must reach the screen byte-for-byte as Benzy sent it.
+ */
+const renderWithLinks = (text: string) =>
+  text.split(/(https?:\/\/[^\s\]]+)/g).map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline break-all"
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+
 export const PassengerForm = ({
   index,
   paxType,
@@ -36,13 +67,14 @@ export const PassengerForm = ({
     onChange({ ...traveller, [field]: value });
   };
 
-  // FNU/LNU guidance: when an airline on this itinerary mandates a title, show
-  // the airline's single-name (first-name-unknown / last-name-unknown) guidance
-  // under the name fields. We only display guidance + keep Title required —
-  // names are NOT auto-transformed (backend FNU transform not implemented yet).
-  const fnuLnuActive = !!fnuLnuSettings && fnuLnuSettings.length > 0;
-  const fnuNote = fnuLnuSettings?.find((s) => s.fnuMessage)?.fnuMessage;
-  const lnuNote = fnuLnuSettings?.find((s) => s.lnuMessage)?.lnuMessage;
+  // Per-airline rules for passengers whose ID carries only one name, already
+  // scoped by the backend to the carriers on this itinerary. Benzy returns them
+  // as free-text prose keyed by airline with no structured form we can apply
+  // automatically, so they are offered on demand — only a single-name passenger
+  // needs them, and they do not apply to the name as printed on a normal ID.
+  const nameRules = (fnuLnuSettings || []).filter(
+    (s) => s.fnuMessage?.trim() || s.lnuMessage?.trim(),
+  );
 
   // PAN is only *mandatory* on journeys arriving into India from abroad — the
   // backend has already applied that direction check to panMandatory. Whenever
@@ -97,9 +129,6 @@ export const PassengerForm = ({
               placeholder="As per ID"
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links)"
             />
-            {fnuLnuActive && fnuNote && (
-              <p className="mt-1 text-[11px] text-amber-700">{fnuNote}</p>
-            )}
           </div>
 
           {/* Last Name */}
@@ -114,9 +143,60 @@ export const PassengerForm = ({
               placeholder="As per ID"
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links)"
             />
-            {fnuLnuActive && lnuNote && (
-              <p className="mt-1 text-[11px] text-amber-700">{lnuNote}</p>
-            )}
+          </div>
+
+          {/* Single-name (FNU/LNU) guidance — collapsed, since it applies only to
+              passengers whose ID has no separate first and last name. */}
+          <div className="sm:col-span-2 lg:col-span-3">
+            <details className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+              <summary className="cursor-pointer text-[11px] font-medium text-amber-800">
+                ID shows only one name (no separate first and last name)?
+              </summary>
+              <div className="mt-2 space-y-3">
+                <p className="text-[11px] text-amber-900">
+                  Enter the name exactly as printed on the ID. If there is only
+                  one name, follow the rule for the operating airline — a
+                  mismatch can stop the passenger boarding.
+                </p>
+                {/* Verbatim airline wording from Benzy's GetTravelCheckList,
+                    scoped by the backend to this itinerary's carriers. Never
+                    reworded or summarised. */}
+                {nameRules.map((rule) => (
+                  <div key={rule.airlineCode} className="text-[11px] text-amber-900">
+                    <p className="font-semibold">
+                      {rule.airlineCode}
+                      {rule.titleMandatory && (
+                        <span className="ml-1 font-normal text-amber-700">
+                          (title required)
+                        </span>
+                      )}
+                    </p>
+                    {rule.fnuMessage?.trim() && (
+                      <p className="mt-0.5 whitespace-pre-line">
+                        {renderWithLinks(rule.fnuMessage)}
+                      </p>
+                    )}
+                    {rule.lnuMessage?.trim() && (
+                      <p className="mt-0.5 whitespace-pre-line">
+                        {renderWithLinks(rule.lnuMessage)}
+                      </p>
+                    )}
+                  </div>
+                ))}
+                <p className="text-[11px] text-amber-900">
+                  <a
+                    href={NAME_FORMAT_GUIDE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium underline"
+                  >
+                    Airline name format guide (PDF)
+                  </a>{' '}
+                  — the format for every airline, including sector-specific rules
+                  for the UAE, USA and other regions.
+                </p>
+              </div>
+            </details>
           </div>
 
           {/* Gender */}
