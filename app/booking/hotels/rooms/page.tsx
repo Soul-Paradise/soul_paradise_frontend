@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { authHeaders } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
+import FreeCancellationBadge from '@/components/HotelResults/FreeCancellationBadge';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -32,6 +33,8 @@ interface RoomOption {
   boardBasis: string | null;
   boardBasisType: string;
   cancellationPolicy: string | null;
+  cancellationPolicies: CancellationPolicy[];
+  freeCancellationUntil: string | null;
   facilities: RoomFacility[];
   images: string[];
   beds: unknown | null;
@@ -93,6 +96,7 @@ interface HotelPricingDetail {
   boardBasis: string | null;
   boardBasisType: string;
   cancellationPolicies: CancellationPolicy[];
+  freeCancellationUntil: string | null;
   currency: string;
   availability: number;
 }
@@ -765,7 +769,10 @@ function RoomCard({
             {/* Badges */}
             <div className="flex flex-wrap gap-1.5 mt-2">
               {room.refundable && (
-                <span className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded">Free Cancellation</span>
+                <FreeCancellationBadge
+                  until={room.freeCancellationUntil}
+                  policyText={room.cancellationPolicy}
+                />
               )}
               {room.payAtHotel && (
                 <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded">Pay at Hotel</span>
@@ -1001,7 +1008,10 @@ function PricingPanel({
       {/* Badges */}
       <div className="flex flex-wrap gap-1.5 mt-3">
         {pricing.refundable ? (
-          <span className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded">Free Cancellation</span>
+          <FreeCancellationBadge
+            until={pricing.freeCancellationUntil}
+            policyText={pricing.cancellationPolicies?.[0]?.text}
+          />
         ) : (
           <span className="text-xs bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded">Non-refundable</span>
         )}

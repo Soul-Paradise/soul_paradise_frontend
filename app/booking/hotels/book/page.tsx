@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { jsPDF } from 'jspdf';
 import { authHeaders } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
+import { formatDeadline } from '@/components/HotelResults/FreeCancellationBadge';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -68,6 +69,9 @@ interface StashedPricing {
   gstAllowed: boolean;
   needsPriceCheck: boolean;
   cancellationPolicies?: CancellationPolicy[];
+  // ISO 8601 (+05:30) instant free cancellation stops; null when the supplier
+  // gave no parseable deadline.
+  freeCancellationUntil?: string | null;
 }
 
 interface StashedSelectedRoom {
@@ -195,6 +199,7 @@ interface BookingVoucher {
   };
   rooms: VoucherRoom[];
   cancellationPolicies: Array<{ text: string; fromDate: string; toDate: string; amount: string }>;
+  freeCancellationUntil?: string | null;
 }
 
 // ── Helpers ──
@@ -859,6 +864,18 @@ function HotelBookPageInner() {
               </div>
             )}
 
+            {pricing.refundable && pricing.freeCancellationUntil && (
+              <div className="mb-4">
+                <p className="text-sm font-semibold text-red-500 mb-1">Cancellation</p>
+                <p className="text-sm text-green-700 font-medium">
+                  Free cancellation until {formatDeadline(pricing.freeCancellationUntil, true)}
+                </p>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  Cancel after this time and the hotel&apos;s cancellation charges apply.
+                </p>
+              </div>
+            )}
+
             {cancellationNotes.length > 0 && (
               <div className="mb-4">
                 <p className="text-sm font-semibold text-red-500 mb-1">Room Policy</p>
@@ -951,7 +968,13 @@ function HotelBookPageInner() {
               {submitting ? 'Booking...' : 'Continue to Payment'}
             </button>
             <p className="text-xs text-gray-400 text-center mt-2">
-              {pricing.payAtHotel ? 'Pay at hotel' : pricing.refundable ? 'Free cancellation' : 'Non-refundable'}
+              {pricing.payAtHotel
+                ? 'Pay at hotel'
+                : pricing.refundable
+                  ? pricing.freeCancellationUntil
+                    ? `Free cancellation until ${formatDeadline(pricing.freeCancellationUntil)}`
+                    : 'Free cancellation'
+                  : 'Non-refundable'}
             </p>
           </div>
         </aside>
@@ -1208,6 +1231,17 @@ function buildPdf(v: BookingVoucher, JsPDF: typeof jsPDF): jsPDF {
     y += 18;
     doc.line(margin, y, pageWidth - margin, y);
     y += 12;
+    if (v.freeCancellationUntil) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(21, 128, 61);
+      doc.text(
+        `Free cancellation until ${formatDeadline(v.freeCancellationUntil, true)}`,
+        margin,
+        y,
+      );
+      y += 16;
+    }
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(71, 85, 105);
