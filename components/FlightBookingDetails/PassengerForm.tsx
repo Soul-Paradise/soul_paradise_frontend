@@ -145,58 +145,61 @@ export const PassengerForm = ({
             />
           </div>
 
-          {/* Single-name (FNU/LNU) guidance — collapsed, since it applies only to
-              passengers whose ID has no separate first and last name. */}
+          {/* Single-name (FNU/LNU) guidance. Shown expanded directly under the
+              name fields (per user, 2026-08-08): the airline's exact rule must be
+              on screen, not behind a toggle. Rendered once as a full-width block
+              rather than duplicated under each name input. */}
           <div className="sm:col-span-2 lg:col-span-3">
-            <details className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
-              <summary className="cursor-pointer text-[11px] font-medium text-amber-800">
-                ID shows only one name (no separate first and last name)?
-              </summary>
-              <div className="mt-2 space-y-3">
-                <p className="text-[11px] text-amber-900">
-                  Enter the name exactly as printed on the ID. If there is only
-                  one name, follow the rule for the operating airline — a
-                  mismatch can stop the passenger boarding.
-                </p>
-                {/* Verbatim airline wording from Benzy's GetTravelCheckList,
-                    scoped by the backend to this itinerary's carriers. Never
-                    reworded or summarised. */}
-                {nameRules.map((rule) => (
-                  <div key={rule.airlineCode} className="text-[11px] text-amber-900">
-                    <p className="font-semibold">
-                      {rule.airlineCode}
-                      {rule.titleMandatory && (
-                        <span className="ml-1 font-normal text-amber-700">
-                          (title required)
-                        </span>
-                      )}
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5">
+              <p className="text-[11px] font-semibold text-amber-800">
+                If the ID shows only one name (no separate first and last name)
+              </p>
+              <p className="mt-1 text-[11px] text-amber-900">
+                Enter the name exactly as printed on the ID. If only one name is
+                shown, follow the operating airline&apos;s rule — a mismatch can
+                stop the passenger boarding.
+              </p>
+              {/* Verbatim airline wording from Benzy's GetTravelCheckList, scoped
+                  by the backend to this itinerary's carriers. Shown in full and
+                  never reworded, trimmed or summarised. */}
+              {nameRules.map((rule) => (
+                <div
+                  key={rule.airlineCode}
+                  className="mt-2 border-l-2 border-amber-300 pl-2.5 text-[11px] text-amber-900"
+                >
+                  <p className="font-semibold">
+                    {rule.airlineCode}
+                    {rule.titleMandatory && (
+                      <span className="ml-1 font-normal text-amber-700">
+                        (title required)
+                      </span>
+                    )}
+                  </p>
+                  {rule.fnuMessage?.trim() && (
+                    <p className="mt-0.5 whitespace-pre-line">
+                      {renderWithLinks(rule.fnuMessage)}
                     </p>
-                    {rule.fnuMessage?.trim() && (
-                      <p className="mt-0.5 whitespace-pre-line">
-                        {renderWithLinks(rule.fnuMessage)}
-                      </p>
-                    )}
-                    {rule.lnuMessage?.trim() && (
-                      <p className="mt-0.5 whitespace-pre-line">
-                        {renderWithLinks(rule.lnuMessage)}
-                      </p>
-                    )}
-                  </div>
-                ))}
-                <p className="text-[11px] text-amber-900">
-                  <a
-                    href={NAME_FORMAT_GUIDE_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium underline"
-                  >
-                    Airline name format guide (PDF)
-                  </a>{' '}
-                  — the format for every airline, including sector-specific rules
-                  for the UAE, USA and other regions.
-                </p>
-              </div>
-            </details>
+                  )}
+                  {rule.lnuMessage?.trim() && (
+                    <p className="mt-0.5 whitespace-pre-line">
+                      {renderWithLinks(rule.lnuMessage)}
+                    </p>
+                  )}
+                </div>
+              ))}
+              <p className="mt-2 text-[11px] text-amber-900">
+                <a
+                  href={NAME_FORMAT_GUIDE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium underline"
+                >
+                  Airline name format guide (PDF)
+                </a>{' '}
+                — the format for every airline, including sector-specific rules
+                for the UAE, USA and other regions.
+              </p>
+            </div>
           </div>
 
           {/* Gender */}
