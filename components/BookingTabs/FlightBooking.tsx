@@ -102,7 +102,7 @@ export const FlightBooking = () => {
   const [dateTab, setDateTab] = useState<'start' | 'end'>('start');
   const datesWrapperRef = useRef<HTMLDivElement>(null);
 
-  // Multi-city — bring the newest leg into view when one is added. Legs render
+  // Multi-city - bring the newest leg into view when one is added. Legs render
   // stacked (no inner scroll region), so scroll the new row into the viewport.
   const legsScrollRef = useRef<HTMLDivElement>(null);
   const prevLegCount = useRef(legs.length);
@@ -344,7 +344,7 @@ export const FlightBooking = () => {
               className="w-full text-base font-bold text-gray-900 bg-transparent outline-none"
             />
           </div>
-          {/* Travellers & class — first leg only; empty spacer on the rest */}
+          {/* Travellers & class - first leg only; empty spacer on the rest */}
           <div className="col-span-2 sm:flex-[1.5] min-w-0">
             {i === 0 && (
               <TravellerSelector
@@ -405,11 +405,11 @@ export const FlightBooking = () => {
         </span>
       </div>
 
-      {/* Main Search Fields — single bordered row (one-way / round-trip) */}
+      {/* Main Search Fields - single bordered row (one-way / round-trip) */}
       {tripType !== 'multicity' && (
       <div className="border-2 border-gray-200 rounded-xl overflow-visible bg-white">
         <div className="grid grid-cols-2 sm:flex sm:items-stretch divide-y divide-gray-200 sm:divide-y-0">
-          {/* FROM — full width on mobile */}
+          {/* FROM - full width on mobile */}
           <div className="col-span-2 sm:flex-[2] min-w-0 relative sm:border-r sm:border-gray-200">
             <AirportPicker
               label="From"
@@ -441,7 +441,7 @@ export const FlightBooking = () => {
             </button>
           </div>
 
-          {/* TO — full width on mobile */}
+          {/* TO - full width on mobile */}
           <div className="col-span-2 sm:flex-[2] min-w-0 sm:border-r sm:border-gray-200">
             <AirportPicker
               label="To"
@@ -451,7 +451,7 @@ export const FlightBooking = () => {
             />
           </div>
 
-          {/* Dates wrapper — relative so calendar anchors under both date fields */}
+          {/* Dates wrapper - relative so calendar anchors under both date fields */}
           <div
             ref={datesWrapperRef}
             className="col-span-2 grid grid-cols-2 sm:flex sm:flex-[2.6] min-w-0 sm:border-r sm:border-gray-200 relative"
@@ -494,7 +494,7 @@ export const FlightBooking = () => {
             />
           </div>
 
-          {/* TRAVELLERS & CLASS — full width on mobile */}
+          {/* TRAVELLERS & CLASS - full width on mobile */}
           <div className="col-span-2 sm:flex-[1.5] min-w-0">
             <TravellerSelector
               travellers={travellers}
@@ -507,7 +507,7 @@ export const FlightBooking = () => {
       </div>
       )}
 
-      {/* Multi-city leg editor — each leg is one compact row (same height as
+      {/* Multi-city leg editor - each leg is one compact row (same height as
           the one-way/round-trip fields row). All legs render fully stacked so
           every hop is visible; the card grows with the leg count (max 6). */}
       {tripType === 'multicity' && (

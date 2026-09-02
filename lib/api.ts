@@ -171,7 +171,7 @@ class ApiClient {
       this.refreshInFlight = this.refreshToken()
         .then(() => true)
         .catch(() => {
-          // Refresh token is gone/expired — the session is truly dead.
+          // Refresh token is gone/expired - the session is truly dead.
           this.clearTokens();
           return false;
         })
@@ -503,7 +503,7 @@ async function refreshAccessToken(): Promise<boolean> {
       .refreshToken()
       .then(() => true)
       .catch(() => {
-        // Refresh token is gone/expired — the session is truly dead.
+        // Refresh token is gone/expired - the session is truly dead.
         api.clearTokens();
         return false;
       })
@@ -518,7 +518,7 @@ async function refreshAccessToken(): Promise<boolean> {
  * fetch() wrapper for authenticated calls that transparently recovers from an
  * expired access token: on a 401 it refreshes the token once and retries the
  * request a single time. If the refresh fails, it clears the session and sends
- * the user to /login. Always attaches the current Authorization header itself —
+ * the user to /login. Always attaches the current Authorization header itself -
  * callers should NOT spread authHeaders() into the request.
  */
 export async function authFetch(
@@ -533,7 +533,7 @@ export async function authFetch(
   const res = await fetch(input, build());
   if (res.status !== 401) return res;
 
-  // Access token likely expired — try one refresh + retry.
+  // Access token likely expired - try one refresh + retry.
   const refreshed = await refreshAccessToken();
   if (!refreshed) {
     if (

@@ -23,7 +23,7 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
-/** Total payable for an SSR option — `charge` already includes any tax. */
+/** Total payable for an SSR option - `charge` already includes any tax. */
 function optTotal(opt: SSROption) {
   return opt.charge || 0;
 }

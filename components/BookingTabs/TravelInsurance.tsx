@@ -286,7 +286,7 @@ export const TravelInsurance = () => {
 
   return (
     <form onSubmit={handleSearch} className="space-y-5" ref={wrapperRef}>
-      {/* Policy Type row — like Special Fares in Flights */}
+      {/* Policy Type row - like Special Fares in Flights */}
       <div className="flex items-center gap-3 flex-wrap">
         <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Policy Type</span>
         <div className="flex flex-wrap gap-2">
@@ -307,7 +307,7 @@ export const TravelInsurance = () => {
         </div>
       </div>
 
-      {/* Main fields row — same bordered container as Flights/Hotels */}
+      {/* Main fields row - same bordered container as Flights/Hotels */}
       <div className="relative border-2 border-gray-200 rounded-xl overflow-visible bg-white">
         <div className="grid grid-cols-2 sm:flex sm:items-stretch divide-y divide-gray-200 sm:divide-y-0">
 
@@ -328,7 +328,7 @@ export const TravelInsurance = () => {
             </div>
           </button>
 
-          {/* Dates wrapper — relative so calendar anchors under the date fields */}
+          {/* Dates wrapper - relative so calendar anchors under the date fields */}
           <div className="col-span-2 grid grid-cols-2 sm:flex sm:flex-[2.6] relative sm:border-r sm:border-gray-200">
             {/* Start Date */}
             <button
@@ -587,7 +587,7 @@ export const TravelInsurance = () => {
         </div>
       )}
 
-      {/* GET QUOTE button — matches Flights/Hotels SEARCH button */}
+      {/* GET QUOTE button - matches Flights/Hotels SEARCH button */}
       <div className="flex justify-end">
         <button
           type="submit"

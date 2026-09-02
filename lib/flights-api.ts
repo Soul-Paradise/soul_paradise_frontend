@@ -49,7 +49,7 @@ export interface FlightResult {
   seats: number;
   fareClass: string;
   fareType: string;
-  // Fare identity — what the airline's rules attach to.
+  // Fare identity - what the airline's rules attach to.
   rbd?: string; // reservation booking class letter
   fareBasisCode?: string; // Benzy FBC
   fareHead?: string; // Benzy FCType, e.g. "PUBLISHED"
@@ -193,7 +193,7 @@ export interface FareBreakdownItem {
 }
 
 /**
- * Benzy penalty amounts are not always numeric — "Non Refundable" is a valid
+ * Benzy penalty amounts are not always numeric - "Non Refundable" is a valid
  * value and must reach the customer verbatim. `null` means the airline defined
  * no amount for that pax type, which is NOT the same as a zero-rupee fee.
  */
@@ -278,7 +278,7 @@ export interface FnuLnuSetting {
 export interface BookingRequirements {
   baggageMandatory: boolean;
   gstMandatory: boolean;
-  // PAN can be collected for this itinerary — shown as an optional field unless
+  // PAN can be collected for this itinerary - shown as an optional field unless
   // panMandatory is also set.
   panApplicable?: boolean;
   // PAN must be supplied: only for journeys arriving into India from abroad.
@@ -374,7 +374,7 @@ export interface BookingRequest {
   selectedSSR: SSRSelection[];
   ssrChargeMap: Record<string, number>;
   freeSSRs: FreeSSR[];
-  // Echo of bookingRequirements.fareMaskingRequired — sets EnableFareMasking.
+  // Echo of bookingRequirements.fareMaskingRequired - sets EnableFareMasking.
   enableFareMasking?: boolean;
   // Multi-city (DM) only: echoed straight back from the pricing response. When
   // length > 1 the backend tickets each leg as its own itinerary.
@@ -397,7 +397,7 @@ export interface BookingResponse {
   currency: string;
 }
 
-/** Returned by createBooking — frontend redirects the browser to redirectUrl. */
+/** Returned by createBooking - frontend redirects the browser to redirectUrl. */
 export interface BookingInitiateResponse {
   bookingId: string;
   merchantTxnNo: string;
@@ -573,7 +573,7 @@ export interface FareRulesLookupResponse {
  * Fetch real cancellation/change penalties for one searched flight.
  *
  * Search results carry no rule data, so this prices the fare against Benzy to
- * obtain it. It is a billable upstream call — only invoke it when the customer
+ * obtain it. It is a billable upstream call - only invoke it when the customer
  * actually asks to see the rules, never eagerly for a list of results.
  */
 export async function getFareRules(
@@ -632,7 +632,7 @@ export interface BaggageLookupResponse {
  *
  * Search carries only one journey-level allowance string and nothing about
  * add-ons, so this prices the fare against Benzy and pulls SSR. Billable
- * upstream — only invoke when the customer opens the baggage view, never
+ * upstream - only invoke when the customer opens the baggage view, never
  * eagerly across a list of results.
  */
 export async function getBaggage(
@@ -687,7 +687,7 @@ export async function priceMultiCityAndGetDetails(
 
 /**
  * Starts a booking and returns the payment-gateway redirect URL. The ticket is
- * only issued (by the backend) after the customer completes payment — the
+ * only issued (by the backend) after the customer completes payment - the
  * caller should send the browser to `redirectUrl`.
  */
 export async function createBooking(

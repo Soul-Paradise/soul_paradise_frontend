@@ -398,8 +398,8 @@ function PlanDetailsInner() {
                         {visibleBenefits.map((b, i) => (
                           <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                             <td className="py-3 pr-4 text-gray-700 font-medium">{b.name}</td>
-                            <td className="py-3 pr-4 text-gray-600">{b.sumInsured || '—'}</td>
-                            <td className="py-3 text-gray-500">{b.deductible || '—'}</td>
+                            <td className="py-3 pr-4 text-gray-600">{b.sumInsured || '-'}</td>
+                            <td className="py-3 text-gray-500">{b.deductible || '-'}</td>
                           </tr>
                         ))}
                       </tbody>

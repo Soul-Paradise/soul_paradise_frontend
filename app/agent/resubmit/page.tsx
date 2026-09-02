@@ -15,7 +15,7 @@ import {
 /**
  * Where a rejected agent lands from the emailed link.
  *
- * They have no session — agents are hard-blocked from logging in until approved —
+ * They have no session - agents are hard-blocked from logging in until approved -
  * so the token in the URL is the only thing authenticating them. Without this
  * page, a rejection would be a dead end and every correction would arrive as a
  * support email with an attachment.
@@ -147,7 +147,7 @@ function ResubmitForm() {
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-6">
           <p className="text-xs text-(--color-foreground) opacity-70">
-            Only upload the documents you need to correct — anything you leave blank
+            Only upload the documents you need to correct - anything you leave blank
             stays as it is.
           </p>
 
@@ -159,13 +159,13 @@ function ResubmitForm() {
           />
           <FileUpload
             id="aadhaarFront"
-            label="Aadhaar — Front"
+            label="Aadhaar - Front"
             value={aadhaarFront}
             onChange={setAadhaarFront}
           />
           <FileUpload
             id="aadhaarBack"
-            label="Aadhaar — Back"
+            label="Aadhaar - Back"
             value={aadhaarBack}
             onChange={setAadhaarBack}
           />

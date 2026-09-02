@@ -425,7 +425,7 @@ function HotelBookPageInner() {
     .filter(Boolean)
     .join(', ');
 
-  // Fare summary shows a single all-inclusive room rate — taxes, TCS and
+  // Fare summary shows a single all-inclusive room rate - taxes, TCS and
   // discounts are already folded into pricing.totalRate and are not itemised.
   const roomCount = pricing?.perRoomRates?.length || 1;
 
@@ -1057,11 +1057,11 @@ function buildPdf(v: BookingVoucher, JsPDF: typeof jsPDF): jsPDF {
 
   const infoRows: Array<[string, string]> = [
     ['Booking ID', v.bookingId],
-    ['Confirmation ID', v.confirmationId || '—'],
-    ['Supplier Ref', v.supplierConfirmationId || '—'],
+    ['Confirmation ID', v.confirmationId || '-'],
+    ['Supplier Ref', v.supplierConfirmationId || '-'],
     ['Transaction', v.transactionId],
     ['Status', tone.label],
-    ['Payment Status', v.paymentStatus || '—'],
+    ['Payment Status', v.paymentStatus || '-'],
   ];
   doc.setFontSize(10);
   for (const [k, val] of infoRows) {
@@ -1088,7 +1088,7 @@ function buildPdf(v: BookingVoucher, JsPDF: typeof jsPDF): jsPDF {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(15, 23, 42);
-  doc.text(v.hotel.name || '—', margin, y);
+  doc.text(v.hotel.name || '-', margin, y);
   y += 16;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
@@ -1332,7 +1332,7 @@ function BookingConfirmation({ voucher, onDone }: { voucher: BookingVoucher; onD
             </div>
             <div className="text-right">
               <p className="text-[10px] tracking-widest opacity-80">CONFIRMATION</p>
-              <p className="font-mono text-lg font-bold">{voucher.confirmationId || '—'}</p>
+              <p className="font-mono text-lg font-bold">{voucher.confirmationId || '-'}</p>
             </div>
           </div>
 
@@ -1438,11 +1438,11 @@ function BookingConfirmation({ voucher, onDone }: { voucher: BookingVoucher; onD
               </div>
               <div>
                 <p className="text-xs text-gray-500">Mobile</p>
-                <p className="font-medium text-slate-800">{voucher.contactInfo.mobile || '—'}</p>
+                <p className="font-medium text-slate-800">{voucher.contactInfo.mobile || '-'}</p>
               </div>
               <div className="sm:col-span-2">
                 <p className="text-xs text-gray-500">Email</p>
-                <p className="font-medium text-slate-800 break-all">{voucher.contactInfo.email || '—'}</p>
+                <p className="font-medium text-slate-800 break-all">{voucher.contactInfo.email || '-'}</p>
               </div>
             </div>
           </div>

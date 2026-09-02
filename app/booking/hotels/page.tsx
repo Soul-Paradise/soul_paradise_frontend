@@ -866,7 +866,7 @@ function HotelResults() {
 
   const totalGuests = rooms.reduce((s: number, r: { adults: number; children: number }) => s + r.adults + r.children, 0);
 
-  // Search — single synchronous POST, no polling, no Redis handoff.
+  // Search - single synchronous POST, no polling, no Redis handoff.
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
     if (!lat || !long || !checkIn || !checkOut) {
@@ -1106,7 +1106,7 @@ function HotelResults() {
         {/* Results */}
         {!loading && !error && results && (
           <div className="flex gap-5">
-            {/* Sidebar (hidden in map view) — independently scrollable (sticky) */}
+            {/* Sidebar (hidden in map view) - independently scrollable (sticky) */}
             {!showMap && (
               <div className="w-[280px] flex-shrink-0">
                 <div className="sticky top-[72px] max-h-[calc(100vh-88px)] overflow-y-auto pr-1">

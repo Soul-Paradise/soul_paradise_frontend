@@ -67,7 +67,7 @@ export default function GoogleSignInButton({
         setIsLoading(true);
 
         if (onCredential) {
-          // Caller takes over — no sign-in, no redirect.
+          // Caller takes over - no sign-in, no redirect.
           await onCredential(response.credential);
         } else {
           await googleAuth(response.credential);

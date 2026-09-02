@@ -509,7 +509,7 @@ function ConfirmationContent() {
                     </td>
                     {showAge && (
                       <td className="px-5 py-3 text-gray-600">
-                        {pax.age != null ? pax.age : '—'}
+                        {pax.age != null ? pax.age : '-'}
                       </td>
                     )}
                     <td className="px-5 py-3 text-gray-600">
@@ -520,7 +520,7 @@ function ConfirmationContent() {
                         {pax.ticketStatus &&
                         pax.ticketStatus !== booking.status
                           ? pax.ticketStatus
-                          : '—'}
+                          : '-'}
                       </td>
                     )}
                     {showPassport && (
@@ -544,7 +544,7 @@ function ConfirmationContent() {
                             )}
                           </div>
                         ) : (
-                          '—'
+                          '-'
                         )}
                       </td>
                     )}

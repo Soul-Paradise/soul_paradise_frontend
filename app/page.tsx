@@ -84,8 +84,8 @@ export default function Home() {
         </section>
 
         {/* ── Hero Section (sm+ only) ── */}
-        {/* min-h (not fixed h) so a taller card — e.g. multi-city with several
-            legs — grows the hero and pushes the next section down instead of
+        {/* min-h (not fixed h) so a taller card - e.g. multi-city with several
+            legs - grows the hero and pushes the next section down instead of
             overflowing it. One-way/round-trip are shorter than 400px, so their
             layout is unchanged. */}
         <section

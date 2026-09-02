@@ -268,7 +268,7 @@ function MultiCityDetailsContent() {
         ssrChargeMap: pricing.ssrChargeMap,
         freeSSRs: pricing.freeSSRs,
         enableFareMasking: pricing.bookingRequirements?.fareMaskingRequired ?? false,
-        // DM: one { tui, netAmount } per leg — the backend splits the flat SSR
+        // DM: one { tui, netAmount } per leg - the backend splits the flat SSR
         // selections per leg by FUID namespace and tickets each leg separately.
         multiCitySessions: pricing.multiCitySessions,
         tripSummary: {

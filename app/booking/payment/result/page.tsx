@@ -34,7 +34,7 @@ function PaymentResultContent() {
   const stopped = useRef(false);
 
   useEffect(() => {
-    // Payment itself failed/cancelled — nothing to poll.
+    // Payment itself failed/cancelled - nothing to poll.
     if (status !== 'PAID') {
       setView('failed_payment');
       return;
@@ -73,10 +73,10 @@ function PaymentResultContent() {
           return;
         }
 
-        // Still PENDING_PAYMENT / TICKETING — keep waiting.
+        // Still PENDING_PAYMENT / TICKETING - keep waiting.
         setView('ticketing');
       } catch {
-        // Transient read error — keep polling until timeout.
+        // Transient read error - keep polling until timeout.
       }
 
       if (Date.now() - startedAt > POLL_TIMEOUT_MS) {

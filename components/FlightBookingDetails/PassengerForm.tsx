@@ -34,7 +34,7 @@ const NAME_FORMAT_GUIDE_URL =
 /**
  * Benzy embeds bare URLs in the FNU/LNU prose (e.g. "[https://…name-format.html]"),
  * so render those as real links rather than making the passenger copy them out.
- * Splitting on a capturing group keeps every other character intact — the airline's
+ * Splitting on a capturing group keeps every other character intact - the airline's
  * wording must reach the screen byte-for-byte as Benzy sent it.
  */
 const renderWithLinks = (text: string) =>
@@ -70,13 +70,13 @@ export const PassengerForm = ({
   // Per-airline rules for passengers whose ID carries only one name, already
   // scoped by the backend to the carriers on this itinerary. Benzy returns them
   // as free-text prose keyed by airline with no structured form we can apply
-  // automatically, so they are offered on demand — only a single-name passenger
+  // automatically, so they are offered on demand - only a single-name passenger
   // needs them, and they do not apply to the name as printed on a normal ID.
   const nameRules = (fnuLnuSettings || []).filter(
     (s) => s.fnuMessage?.trim() || s.lnuMessage?.trim(),
   );
 
-  // PAN is only *mandatory* on journeys arriving into India from abroad — the
+  // PAN is only *mandatory* on journeys arriving into India from abroad - the
   // backend has already applied that direction check to panMandatory. Whenever
   // PAN is merely applicable (fare-level flag or the per-passenger checklist),
   // the field is still offered, just optional.
@@ -156,7 +156,7 @@ export const PassengerForm = ({
               </p>
               <p className="mt-1 text-[11px] text-amber-900">
                 Enter the name exactly as printed on the ID. If only one name is
-                shown, follow the operating airline&apos;s rule — a mismatch can
+                shown, follow the operating airline&apos;s rule - a mismatch can
                 stop the passenger boarding.
               </p>
               {/* Verbatim airline wording from Benzy's GetTravelCheckList, scoped
@@ -196,7 +196,7 @@ export const PassengerForm = ({
                 >
                   Airline name format guide (PDF)
                 </a>{' '}
-                — the format for every airline, including sector-specific rules
+                - the format for every airline, including sector-specific rules
                 for the UAE, USA and other regions.
               </p>
             </div>

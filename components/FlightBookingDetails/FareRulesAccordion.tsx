@@ -19,7 +19,7 @@ interface FareRulesAccordionProps {
  */
 function renderAmount(amount: FareRuleAmount, currency?: string) {
   if (amount === null || amount === undefined) {
-    return <span className="text-gray-300">&mdash;</span>;
+    return <span className="text-gray-300">-</span>;
   }
   if (typeof amount === 'string') {
     return <span className="font-medium text-amber-700">{amount}</span>;
@@ -152,7 +152,7 @@ export const FareRulesAccordion = ({ fareRules }: FareRulesAccordionProps) => {
       </div>
       {anyOmitted && (
         <div className="px-5 py-2.5 bg-gray-50 border-t border-gray-100 text-[11px] text-gray-500">
-          &mdash; the airline has not published a separate amount for that
+          - the airline has not published a separate amount for that
           passenger type; the adult charge normally applies.
         </div>
       )}

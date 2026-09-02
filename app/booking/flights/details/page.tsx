@@ -283,7 +283,7 @@ function FlightDetailsContent() {
         lastName: firstAdult?.lastName || contactInfo.lastName || 'User',
       };
 
-      // Customer-facing grand total — must match the BookingSummary figure
+      // Customer-facing grand total - must match the BookingSummary figure
       // (gross fare + paid SSRs/seats − promo discount). This is what we charge.
       // Match on BOTH fuid and id (keyed like the backend's ssrChargeMap) so a
       // shared ssrId across segments can't pick the wrong charge.

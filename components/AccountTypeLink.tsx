@@ -24,7 +24,7 @@ const COPY = {
  * Cross-link between the customer and agent registration pages.
  *
  * A link, not a form control: the two paths are separate pages collecting
- * different information (an agent submits KYC documents), so this navigates —
+ * different information (an agent submits KYC documents), so this navigates -
  * it does not toggle state within a single form.
  */
 export default function AccountTypeLink({ current }: AccountTypeLinkProps) {

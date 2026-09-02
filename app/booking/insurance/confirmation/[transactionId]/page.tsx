@@ -104,7 +104,7 @@ const statusInfo = (s: string): StatusInfo => {
     };
   }
 
-  // In Progress — provider hasn't issued policy yet
+  // In Progress - provider hasn't issued policy yet
   if (['IP', 'INPROGRESS', 'IN_PROGRESS', 'PENDING', 'PROCESSING'].includes(code)) {
     return {
       kind: 'pending',
@@ -481,7 +481,7 @@ function InfoCell({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="text-xs text-gray-400">{label}</p>
-      <p className="text-sm font-medium text-gray-800 mt-0.5">{value || '—'}</p>
+      <p className="text-sm font-medium text-gray-800 mt-0.5">{value || '-'}</p>
     </div>
   );
 }

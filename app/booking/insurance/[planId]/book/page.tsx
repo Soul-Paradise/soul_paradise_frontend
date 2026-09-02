@@ -86,7 +86,7 @@ const GENDERS = ['M', 'F'];
 const toBackendPolicyType = (p: string): string => {
   // StartPay sample uses title case (e.g. "Individual"); our DTO stores uppercase
   // from the search. Backend BookInsuranceSchema now expects uppercase (see
-  // POLICY_TYPES) — pass through.
+  // POLICY_TYPES) - pass through.
   return (p || 'INDIVIDUAL').toUpperCase();
 };
 

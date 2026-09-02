@@ -1,7 +1,7 @@
 /**
  * Free-cancellation deadline display.
  *
- * Benzy never returns a "free until" field — the backend derives it from the
+ * Benzy never returns a "free until" field - the backend derives it from the
  * room's cancellation policy (see hotels/cancellation-deadline.ts) and hands it
  * over as `freeCancellationUntil`, an ISO 8601 instant carrying an explicit
  * +05:30 offset.

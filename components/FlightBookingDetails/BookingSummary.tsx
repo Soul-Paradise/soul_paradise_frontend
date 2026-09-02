@@ -48,13 +48,13 @@ export const BookingSummary = ({
 
   // Aggregate each per-passenger breakdown line across the whole party
   // (per-pax amount × count for each type) so the rows sum exactly to the fare
-  // total for any passenger mix — not just a single traveller.
+  // total for any passenger mix - not just a single traveller.
   const aggregate = (item: FareBreakdownItem) =>
     item.adultAmount * passengerCounts.adults +
     item.childAmount * passengerCounts.children +
     item.infantAmount * passengerCounts.infants;
 
-  // The backend sends a single all-inclusive ticket line — taxes, GST and
+  // The backend sends a single all-inclusive ticket line - taxes, GST and
   // service charges are folded into it and are never itemised for the customer.
   const fareLines = fareBreakdown
     .map((item) => ({ label: item.label, amount: aggregate(item) }))
@@ -72,8 +72,8 @@ export const BookingSummary = ({
     )
     .filter((o): o is SSROption => !!o);
 
-  // Break the extras out the way the customer chose them — seats, extra
-  // baggage, meals — so each optional fare they picked is visible on its own
+  // Break the extras out the way the customer chose them - seats, extra
+  // baggage, meals - so each optional fare they picked is visible on its own
   // line rather than hidden inside one lump "Add-ons" figure.
   const ADD_ON_GROUPS: Array<{ label: string; types: SSROption['type'][] }> = [
     { label: 'Seat Selection', types: ['seat'] },
@@ -99,7 +99,7 @@ export const BookingSummary = ({
   // Promo discount
   const promoDiscount = appliedPromo?.valid ? appliedPromo.discountAmount : 0;
 
-  // Grand total — derived from the visible lines so the breakdown always
+  // Grand total - derived from the visible lines so the breakdown always
   // reconciles with the Total Amount shown to (and paid by) the customer.
   const grandTotal = fareLinesTotal + ssrTotal - promoDiscount;
 
@@ -116,7 +116,7 @@ export const BookingSummary = ({
       </div>
 
       <div className="p-4 sm:p-5 space-y-2.5">
-        {/* All-inclusive ticket fare — never split into taxes or charges */}
+        {/* All-inclusive ticket fare - never split into taxes or charges */}
         {fareLines.map((line) => (
           <div key={line.label} className="flex justify-between text-sm">
             <span className="text-gray-600">{line.label}</span>
@@ -170,7 +170,7 @@ export const BookingSummary = ({
           onApplyPromo={onApplyPromo}
         />
 
-        {/* Confirm & Pay button — only on last step */}
+        {/* Confirm & Pay button - only on last step */}
         {currentStep === totalSteps - 1 && (
           <>
             <button

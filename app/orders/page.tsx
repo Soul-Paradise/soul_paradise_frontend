@@ -26,7 +26,7 @@ import { showToast } from '@/lib/toast';
 type TabKey = 'flights' | 'hotels' | 'insurance';
 
 function formatDate(value: string | null | undefined) {
-  if (!value) return '—';
+  if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString('en-IN', {
@@ -283,7 +283,7 @@ export default function OrdersPage() {
                 </h2>
                 <p className="mt-1 text-sm text-(--color-inactive)">
                   {cancelTarget.hotelName || 'This hotel booking'}
-                  {cancelTarget.city ? `, ${cancelTarget.city}` : ''} — check-in{' '}
+                  {cancelTarget.city ? `, ${cancelTarget.city}` : ''} - check-in{' '}
                   {formatDate(cancelTarget.checkInDate)}. This action cannot be
                   undone.
                 </p>

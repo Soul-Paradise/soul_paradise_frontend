@@ -313,7 +313,7 @@ function FlightInfoTab({
             </div>
           </div>
 
-          {/* Itinerary — one journey per hop (origin → halt → destination) */}
+          {/* Itinerary - one journey per hop (origin → halt → destination) */}
           <ol className="relative">
             {stops.map((s, i) => {
               const last = i === stops.length - 1;
@@ -483,7 +483,7 @@ function FareSummaryTab({ flight, tui }: { flight: FlightResult; tui: string }) 
             </Row>
             {(flight.fareHead || flight.fareBasisCode) && (
               <Row label="Fare Type">
-                {flight.fareHead || '—'}
+                {flight.fareHead || '-'}
                 {flight.fareBasisCode && (
                   <span className="block text-xs text-gray-400 font-normal">
                     Fare basis {flight.fareBasisCode}
@@ -507,7 +507,7 @@ function FareSummaryTab({ flight, tui }: { flight: FlightResult; tui: string }) 
             {hold && <Row label="Hold Available">Up to {hold}</Row>}
             <Row label="Refundable">
               {/* Benzy's flag only says whether the fare is refundable at
-                  all — refundable fares still carry a cancellation penalty,
+                  all - refundable fares still carry a cancellation penalty,
                   so never present this as a full refund. */}
               <span
                 className={`px-2 py-0.5 rounded text-xs font-semibold ${
@@ -622,7 +622,7 @@ function BaggageTab({ flight, tui }: { flight: FlightResult; tui: string }) {
   const groups = data?.extraBaggage ?? [];
   const chargedGroups = groups.filter((g) => !g.carriedThrough);
   const carriedGroups = groups.filter((g) => g.carriedThrough);
-  // Which sector the customer actually pays on — named in the carried-through
+  // Which sector the customer actually pays on - named in the carried-through
   // line so "charged here, not there" is explicit rather than implied.
   const chargedSectorName =
     chargedGroups.find((g) => g.sector)?.sector ?? 'the charged sector';
@@ -663,7 +663,7 @@ function BaggageTab({ flight, tui }: { flight: FlightResult; tui: string }) {
                       </span>
                     )}
                   </td>
-                  {/* Benzy carries no cabin-baggage field at any stage —
+                  {/* Benzy carries no cabin-baggage field at any stage -
                       Inclusions.Baggage is check-in only. Printing a fixed
                       weight here would be inventing airline policy. */}
                   <td className="px-5 py-2.5 text-right font-medium text-gray-700 align-top">
@@ -710,7 +710,7 @@ function BaggageTab({ flight, tui }: { flight: FlightResult; tui: string }) {
             {chargedGroups.map((group, gi) => (
               <div key={group.fuid ?? `unmapped-${gi}`} className="px-5 py-3">
                 {/* On a connecting itinerary the customer has to know which leg
-                    the charge attaches to, so always name it — even when there
+                    the charge attaches to, so always name it - even when there
                     is only one charging group. */}
                 {allowances.length > 1 && (
                   <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-2">
@@ -750,7 +750,7 @@ function BaggageTab({ flight, tui }: { flight: FlightResult; tui: string }) {
                           )}
                         </span>
                         <span className="font-semibold text-gray-800 tabular-nums flex-shrink-0">
-                          {/* `charge` is already tax-inclusive — this is the
+                          {/* `charge` is already tax-inclusive - this is the
                               total the customer will actually pay. */}
                           {total > 0 ? formatCurrency(total) : 'Free'}
                         </span>

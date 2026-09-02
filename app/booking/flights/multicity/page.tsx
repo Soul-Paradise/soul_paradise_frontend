@@ -222,7 +222,7 @@ function MultiCityResults() {
     [results],
   );
 
-  // Keep one valid selection per leg — reselect the cheapest when the current
+  // Keep one valid selection per leg - reselect the cheapest when the current
   // pick is filtered out (or on first load).
   useEffect(() => {
     if (!results) return;
@@ -284,7 +284,7 @@ function MultiCityResults() {
 
   return (
     <main className="min-h-screen bg-gray-100">
-      {/* Search Header — multi-city itinerary, styled like SearchSummary */}
+      {/* Search Header - multi-city itinerary, styled like SearchSummary */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center justify-between gap-4">

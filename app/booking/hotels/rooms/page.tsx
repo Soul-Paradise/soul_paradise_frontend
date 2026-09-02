@@ -538,7 +538,7 @@ function HotelHero({
         </div>
       </div>
 
-      {/* Gallery + info — fixed 420px height on lg+ so every hotel has the same layout.
+      {/* Gallery + info - fixed 420px height on lg+ so every hotel has the same layout.
           Images crop to fit their slot via object-cover on absolutely-positioned <img>. */}
       <div className="px-5 pb-5">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:h-[420px]">
@@ -957,7 +957,7 @@ function PricingPanel({
 
       <div className="border-t border-gray-100 my-3" />
 
-      {/* Price — single all-inclusive line, taxes/fees are not itemised */}
+      {/* Price - single all-inclusive line, taxes/fees are not itemised */}
       <div className="space-y-1.5 text-sm">
         {hasSavings && (
           <div className="flex justify-between text-gray-400">
@@ -1546,7 +1546,7 @@ function RoomsContent() {
         }),
       );
     } catch {
-      // sessionStorage unavailable — proceed anyway, booking page can show an error
+      // sessionStorage unavailable - proceed anyway, booking page can show an error
     }
     const params = new URLSearchParams({ searchId, hotelId, checkIn, checkOut });
     router.push(`/booking/hotels/book?${params.toString()}`);

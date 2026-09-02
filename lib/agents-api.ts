@@ -3,7 +3,7 @@
  *
  * These endpoints are multipart, not JSON, so they bypass the shared ApiClient
  * (which sets Content-Type: application/json). They are also all unauthenticated
- * — the agent has no session yet at signup time — so there is no token handling
+ * - the agent has no session yet at signup time - so there is no token handling
  * here either.
  */
 
@@ -14,7 +14,7 @@ export type AgentStatus = 'PENDING' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED';
 
 export interface AgentRegistrationResponse {
   status: AgentStatus;
-  // true for password signups — they must confirm their email before first login.
+  // true for password signups - they must confirm their email before first login.
   // Absent/false for Google signups, which can sign in immediately.
   emailVerificationRequired?: boolean;
   message: string;
@@ -40,7 +40,7 @@ async function parseError(response: Response): Promise<never> {
       ? body.message[0]
       : body?.message || message;
   } catch {
-    // Response wasn't JSON — keep the generic message.
+    // Response wasn't JSON - keep the generic message.
   }
 
   throw new Error(message);
@@ -52,7 +52,7 @@ function buildFormData(
   const formData = new FormData();
 
   for (const [key, value] of Object.entries(fields)) {
-    // Skip empty optionals — sending "" would fail the backend's format checks
+    // Skip empty optionals - sending "" would fail the backend's format checks
     // on fields like gstNumber, which are optional but validated when present.
     if (value === undefined || value === null || value === '') continue;
     formData.append(key, value);
@@ -64,7 +64,7 @@ function buildFormData(
 /**
  * Verifies a Google credential for agent signup and checks the email is free.
  *
- * Note this is NOT /auth/google-auth — that would log the user straight in as a
+ * Note this is NOT /auth/google-auth - that would log the user straight in as a
  * customer. This only proves who they are; no account, no session.
  */
 export async function verifyAgentGoogle(
