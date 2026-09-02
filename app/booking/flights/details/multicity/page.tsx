@@ -185,7 +185,7 @@ function MultiCityDetailsContent() {
               id: s.ssid,
               code: s.seatNumber,
               description: `Seat ${s.seatNumber}`,
-              charge: s.fare + s.tax,
+              charge: s.fare,
               type: 'seat' as const,
               fuid: sm.fuid,
             })),

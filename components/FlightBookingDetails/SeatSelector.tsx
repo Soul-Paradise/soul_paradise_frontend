@@ -184,7 +184,7 @@ export const SeatSelector = ({
   const segSeats = selectedSeats.filter((s) => s.fuid === currentSeatMap?.fuid);
   const totalCost = segSeats.reduce((sum, sel) => {
     const seat = currentSeatMap?.seats.find((s) => s.ssid === sel.ssrId);
-    return sum + (seat ? seat.fare + seat.tax : 0);
+    return sum + (seat ? seat.fare : 0);
   }, 0);
 
   /* Wing placement near exit rows or mid-fuselage */
@@ -547,7 +547,7 @@ export const SeatSelector = ({
                                   onClick={() => handleSeatClick(seat)}
                                   onMouseEnter={() => seat.available && !isOtherPax && setHoveredSeat(seat.ssid)}
                                   onMouseLeave={() => setHoveredSeat(null)}
-                                  title={!seat.available ? 'Booked' : isOtherPax ? `Passenger ${owner}` : `${seat.seatNumber} · ${color.label}${seat.fare > 0 ? ` · ${formatCurrency(seat.fare + seat.tax)}` : ' · Free'}`}
+                                  title={!seat.available ? 'Booked' : isOtherPax ? `Passenger ${owner}` : `${seat.seatNumber} · ${color.label}${seat.fare > 0 ? ` · ${formatCurrency(seat.fare)}` : ' · Free'}`}
                                   style={{
                                     width: cellW, height: cellH, backgroundColor: seatBg, borderColor: seatBorder,
                                     color: textColor, cursor, boxShadow: shadow, transform,
@@ -579,7 +579,7 @@ export const SeatSelector = ({
                                         fontSize: 10, fontWeight: 600, zIndex: 50, boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
                                       }}
                                     >
-                                      {seat.seatNumber} · {seat.fare > 0 ? formatCurrency(seat.fare + seat.tax) : 'Free'}
+                                      {seat.seatNumber} · {seat.fare > 0 ? formatCurrency(seat.fare) : 'Free'}
                                       <span style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '4px solid transparent', borderRight: '4px solid transparent', borderTop: '4px solid #1e293b' }} />
                                     </span>
                                   )}
@@ -667,7 +667,7 @@ export const SeatSelector = ({
                     Pax {sel.paxId} <span className="text-gray-400">·</span> <strong className="text-gray-800">{seat.seatNumber}</strong>
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: style.bg, color: style.dot, border: `1px solid ${style.border}50` }}>{style.label}</span>
                   </span>
-                  <span className="text-xs font-semibold text-gray-800 tabular-nums">{seat.fare > 0 ? formatCurrency(seat.fare + seat.tax) : 'Free'}</span>
+                  <span className="text-xs font-semibold text-gray-800 tabular-nums">{seat.fare > 0 ? formatCurrency(seat.fare) : 'Free'}</span>
                 </div>
               );
             })}

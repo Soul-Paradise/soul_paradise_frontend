@@ -54,24 +54,47 @@ export const BookingSummary = ({
     item.childAmount * passengerCounts.children +
     item.infantAmount * passengerCounts.infants;
 
-  // Show every itemised line the backend sends (Base Fare — commission already
-  // folded in — Taxes & Fees, Service Charge, …). Nothing is hidden: whatever is
-  // in the total appears as a line, and the lines add up to the total.
+  // The backend sends a single all-inclusive ticket line — taxes, GST and
+  // service charges are folded into it and are never itemised for the customer.
   const fareLines = fareBreakdown
     .map((item) => ({ label: item.label, amount: aggregate(item) }))
     .filter((line) => line.amount > 0);
   const fareLinesTotal = fareLines.reduce((sum, line) => sum + line.amount, 0);
 
-  // SSR add-ons total. Match on BOTH fuid and id: multi-city (and round-trip)
-  // legs can share an ssrId across segments, so an id-only match would pick the
-  // wrong leg's charge. This keys exactly like the backend's ssrChargeMap
-  // (`${fuid}:${id}`), so the customer total reconciles with what's sent to Benzy.
-  const ssrTotal = selectedSSR.reduce((total, sel) => {
-    const option = allSSROptions.find(
-      (o) => o.id === sel.ssrId && o.fuid === sel.fuid,
-    );
-    return total + (option?.charge || 0);
-  }, 0);
+  // Resolve each selection to its option. Match on BOTH fuid and id: multi-city
+  // (and round-trip) legs can share an ssrId across segments, so an id-only
+  // match would pick the wrong leg's charge. This keys exactly like the
+  // backend's ssrChargeMap (`${fuid}:${id}`), so the customer total reconciles
+  // with what's sent to Benzy. Charges are already tax-inclusive.
+  const selectedOptions = selectedSSR
+    .map((sel) =>
+      allSSROptions.find((o) => o.id === sel.ssrId && o.fuid === sel.fuid),
+    )
+    .filter((o): o is SSROption => !!o);
+
+  // Break the extras out the way the customer chose them — seats, extra
+  // baggage, meals — so each optional fare they picked is visible on its own
+  // line rather than hidden inside one lump "Add-ons" figure.
+  const ADD_ON_GROUPS: Array<{ label: string; types: SSROption['type'][] }> = [
+    { label: 'Seat Selection', types: ['seat'] },
+    { label: 'Extra Baggage', types: ['baggage', 'sports'] },
+    { label: 'Meals', types: ['meal'] },
+    { label: 'Other Add-ons', types: ['priority', 'fastForward', 'other'] },
+  ];
+
+  const addOnLines = ADD_ON_GROUPS.map((group) => {
+    const items = selectedOptions.filter((o) => group.types.includes(o.type));
+    return {
+      label: group.label,
+      count: items.length,
+      amount: items.reduce((sum, o) => sum + (o.charge || 0), 0),
+    };
+  }).filter((line) => line.amount > 0);
+
+  const ssrTotal = selectedOptions.reduce(
+    (total, o) => total + (o.charge || 0),
+    0,
+  );
 
   // Promo discount
   const promoDiscount = appliedPromo?.valid ? appliedPromo.discountAmount : 0;
@@ -93,7 +116,7 @@ export const BookingSummary = ({
       </div>
 
       <div className="p-4 sm:p-5 space-y-2.5">
-        {/* Itemised fare lines — Base Fare, Taxes & Fees, Service Charge, … */}
+        {/* All-inclusive ticket fare — never split into taxes or charges */}
         {fareLines.map((line) => (
           <div key={line.label} className="flex justify-between text-sm">
             <span className="text-gray-600">{line.label}</span>
@@ -103,17 +126,18 @@ export const BookingSummary = ({
           </div>
         ))}
 
-        {/* Add-ons */}
-        {ssrTotal > 0 && (
-          <div className="flex justify-between text-sm">
+        {/* Optional extras the customer selected, one line per category */}
+        {addOnLines.map((line) => (
+          <div key={line.label} className="flex justify-between text-sm">
             <span className="text-gray-600">
-              Add-ons ({selectedSSR.length} item{selectedSSR.length > 1 ? 's' : ''})
+              {line.label}
+              {line.count > 1 ? ` (${line.count})` : ''}
             </span>
             <span className="text-gray-900 font-medium">
-              {formatCurrency(ssrTotal, totalFare.currency)}
+              {formatCurrency(line.amount, totalFare.currency)}
             </span>
           </div>
-        )}
+        ))}
 
         {/* Promo Discount */}
         {appliedPromo?.valid && promoDiscount > 0 && (

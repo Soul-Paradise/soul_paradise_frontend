@@ -558,7 +558,7 @@ function FareSummaryTab({ flight, tui }: { flight: FlightResult; tui: string }) 
 
       <Notes
         items={[
-          'Charges are levied by the airline per passenger, per journey, and are in addition to any applicable service charge.',
+          'Charges are levied by the airline per passenger, per journey, and are in addition to the ticket fare.',
           'Fare rules are subject to change by the airline. The amounts confirmed at the time of booking apply.',
         ]}
       />
@@ -735,7 +735,7 @@ function BaggageTab({ flight, tui }: { flight: FlightResult; tui: string }) {
                 )}
                 <ul className="space-y-1.5">
                   {group.options.map((opt) => {
-                    const total = (opt.charge || 0) + (opt.vat || 0);
+                    const total = opt.charge || 0;
                     return (
                       <li
                         key={opt.id}
@@ -750,15 +750,9 @@ function BaggageTab({ flight, tui }: { flight: FlightResult; tui: string }) {
                           )}
                         </span>
                         <span className="font-semibold text-gray-800 tabular-nums flex-shrink-0">
-                          {/* VAT is billed on top of the base charge, so quote
-                              the total the customer will actually pay. */}
+                          {/* `charge` is already tax-inclusive — this is the
+                              total the customer will actually pay. */}
                           {total > 0 ? formatCurrency(total) : 'Free'}
-                          {opt.vat ? (
-                            <span className="text-[9px] font-normal text-gray-400">
-                              {' '}
-                              incl. VAT
-                            </span>
-                          ) : null}
                         </span>
                       </li>
                     );

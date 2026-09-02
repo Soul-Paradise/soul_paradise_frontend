@@ -23,9 +23,9 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
-/** Total payable for an SSR option = base charge + VAT (VAT optional). */
+/** Total payable for an SSR option — `charge` already includes any tax. */
 function optTotal(opt: SSROption) {
-  return (opt.charge || 0) + (opt.vat || 0);
+  return opt.charge || 0;
 }
 
 /* ─── Category Icons (inline SVG) ─── */
@@ -207,7 +207,7 @@ export const SSRSelector = ({
       (s) => s.fuid === fuid && s.paxId === paxId && s.ssrId === ssrId,
     );
 
-  // Total selected cost (charge + VAT)
+  // Total selected cost (tax-inclusive)
   const totalAddOnCost = selectedSSR.reduce((sum, sel) => {
     const opt = allOptions.find((o) => o.id === sel.ssrId && o.fuid === sel.fuid);
     return sum + (opt ? optTotal(opt) : 0);
@@ -428,9 +428,6 @@ export const SSRSelector = ({
                   </span>
                   <span className="font-semibold text-gray-800 tabular-nums">
                     {optTotal(opt) > 0 ? formatCurrency(optTotal(opt)) : 'Free'}
-                    {opt.vat ? (
-                      <span className="text-[9px] font-normal text-gray-400"> incl. VAT</span>
-                    ) : null}
                   </span>
                 </div>
               );
@@ -630,9 +627,6 @@ function MealGrid({
                 style={{ color: selected ? color : '#6b7280' }}
               >
                 {optTotal(opt) > 0 ? formatCurrency(optTotal(opt)) : 'Free'}
-                {opt.vat ? (
-                  <span className="text-[9px] font-normal text-gray-400"> +VAT</span>
-                ) : null}
               </p>
             </div>
 
@@ -727,9 +721,6 @@ function BaggageList({
                 style={{ color: selected ? color : '#374151' }}
               >
                 {optTotal(opt) > 0 ? formatCurrency(optTotal(opt)) : 'Free'}
-                {opt.vat ? (
-                  <span className="text-[9px] font-normal text-gray-400"> +VAT</span>
-                ) : null}
               </span>
               <div
                 className="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
@@ -807,9 +798,6 @@ function GenericOptions({
               style={{ color: selected ? color : '#9ca3af' }}
             >
               {optTotal(opt) > 0 ? formatCurrency(optTotal(opt)) : 'Free'}
-              {opt.vat ? (
-                <span className="text-[9px] font-normal text-gray-400"> +VAT</span>
-              ) : null}
             </span>
           </button>
         );

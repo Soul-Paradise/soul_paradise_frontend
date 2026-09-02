@@ -218,8 +218,7 @@ export interface SSROption {
   id: number;
   code: string;
   description: string;
-  charge: number;
-  vat?: number;
+  charge: number; // tax-inclusive: supplier VAT is already folded in
   type: 'baggage' | 'meal' | 'priority' | 'seat' | 'sports' | 'fastForward' | 'other';
   mealImage?: string;
   pieceDescription?: string | null;
@@ -234,8 +233,7 @@ export interface SeatInfo {
   seatInfo: string;
   seatType: string;
   available: boolean;
-  fare: number;
-  tax: number;
+  fare: number; // tax-inclusive: seat tax is already folded in
   x: number;
   y: number;
   height?: number;
@@ -464,11 +462,8 @@ export interface BookingCrossSell {
 }
 
 export interface BookingFareBreakdown {
-  baseFare: number;
-  taxes: number;
-  ssrAmount: number;
-  gst: number;
-  atFare: number;
+  ticketFare: number; // all-inclusive ticket price for the whole party
+  addOns: number; // selected seats / baggage / meals
   total: number;
 }
 
