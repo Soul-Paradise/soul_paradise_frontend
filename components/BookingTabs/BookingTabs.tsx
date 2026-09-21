@@ -2,15 +2,16 @@
 
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Hotel, Plane, ShieldCheck } from 'lucide-react';
+import { CreditCard, Hotel, Plane, ShieldCheck } from 'lucide-react';
 import { FlightBooking } from './FlightBooking';
 import { HotelBooking } from './HotelBooking';
 import { TravelInsurance } from './TravelInsurance';
+import { CustomPayment } from './CustomPayment';
 
-type TabType = 'flights' | 'hotel' | 'insurance';
+type TabType = 'flights' | 'hotel' | 'insurance' | 'payment';
 
 const isTabType = (v: string | null): v is TabType =>
-  v === 'flights' || v === 'hotel' || v === 'insurance';
+  v === 'flights' || v === 'hotel' || v === 'insurance' || v === 'payment';
 
 const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
   {
@@ -32,6 +33,13 @@ const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     label: 'Insurance',
     icon: (
       <ShieldCheck className="w-5 h-5" />
+    ),
+  },
+  {
+    id: 'payment',
+    label: 'Custom Payment',
+    icon: (
+      <CreditCard className="w-5 h-5" />
     ),
   },
 ];
@@ -84,6 +92,7 @@ const BookingTabsInner = () => {
           {activeTab === 'flights' && <FlightBooking />}
           {activeTab === 'hotel' && <HotelBooking />}
           {activeTab === 'insurance' && <TravelInsurance />}
+          {activeTab === 'payment' && <CustomPayment />}
         </div>
       </div>
     </div>

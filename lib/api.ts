@@ -50,6 +50,26 @@ export interface AuthResponse {
   };
 }
 
+export type PaymentStatus =
+  | 'INITIATED'
+  | 'REDIRECTED'
+  | 'PAID'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'REFUND_PENDING'
+  | 'REFUNDED'
+  | 'EXPIRED';
+
+/** A user-entered ad-hoc payment (the home page "Custom Payment" tab). */
+export interface CustomPayment {
+  merchantTxnNo: string;
+  /** Decimal as a string, e.g. "5000.00". */
+  amount: string;
+  status: PaymentStatus;
+  createdAt: string;
+  paidAt: string | null;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -57,7 +77,7 @@ export interface User {
   profilePicture: string | null;
   emailVerified: boolean;
   provider: string;
-  role: 'USER' | 'ADMIN';
+  role: 'USER' | 'AGENT' | 'ADMIN' | 'SUPER_ADMIN';
   createdAt: string;
   lastLoginAt: string;
 }
@@ -478,6 +498,28 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  // Custom Payments (any signed-in user; each sees only their own)
+
+  /** Starts an ICICI PG payment; send the browser to `redirectUrl`. */
+  async createCustomPayment(
+    amount: number
+  ): Promise<{ merchantTxnNo: string; redirectUrl: string }> {
+    return this.authenticatedRequest('/custom-payments', {
+      method: 'POST',
+      body: JSON.stringify({ amount }),
+    });
+  }
+
+  async getCustomPayments(): Promise<CustomPayment[]> {
+    return this.authenticatedRequest<CustomPayment[]>('/custom-payments');
+  }
+
+  async getCustomPayment(merchantTxnNo: string): Promise<CustomPayment> {
+    return this.authenticatedRequest<CustomPayment>(
+      `/custom-payments/${encodeURIComponent(merchantTxnNo)}`
+    );
   }
 }
 

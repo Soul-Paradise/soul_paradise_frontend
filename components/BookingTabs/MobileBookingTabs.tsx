@@ -2,15 +2,16 @@
 
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Plane, Hotel, ShieldCheck, X } from 'lucide-react';
+import { Plane, Hotel, ShieldCheck, CreditCard, X } from 'lucide-react';
 import { FlightBooking } from './FlightBooking';
 import { HotelBooking } from './HotelBooking';
 import { TravelInsurance } from './TravelInsurance';
+import { CustomPayment } from './CustomPayment';
 
-type TabType = 'flights' | 'hotel' | 'insurance';
+type TabType = 'flights' | 'hotel' | 'insurance' | 'payment';
 
 const isTabType = (v: string | null): v is TabType =>
-  v === 'flights' || v === 'hotel' || v === 'insurance';
+  v === 'flights' || v === 'hotel' || v === 'insurance' || v === 'payment';
 
 const tabs: { id: TabType; label: string; icon: React.ReactNode; bg: string; iconColor: string }[] = [
   {
@@ -33,6 +34,13 @@ const tabs: { id: TabType; label: string; icon: React.ReactNode; bg: string; ico
     icon: <ShieldCheck className="w-8 h-8" strokeWidth={1.5} />,
     bg: 'bg-purple-50',
     iconColor: 'text-purple-600',
+  },
+  {
+    id: 'payment',
+    label: 'Custom Payment',
+    icon: <CreditCard className="w-8 h-8" strokeWidth={1.5} />,
+    bg: 'bg-amber-50',
+    iconColor: 'text-amber-600',
   },
 ];
 
@@ -59,7 +67,7 @@ const MobileBookingTabsInner = () => {
     <div className="w-full">
       {/* Icon Grid */}
       <div className="bg-white px-4 pt-5 pb-4">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-2">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -119,6 +127,7 @@ const MobileBookingTabsInner = () => {
             {activeTab === 'flights' && <FlightBooking />}
             {activeTab === 'hotel' && <HotelBooking />}
             {activeTab === 'insurance' && <TravelInsurance />}
+            {activeTab === 'payment' && <CustomPayment />}
           </div>
         </div>
       )}
