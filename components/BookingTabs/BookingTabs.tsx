@@ -69,7 +69,7 @@ const BookingTabsInner = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative flex flex-col items-center gap-1 px-5 py-2.5 min-w-[80px] transition-colors ${
+                className={`relative flex flex-col items-center gap-1 px-5 py-2.5 min-w-[80px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#1F7AC4]/40 ${
                   activeTab === tab.id
                     ? 'text-[#1F7AC4]'
                     : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
