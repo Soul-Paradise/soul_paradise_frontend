@@ -527,7 +527,10 @@ function MultiCityDetailsContent() {
           </div>
 
           <div className="hidden lg:block w-80 flex-shrink-0">
-            <BookingSummary {...sidebarProps} />
+            <div className="sticky top-4 space-y-4 max-h-[calc(100vh-2rem)] overflow-y-auto">
+              <BookingSummary {...sidebarProps} />
+              <FareRulesAccordion fareRules={pricing.fareRules} />
+            </div>
           </div>
         </div>
       </div>
