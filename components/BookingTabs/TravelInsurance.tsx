@@ -5,13 +5,18 @@ import { MapPin, CalendarDays, Search, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CalendarPanel } from './CalendarPanel';
 import { usePersistentSearch, notBeforeToday } from '@/lib/hooks/useSearchPersistence';
-
-type PolicyType = 'INDIVIDUAL' | 'FAMILY' | 'FRIENDS' | 'STUDENT' | 'ANNUAL MULTITRIP';
+import {
+  getInsuranceOptions,
+  searchToParams,
+  type PolicyType,
+  type PolicyTypeOption,
+  type Relation,
+} from '@/lib/insurance-api';
 
 interface Traveller {
   id: number;
   birthdate: string;
-  relation: string;
+  relation: Relation;
 }
 
 interface SelectedLocation {
@@ -39,7 +44,9 @@ interface NominatimResult {
   };
 }
 
-const POLICY_TYPES: { value: PolicyType; label: string }[] = [
+// Used until GetProviderCheckList answers (and if it can't be reached); the
+// buttons then show only the policy types Benzy reports as enabled.
+const FALLBACK_POLICY_TYPES: { value: PolicyType; label: string }[] = [
   { value: 'INDIVIDUAL', label: 'Individual' },
   { value: 'FAMILY', label: 'Family' },
   { value: 'FRIENDS', label: 'Friends' },
@@ -47,13 +54,41 @@ const POLICY_TYPES: { value: PolicyType; label: string }[] = [
   { value: 'ANNUAL MULTITRIP', label: 'Multi-Trip' },
 ];
 
-const RELATION_OPTIONS: Record<PolicyType, string[]> = {
+const POLICY_BUTTON_LABELS: Record<PolicyType, string> = {
+  INDIVIDUAL: 'Individual',
+  FAMILY: 'Family',
+  FRIENDS: 'Friends',
+  STUDENT: 'Student',
+  'ANNUAL MULTITRIP': 'Multi-Trip',
+};
+
+const RELATION_OPTIONS: Record<PolicyType, Relation[]> = {
   INDIVIDUAL: ['SELF'],
   'ANNUAL MULTITRIP': ['SELF'],
   STUDENT: ['SELF'],
   FAMILY: ['SELF', 'SPOUSE', 'SON', 'DAUGHTER', 'FATHER', 'MOTHER'],
   FRIENDS: ['SELF', 'FRIEND'],
 };
+
+const RELATION_DISPLAY: Record<Relation, string> = {
+  SELF: 'You',
+  SPOUSE: 'Spouse',
+  SON: 'Son',
+  DAUGHTER: 'Daughter',
+  FATHER: 'Father',
+  MOTHER: 'Mother',
+  FRIEND: 'Friend',
+};
+
+/** Customer-facing name for a traveller row, e.g. "You", "Spouse", "Friend 2". */
+function travellerDisplayName(travellers: Traveller[], index: number): string {
+  const relation = travellers[index].relation;
+  const base = RELATION_DISPLAY[relation] ?? relation.charAt(0) + relation.slice(1).toLowerCase();
+  const sameRelation = travellers.filter((t) => t.relation === relation).length;
+  if (sameRelation < 2) return base;
+  const ordinal = travellers.slice(0, index + 1).filter((t) => t.relation === relation).length;
+  return `${base} ${ordinal}`;
+}
 
 const MAX_TRAVELLERS: Record<PolicyType, number> = {
   INDIVIDUAL: 1,
@@ -92,6 +127,14 @@ function tomorrowStr(): string {
   return toDateStr(d);
 }
 
+/** Last day of cover for a policy that starts on `start` and runs `months` months. */
+function coverEndDate(start: string, months: number): string {
+  const d = new Date(start + 'T00:00:00');
+  d.setMonth(d.getMonth() + months);
+  d.setDate(d.getDate() - 1);
+  return toDateStr(d);
+}
+
 function defaultTravellersForPolicy(policyType: PolicyType): Traveller[] {
   return [{ id: 1, birthdate: '', relation: RELATION_OPTIONS[policyType][0] }];
 }
@@ -123,6 +166,17 @@ export const TravelInsurance = () => {
   const [locationQuery, setLocationQuery] = useState('');
   const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [policyOptions, setPolicyOptions] = useState<PolicyTypeOption[] | null>(null);
+
+  // Workflow step 1 (GetProviderCheckList): which policy types are on offer.
+  useEffect(() => {
+    getInsuranceOptions()
+      .then((o) => setPolicyOptions(o.policyTypes.length ? o.policyTypes : null))
+      .catch(() => setPolicyOptions(null));
+  }, []);
+  const policyTypes = policyOptions
+    ? policyOptions.map((o) => ({ value: o.value, label: POLICY_BUTTON_LABELS[o.value] ?? o.label }))
+    : FALLBACK_POLICY_TYPES;
 
   // When restoring a saved search, we set policyType AND its travellers together;
   // this lets us skip the one reset the policyType effect would otherwise fire
@@ -215,6 +269,14 @@ export const TravelInsurance = () => {
   const usedRelations = travellers.map((t) => t.relation);
   const maxTravellers = MAX_TRAVELLERS[policyType];
   const isStudent = policyType === 'STUDENT';
+  const isMultiTrip = policyType === 'ANNUAL MULTITRIP';
+  // Student runs for the chosen tenure and Multi-Trip for a year from the
+  // start date, so neither has an end date to pick.
+  const effectiveEndDate = isStudent
+    ? coverEndDate(startDate, tenureInMonths)
+    : isMultiTrip
+      ? coverEndDate(startDate, 12)
+      : endDate;
   const isMultiPax = policyType === 'FAMILY' || policyType === 'FRIENDS';
 
   const addTraveller = () => {
@@ -240,9 +302,13 @@ export const TravelInsurance = () => {
     e.preventDefault();
     setError('');
     if (destinations.length === 0) { setError('Please select at least one destination.'); return; }
+    if (destinations.some((d) => d.countryCode === 'IN')) {
+      setError('Travel insurance covers trips outside India. Please remove destinations in India.');
+      return;
+    }
     if (!startDate) { setError('Please select a travel start date.'); return; }
-    if (!isStudent && !endDate) { setError('Please select a travel end date.'); return; }
-    if (!isStudent && endDate <= startDate) { setError('End date must be after start date.'); return; }
+    if (!effectiveEndDate) { setError('Please select a travel end date.'); return; }
+    if (effectiveEndDate <= startDate) { setError('End date must be after start date.'); return; }
     for (const t of travellers) {
       if (!t.birthdate) { setError('Please enter date of birth for all travellers.'); return; }
     }
@@ -256,17 +322,14 @@ export const TravelInsurance = () => {
       }
     }
 
-    const params = new URLSearchParams({
+    const params = searchToParams({
       policyType,
-      countryCodes: uniqueCodes.join(','),
-      countryNames: uniqueNames.join(','),
-      locations: destinations.map((d) => d.displayName).join('|'),
+      countryCodes: uniqueCodes,
+      countryNames: uniqueNames,
       startDate,
-      endDate: isStudent ? startDate : endDate,
-      tenureInMonths: String(isStudent ? tenureInMonths : 0),
-      travellers: JSON.stringify(
-        travellers.map((t, i) => ({ id: i, birthdate: t.birthdate, relation: t.relation })),
-      ),
+      endDate: effectiveEndDate,
+      tenureInMonths: isStudent ? tenureInMonths : 0,
+      travellers: travellers.map((t) => ({ birthdate: t.birthdate, relation: t.relation })),
     });
     router.push(`/booking/insurance?${params.toString()}`);
   };
@@ -277,7 +340,7 @@ export const TravelInsurance = () => {
   const shortLocationName = (displayName: string) => displayName.split(',')[0].trim();
 
   const startDisplay = formatDisplayDate(startDate);
-  const endDisplay = formatDisplayDate(endDate);
+  const endDisplay = formatDisplayDate(effectiveEndDate);
   const destinationLabel = destinations.length === 0
     ? null
     : destinations.length === 1
@@ -290,7 +353,7 @@ export const TravelInsurance = () => {
       <div className="flex items-center gap-3 flex-wrap">
         <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Policy Type</span>
         <div className="flex flex-wrap gap-2">
-          {POLICY_TYPES.map(({ value, label }) => (
+          {policyTypes.map(({ value, label }) => (
             <button
               key={value}
               type="button"
@@ -359,6 +422,9 @@ export const TravelInsurance = () => {
               onClick={() => {
                 if (isStudent) {
                   setActivePanel(activePanel === 'tenure' ? null : 'tenure');
+                } else if (isMultiTrip) {
+                  setDateTab('start');
+                  setActivePanel('dates');
                 } else {
                   setDateTab('end');
                   setActivePanel('dates');
@@ -368,12 +434,15 @@ export const TravelInsurance = () => {
             >
               <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${(activePanel === 'dates' && dateTab === 'end') || activePanel === 'tenure' ? 'text-[#1F7AC4]' : 'text-gray-500'}`}>
                 <CalendarDays className="w-3 h-3" />
-                {isStudent ? 'Tenure' : 'End Date'}
+                {isStudent ? 'Tenure' : isMultiTrip ? 'Covered Until' : 'End Date'}
               </div>
               {isStudent ? (
-                <span className="text-lg font-bold text-gray-900">
-                  {TENURE_OPTIONS.find((o) => o.value === tenureInMonths)?.label}
-                </span>
+                <>
+                  <span className="text-lg font-bold text-gray-900">
+                    {TENURE_OPTIONS.find((o) => o.value === tenureInMonths)?.label}
+                  </span>
+                  <div className="text-xs text-gray-500 mt-0.5">Until {formatDisplayDate(effectiveEndDate)?.day} {formatDisplayDate(effectiveEndDate)?.monthYear}</div>
+                </>
               ) : endDisplay ? (
                 <>
                   <div className="flex items-baseline gap-1">
@@ -387,8 +456,9 @@ export const TravelInsurance = () => {
               )}
             </button>
 
-            {/* Shared CalendarPanel for trip start/end dates */}
-            {!isStudent && (() => {
+            {/* Shared CalendarPanel: a range for single trips, just the start
+                date for Student / Multi-Trip (their end date follows from it). */}
+            {(() => {
               const today = new Date();
               today.setHours(0, 0, 0, 0);
               const startObj = startDate ? new Date(startDate + 'T00:00:00') : null;
@@ -398,10 +468,10 @@ export const TravelInsurance = () => {
               return (
                 <CalendarPanel
                   isOpen={activePanel === 'dates'}
-                  mode="range"
+                  mode={isStudent || isMultiTrip ? 'single' : 'range'}
                   startDate={startObj}
-                  endDate={endObj}
-                  activeTab={dateTab}
+                  endDate={isStudent || isMultiTrip ? null : endObj}
+                  activeTab={isStudent || isMultiTrip ? 'start' : dateTab}
                   onActiveTabChange={setDateTab}
                   startLabel="Start date"
                   endLabel="End date"
@@ -409,6 +479,7 @@ export const TravelInsurance = () => {
                   onChange={(start, end) => {
                     setStartDate(toStr(start));
                     if (end) setEndDate(toStr(end));
+                    if (isStudent || isMultiTrip) setActivePanel(null);
                   }}
                   onClose={() => setActivePanel(null)}
                 />
@@ -455,7 +526,7 @@ export const TravelInsurance = () => {
 
         {/* Destination Dropdown */}
         {activePanel === 'destination' && (
-          <div className="absolute top-full left-0 z-50 w-full sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 overflow-hidden">
+          <div className="absolute top-full left-0 z-50 w-full sm:w-80 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 overflow-hidden">
             <div className="p-3 border-b border-gray-100">
               <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg">
                 <Search className="w-4 h-4 text-gray-400" />
@@ -464,12 +535,9 @@ export const TravelInsurance = () => {
                   type="text"
                   value={locationQuery}
                   onChange={(e) => setLocationQuery(e.target.value)}
-                  placeholder="Type a city, region or country (e.g. Kolkata, Paris)"
+                  placeholder="Enter city or country..."
                   className="flex-1 outline-none text-sm text-gray-800 placeholder-gray-400"
                 />
-                {searching && (
-                  <div className="w-3 h-3 border-2 border-gray-200 border-t-[#1F7AC4] rounded-full animate-spin" />
-                )}
               </div>
               {destinations.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
@@ -484,11 +552,13 @@ export const TravelInsurance = () => {
             </div>
             <div className="max-h-64 overflow-y-auto">
               {locationQuery.trim().length < 2 ? (
-                <div className="px-4 py-6 text-center text-xs text-gray-400">
-                  Start typing to search locations worldwide
+                <div className="px-4 py-3 text-sm text-gray-400">
+                  Start typing to search locations
                 </div>
-              ) : !searching && suggestions.length === 0 ? (
-                <div className="px-4 py-6 text-center text-xs text-gray-400">No locations found</div>
+              ) : searching && suggestions.length === 0 ? (
+                <div className="px-4 py-3 text-sm text-gray-400">Searching...</div>
+              ) : suggestions.length === 0 ? (
+                <div className="px-4 py-3 text-sm text-gray-400">No results found</div>
               ) : (
                 suggestions.map((r) => {
                   const already = destinations.some((d) => d.placeId === r.place_id);
@@ -498,21 +568,18 @@ export const TravelInsurance = () => {
                       type="button"
                       onClick={() => pickLocation(r)}
                       disabled={already}
-                      className="w-full text-left px-4 py-2.5 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-start gap-3 text-sm border-b border-gray-50 last:border-0"
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-start gap-3 border-b border-gray-50 last:border-0"
                     >
                       <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
                       <div className="min-w-0 flex-1">
-                        <div className="text-gray-800 truncate">{shortLocationName(r.display_name)}</div>
-                        <div className="text-xs text-gray-500 truncate">{r.display_name}</div>
+                        <div className="text-sm font-semibold text-gray-800 truncate">{shortLocationName(r.display_name)}</div>
+                        <div className="text-xs text-gray-400 truncate">{r.display_name}</div>
                       </div>
                       {already && <span className="text-[10px] text-[#1F7AC4] font-semibold flex-shrink-0">ADDED</span>}
                     </button>
                   );
                 })
               )}
-            </div>
-            <div className="p-3 border-t border-gray-100">
-              <button type="button" onClick={() => setActivePanel(null)} className="w-full py-2 bg-[#1F7AC4] text-white text-sm font-bold rounded-lg">Done</button>
             </div>
           </div>
         )}
@@ -528,9 +595,9 @@ export const TravelInsurance = () => {
                 );
                 return (
                   <div key={i} className="flex flex-wrap gap-2 items-end p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-center gap-2 text-sm font-medium text-gray-600 w-20">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 w-24">
                       <div className="w-6 h-6 rounded-full bg-blue-100 text-[#1F7AC4] flex items-center justify-center text-xs font-bold flex-shrink-0">{i + 1}</div>
-                      <span>T{i + 1}</span>
+                      <span className="truncate">{travellerDisplayName(travellers, i)}</span>
                     </div>
                     <div className="flex-1 min-w-[150px]">
                       <label className="block text-xs text-gray-500 mb-1">Date of Birth *</label>
@@ -547,7 +614,7 @@ export const TravelInsurance = () => {
                         <label className="block text-xs text-gray-500 mb-1">Relation *</label>
                         <select
                           value={t.relation}
-                          onChange={(e) => updateTraveller(i, { ...t, relation: e.target.value })}
+                          onChange={(e) => updateTraveller(i, { ...t, relation: e.target.value as Relation })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1F7AC4] outline-none bg-white"
                         >
                           {availableRelations.map((r) => (

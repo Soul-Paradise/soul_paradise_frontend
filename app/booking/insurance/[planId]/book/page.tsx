@@ -1,706 +1,603 @@
 'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { authHeaders } from '@/lib/api';
-import { useRequireAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
+import { useParams, useSearchParams } from 'next/navigation';
+import { AlertCircle, BadgeCheck, ExternalLink, Lock } from 'lucide-react';
+import { useAuth, useRequireAuth } from '@/contexts/AuthContext';
+import {
+  PriceChangedError,
+  formatCoverage,
+  formatInr,
+  getPlanDetails,
+  searchFromParams,
+  startInsuranceBooking,
+  travellerLabel,
+  verifyKyc,
+  type BookingTraveller,
+  type InsurancePlan,
+  type InsuranceSearch,
+  type PlanQuestion,
+  type Title,
+} from '@/lib/insurance-api';
+import { ErrorCard, ProviderLogo, Spinner, TripSummaryBar, formatDay } from '@/components/Insurance/shared';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+const TITLES: Title[] = ['Mr', 'Mrs', 'Ms', 'Miss', 'Master'];
+const NOMINEE_RELATIONS = ['Spouse', 'Father', 'Mother', 'Son', 'Daughter', 'Brother', 'Sister', 'Other'];
+const PED_MASTER = 'ISPED';
 
-// ── Types ──────────────────────────────────────────────────────────────────
+/** CheckBox, Radio and List questions are all answered Yes/No. */
+const isYesNo = (q: PlanQuestion) => ['checkbox', 'radio', 'list'].includes(q.selectionType.toLowerCase());
 
-interface PlanQuestion {
-  title: string;
-  questionCode: string;
-  selectionType: string;
-  category: string;
-}
+/**
+ * Key of a question in the answers map. List items share one code (every
+ * disease is "PEDDetails"), so they are keyed by title too. Mirrors the backend.
+ */
+const answerKey = (q: PlanQuestion) =>
+  q.selectionType.toLowerCase() === 'list' ? `${q.questionCode}:${q.title.trim()}` : q.questionCode;
 
-interface PlanDetailsSummary {
-  planId: string;
-  providerName: string;
-  planName: string;
-  planType: string;
-  policyType: string;
-  premium: { total: number; tax: number; netTotal: number; currency: string };
-  coverage: { amount: number; currency: string };
-  providerSpecificFields: string[];
-  coverageDetails: { questions: PlanQuestion[] };
-}
+type Address = { line1: string; line2: string; city: string; state: string; pinCode: string };
 
-interface SearchTraveller {
-  id: number;
-  birthdate: string;
-  relation: string;
-}
+const inputCls =
+  'w-full px-3 py-2.5 border border-gray-300 rounded-md text-base sm:text-sm bg-white outline-none focus:border-(--color-links) focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 disabled:text-gray-500';
 
-interface Nominee {
-  firstName: string;
-  middleName: string;
-  lastName: string;
-  relation: string;
-  birthDate: string;
-}
-
-interface TravellerForm {
-  title: string;
-  firstName: string;
-  lastName: string;
-  birthDate: string; // YYYY-MM-DD
-  gender: string;
-  relationship: string;
-  passportNumber: string;
-  visaType: string;
-  maritalStatus: boolean;
-  nominee: Nominee;
-  answers: Record<string, string>; // questionCode → answer
-}
-
-interface CustomerForm {
-  title: string;
-  firstName: string;
-  middleName: string;
-  lastName: string;
-  birthDate: string;
-  gender: string;
-  nationality: string;
-  mobile: string;
-  email: string;
-  passportNumber: string;
-  pan: string;
-  gstin: string;
-  line1: string;
-  line2: string;
-  pinCode: string;
-  city: string;
-  state: string;
-  countryCode: string;
-  countryName: string;
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-const TITLES = ['Mr', 'Mrs', 'Ms', 'Miss', 'Dr'];
-const GENDERS = ['M', 'F'];
-
-const toBackendPolicyType = (p: string): string => {
-  // StartPay sample uses title case (e.g. "Individual"); our DTO stores uppercase
-  // from the search. Backend BookInsuranceSchema now expects uppercase (see
-  // POLICY_TYPES) - pass through.
-  return (p || 'INDIVIDUAL').toUpperCase();
-};
-
-const emptyNominee = (): Nominee => ({
-  firstName: '',
-  middleName: '',
-  lastName: '',
-  relation: '',
-  birthDate: '',
-});
-
-const makeTraveller = (t: SearchTraveller): TravellerForm => ({
-  title: '',
-  firstName: '',
-  lastName: '',
-  birthDate: t.birthdate,
-  gender: '',
-  relationship: t.relation || 'SELF',
-  passportNumber: '',
-  visaType: '',
-  maritalStatus: false,
-  nominee: emptyNominee(),
-  answers: {},
-});
-
-const emptyCustomer = (countryCode: string, countryName: string): CustomerForm => ({
-  title: '',
-  firstName: '',
-  middleName: '',
-  lastName: '',
-  birthDate: '',
-  gender: '',
-  nationality: 'indian',
-  mobile: '',
-  email: '',
-  passportNumber: '',
-  pan: '',
-  gstin: '',
-  line1: '',
-  line2: '',
-  pinCode: '',
-  city: '',
-  state: '',
-  countryCode,
-  countryName,
-});
-
-// ── Inner ──────────────────────────────────────────────────────────────────
-
-function BookInsuranceInner() {
-  const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
-  const router = useRouter();
-  const params = useParams<{ planId: string }>();
-  const searchParams = useSearchParams();
-
-  const planId = params.planId;
-  const tui = searchParams.get('tui') || '';
-  const policyType = searchParams.get('policyType') || 'INDIVIDUAL';
-  const countryNames = (searchParams.get('countryNames') || '').split(',').filter(Boolean);
-  const countryCodes = (searchParams.get('countryCodes') || '').split(',').filter(Boolean);
-  const startDate = searchParams.get('startDate') || '';
-  const endDate = searchParams.get('endDate') || '';
-  const tenureInMonths = Number(searchParams.get('tenureInMonths') || '0');
-
-  const searchTravellers: SearchTraveller[] = useMemo(() => {
-    try {
-      return JSON.parse(searchParams.get('travellers') || '[]');
-    } catch {
-      return [];
-    }
-  }, [searchParams]);
-
-  const [plan, setPlan] = useState<PlanDetailsSummary | null>(null);
-  const [planLoading, setPlanLoading] = useState(true);
-  const [planError, setPlanError] = useState('');
-
-  const [customer, setCustomer] = useState<CustomerForm>(() =>
-    emptyCustomer(countryCodes[0] || 'IN', countryNames[0] || 'India'),
-  );
-  const [travellers, setTravellers] = useState<TravellerForm[]>(
-    searchTravellers.map(makeTraveller),
-  );
-  const [copyProposerAddress, setCopyProposerAddress] = useState(true);
-  const [kycLoading, setKycLoading] = useState(false);
-  const [kycMsg, setKycMsg] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState('');
-
-  // Fetch plan details (need amount + plan type + questions + provider fields)
-  useEffect(() => {
-    if (authLoading || !isAuthenticated) return;
-    if (!tui) {
-      setPlanError('Search session expired. Please run the search again.');
-      setPlanLoading(false);
-      return;
-    }
-    const fetchPlan = async () => {
-      setPlanLoading(true);
-      setPlanError('');
-      try {
-        const res = await fetch(`${API_URL}/insurance/plan-details`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders() },
-          body: JSON.stringify({
-            planId,
-            policyType,
-            countryNames,
-            startDate,
-            endDate,
-            isPED: false,
-            tenureInMonths,
-            travellers: searchTravellers,
-            tui,
-          }),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = (await res.json()) as PlanDetailsSummary;
-        setPlan(json);
-      } catch (err: unknown) {
-        setPlanError(err instanceof Error ? err.message : 'Failed to load plan.');
-      } finally {
-        setPlanLoading(false);
-      }
-    };
-    fetchPlan();
-  }, [authLoading, isAuthenticated, planId, policyType, tui]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const updateTraveller = (i: number, patch: Partial<TravellerForm>) => {
-    setTravellers((prev) => prev.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
-  };
-
-  const updateNominee = (i: number, patch: Partial<Nominee>) => {
-    setTravellers((prev) =>
-      prev.map((t, idx) => (idx === i ? { ...t, nominee: { ...t.nominee, ...patch } } : t)),
-    );
-  };
-
-  const updateAnswer = (i: number, code: string, value: string) => {
-    setTravellers((prev) =>
-      prev.map((t, idx) =>
-        idx === i ? { ...t, answers: { ...t.answers, [code]: value } } : t,
-      ),
-    );
-  };
-
-  const needsGSTIN = plan?.providerSpecificFields?.some((f) => f.toLowerCase() === 'gstin');
-  const questions = plan?.coverageDetails.questions ?? [];
-
-  // ── KYC ──
-  const handleValidateKyc = async () => {
-    if (!customer.pan || !customer.firstName || !customer.birthDate || !customer.gender) {
-      setKycMsg('Please fill PAN, name, DOB and gender before validating.');
-      return;
-    }
-    if (!plan) return;
-    setKycLoading(true);
-    setKycMsg('');
-    try {
-      const res = await fetch(`${API_URL}/insurance/validate-kyc`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({
-          pan: customer.pan,
-          name: `${customer.firstName} ${customer.lastName}`.trim(),
-          gender: customer.gender,
-          dob: customer.birthDate,
-          providerName: plan.providerName,
-          tui,
-        }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      if (json.status !== 'Success') {
-        setKycMsg(`KYC check returned: ${json.status || 'Failed'}`);
-        return;
-      }
-      setCustomer((c) => ({
-        ...c,
-        title: json.prefix || c.title,
-        firstName: json.fname || c.firstName,
-        lastName: json.lname || c.lastName,
-        line1: json.correS_LINE1 || c.line1,
-        line2: json.correS_LINE2 || c.line2,
-        city: json.correS_CITY || c.city,
-        state: json.correS_STATE || c.state,
-        pinCode: json.correS_PIN || c.pinCode,
-      }));
-      setKycMsg('KYC verified. Address and name prefilled.');
-    } catch (err: unknown) {
-      setKycMsg(err instanceof Error ? err.message : 'KYC validation failed.');
-    } finally {
-      setKycLoading(false);
-    }
-  };
-
-  // ── Submit ──
-  const validate = (): string | null => {
-    if (!plan) return 'Plan not loaded yet.';
-    if (!customer.title || !customer.firstName || !customer.lastName) return 'Proposer name is required.';
-    if (!customer.birthDate) return 'Proposer DOB is required.';
-    if (!customer.mobile || customer.mobile.length < 8) return 'Valid mobile number is required.';
-    if (!customer.email || !customer.email.includes('@')) return 'Valid email is required.';
-    if (!customer.line1 || !customer.pinCode || !customer.city || !customer.state) return 'Proposer address is incomplete.';
-    for (let i = 0; i < travellers.length; i++) {
-      const t = travellers[i];
-      if (!t.title || !t.firstName || !t.lastName) return `Traveller ${i + 1}: name is required.`;
-      if (!t.birthDate) return `Traveller ${i + 1}: DOB is required.`;
-      if (!t.nominee.firstName || !t.nominee.lastName || !t.nominee.relation) return `Traveller ${i + 1}: nominee details are required.`;
-      for (const q of questions) {
-        if (!t.answers[q.questionCode]) return `Traveller ${i + 1}: please answer "${q.title}"`;
-      }
-    }
-    return null;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const err = validate();
-    if (err) {
-      setSubmitError(err);
-      return;
-    }
-    if (!plan) return;
-    setSubmitting(true);
-    setSubmitError('');
-
-    const proposerAddress = {
-      addressType: 'PERMANENT',
-      line1: customer.line1,
-      line2: customer.line2,
-      pinCode: customer.pinCode,
-      areaCode: '0',
-      city: { name: customer.city },
-      state: { name: customer.state },
-      country: { code: customer.countryCode, name: customer.countryName },
-    };
-
-    const proposerContact = {
-      number: Number(customer.mobile),
-      code: '+91',
-      contactType: 'MOBILE',
-      emailAddress: customer.email,
-      emailAddressType: 'PERSONAL',
-    };
-
-    try {
-      const res = await fetch(`${API_URL}/insurance/book`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({
-          ckyc: '',
-          panNo: customer.pan,
-          isDocumentUpload: false,
-          isForm60: false,
-          passportFileNo: '',
-          countryCodes,
-          countryNames,
-          startDate,
-          endDate,
-          isTravelingFromIndia: true,
-          tenureInMonths,
-          policyType: toBackendPolicyType(policyType),
-          customer: {
-            nationality: customer.nationality,
-            title: customer.title,
-            firstName: customer.firstName,
-            middleName: customer.middleName,
-            lastName: customer.lastName,
-            birthDate: customer.birthDate,
-            contactInfo: proposerContact,
-            addresses: [proposerAddress],
-            gstin: customer.gstin,
-            passportNumber: customer.passportNumber || null,
-            gender: customer.gender || null,
-          },
-          plans: [
-            {
-              id: plan.planId,
-              type: plan.planType,
-              travellers: travellers.map((t, i) => ({
-                id: i + 1,
-                title: t.title,
-                firstName: t.firstName,
-                lastName: t.lastName,
-                birthDate: t.birthDate,
-                passportNumber: t.passportNumber || null,
-                visaType: t.visaType || null,
-                maritalStatus: t.maritalStatus,
-                gender: t.gender || null,
-                relationship: t.relationship,
-                isProposer: i === 0,
-                nominee: {
-                  firstName: t.nominee.firstName,
-                  middleName: t.nominee.middleName || null,
-                  lastName: t.nominee.lastName,
-                  relation: t.nominee.relation,
-                  birthDate: t.nominee.birthDate || null,
-                },
-                questionsAnswers: questions.length
-                  ? questions.map((q) => ({
-                      questionCode: q.questionCode,
-                      answer: t.answers[q.questionCode] ?? '',
-                    }))
-                  : null,
-                addresses: [copyProposerAddress ? proposerAddress : proposerAddress],
-                contactInfo: proposerContact,
-              })),
-            },
-          ],
-          tripType: 'Single',
-          amount: plan.premium.total,
-          tui,
-        }),
-      });
-      if (!res.ok) {
-        const body = await res.text();
-        throw new Error(`HTTP ${res.status}: ${body}`);
-      }
-      const json = await res.json();
-      const transactionId = json.TransactionID ?? json.transactionID;
-      if (transactionId) {
-        router.push(`/booking/insurance/confirmation/${transactionId}`);
-      } else {
-        setSubmitError('Booking succeeded but no transaction ID returned.');
-      }
-    } catch (err: unknown) {
-      setSubmitError(err instanceof Error ? err.message : 'Booking failed.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (planLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center flex-col gap-4">
-        <div className="w-14 h-14 border-4 border-green-200 border-t-[var(--color-success)] rounded-full animate-spin" />
-        <p className="text-gray-500 text-sm">Loading plan...</p>
-      </div>
-    );
-  }
-
-  if (planError || !plan) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-xl p-8 text-center max-w-sm">
-          <p className="text-gray-600 mb-4">{planError || 'Plan not found.'}</p>
-          <button onClick={() => router.back()} className="text-[var(--color-success)] hover:underline text-sm">
-            ← Go back
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const priceToPay = plan.premium.netTotal > 0 && plan.premium.netTotal < plan.premium.total
-    ? plan.premium.netTotal
-    : plan.premium.total;
-
+function Field({ label, hint, className = '', children }: { label: string; hint?: string; className?: string; children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gray-50 pb-28">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <button onClick={() => router.back()} className="p-2 rounded-lg hover:bg-gray-100">
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <div>
-            <h1 className="font-semibold text-gray-800 text-sm">Passenger & Booking Details</h1>
-            <p className="text-xs text-gray-500">{plan.planName} · {plan.providerName}</p>
-          </div>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="max-w-4xl mx-auto px-4 py-6 space-y-5">
-        {/* Proposer Section */}
-        <section className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-gray-800">Proposer Details</h2>
-            <span className="text-xs text-gray-400">Person who owns the policy</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Field label="Title *">
-              <select className={selectCls} value={customer.title} onChange={(e) => setCustomer({ ...customer, title: e.target.value })}>
-                <option value="">Select</option>
-                {TITLES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </Field>
-            <Field label="First Name *">
-              <input className={inputCls} value={customer.firstName} onChange={(e) => setCustomer({ ...customer, firstName: e.target.value })} />
-            </Field>
-            <Field label="Last Name *">
-              <input className={inputCls} value={customer.lastName} onChange={(e) => setCustomer({ ...customer, lastName: e.target.value })} />
-            </Field>
-
-            <Field label="Date of Birth *">
-              <input type="date" className={inputCls} value={customer.birthDate} max={new Date().toISOString().split('T')[0]} onChange={(e) => setCustomer({ ...customer, birthDate: e.target.value })} />
-            </Field>
-            <Field label="Gender">
-              <select className={selectCls} value={customer.gender} onChange={(e) => setCustomer({ ...customer, gender: e.target.value })}>
-                <option value="">Select</option>
-                {GENDERS.map((g) => <option key={g} value={g}>{g === 'M' ? 'Male' : 'Female'}</option>)}
-              </select>
-            </Field>
-            <Field label="Nationality *">
-              <input className={inputCls} value={customer.nationality} onChange={(e) => setCustomer({ ...customer, nationality: e.target.value })} />
-            </Field>
-
-            <Field label="Mobile *">
-              <input type="tel" className={inputCls} value={customer.mobile} onChange={(e) => setCustomer({ ...customer, mobile: e.target.value.replace(/\D/g, '') })} />
-            </Field>
-            <Field label="Email *" span={2}>
-              <input type="email" className={inputCls} value={customer.email} onChange={(e) => setCustomer({ ...customer, email: e.target.value })} />
-            </Field>
-
-            <Field label="Passport Number">
-              <input className={inputCls} value={customer.passportNumber} onChange={(e) => setCustomer({ ...customer, passportNumber: e.target.value.toUpperCase() })} />
-            </Field>
-
-            {needsGSTIN && (
-              <Field label="GSTIN">
-                <input className={inputCls} value={customer.gstin} onChange={(e) => setCustomer({ ...customer, gstin: e.target.value.toUpperCase() })} placeholder="Optional" />
-              </Field>
-            )}
-          </div>
-
-          {/* KYC */}
-          <div className="mt-5 pt-5 border-t border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">KYC (PAN)</h3>
-            <div className="flex flex-wrap items-end gap-3">
-              <Field label="PAN">
-                <input className={inputCls} value={customer.pan} onChange={(e) => setCustomer({ ...customer, pan: e.target.value.toUpperCase() })} placeholder="ABCDE1234F" />
-              </Field>
-              <button
-                type="button"
-                onClick={handleValidateKyc}
-                disabled={kycLoading}
-                className="px-4 py-2 bg-blue-50 text-[#1F7AC4] text-sm font-semibold rounded-lg hover:bg-blue-100 disabled:opacity-50"
-              >
-                {kycLoading ? 'Verifying…' : 'Verify & Autofill'}
-              </button>
-              {kycMsg && <p className="text-xs text-gray-600">{kycMsg}</p>}
-            </div>
-          </div>
-
-          {/* Address */}
-          <div className="mt-5 pt-5 border-t border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Address</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <Field label="Address Line 1 *" span={3}>
-                <input className={inputCls} value={customer.line1} onChange={(e) => setCustomer({ ...customer, line1: e.target.value })} />
-              </Field>
-              <Field label="Address Line 2" span={3}>
-                <input className={inputCls} value={customer.line2} onChange={(e) => setCustomer({ ...customer, line2: e.target.value })} />
-              </Field>
-              <Field label="Pin Code *">
-                <input className={inputCls} value={customer.pinCode} onChange={(e) => setCustomer({ ...customer, pinCode: e.target.value.replace(/\D/g, '') })} />
-              </Field>
-              <Field label="City *">
-                <input className={inputCls} value={customer.city} onChange={(e) => setCustomer({ ...customer, city: e.target.value })} />
-              </Field>
-              <Field label="State *">
-                <input className={inputCls} value={customer.state} onChange={(e) => setCustomer({ ...customer, state: e.target.value })} />
-              </Field>
-            </div>
-          </div>
-        </section>
-
-        {/* Travellers */}
-        <section className="bg-white rounded-xl border border-gray-200 p-5 space-y-5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-gray-800">Travellers ({travellers.length})</h2>
-            <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
-              <input type="checkbox" checked={copyProposerAddress} onChange={(e) => setCopyProposerAddress(e.target.checked)} />
-              Use proposer's address for all travellers
-            </label>
-          </div>
-
-          {travellers.map((t, i) => (
-            <div key={i} className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="w-6 h-6 rounded-full bg-blue-100 text-[#1F7AC4] text-xs font-bold flex items-center justify-center">{i + 1}</span>
-                <h3 className="text-sm font-semibold text-gray-700">Traveller {i + 1}</h3>
-                <span className="ml-auto text-xs text-gray-400">{t.relationship}{i === 0 ? ' · Proposer' : ''}</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Field label="Title *">
-                  <select className={selectCls} value={t.title} onChange={(e) => updateTraveller(i, { title: e.target.value })}>
-                    <option value="">Select</option>
-                    {TITLES.map((x) => <option key={x} value={x}>{x}</option>)}
-                  </select>
-                </Field>
-                <Field label="First Name *">
-                  <input className={inputCls} value={t.firstName} onChange={(e) => updateTraveller(i, { firstName: e.target.value })} />
-                </Field>
-                <Field label="Last Name *">
-                  <input className={inputCls} value={t.lastName} onChange={(e) => updateTraveller(i, { lastName: e.target.value })} />
-                </Field>
-
-                <Field label="Date of Birth *">
-                  <input type="date" className={inputCls} value={t.birthDate} max={new Date().toISOString().split('T')[0]} onChange={(e) => updateTraveller(i, { birthDate: e.target.value })} />
-                </Field>
-                <Field label="Gender">
-                  <select className={selectCls} value={t.gender} onChange={(e) => updateTraveller(i, { gender: e.target.value })}>
-                    <option value="">Select</option>
-                    {GENDERS.map((g) => <option key={g} value={g}>{g === 'M' ? 'Male' : 'Female'}</option>)}
-                  </select>
-                </Field>
-                <Field label="Passport Number">
-                  <input className={inputCls} value={t.passportNumber} onChange={(e) => updateTraveller(i, { passportNumber: e.target.value.toUpperCase() })} />
-                </Field>
-              </div>
-
-              {/* Nominee */}
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <h4 className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Nominee</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <Field label="First Name *">
-                    <input className={inputCls} value={t.nominee.firstName} onChange={(e) => updateNominee(i, { firstName: e.target.value })} />
-                  </Field>
-                  <Field label="Last Name *">
-                    <input className={inputCls} value={t.nominee.lastName} onChange={(e) => updateNominee(i, { lastName: e.target.value })} />
-                  </Field>
-                  <Field label="Relation *">
-                    <input className={inputCls} value={t.nominee.relation} onChange={(e) => updateNominee(i, { relation: e.target.value })} placeholder="e.g. Spouse" />
-                  </Field>
-                </div>
-              </div>
-
-              {/* Health Questions */}
-              {questions.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <h4 className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Health Questions</h4>
-                  <div className="space-y-2">
-                    {questions.map((q) => (
-                      <div key={q.questionCode} className="flex items-center justify-between gap-3 p-2.5 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-700 flex-1">{q.title}</p>
-                        <div className="flex gap-2">
-                          {['Yes', 'No'].map((opt) => (
-                            <button
-                              type="button"
-                              key={opt}
-                              onClick={() => updateAnswer(i, q.questionCode, opt)}
-                              className={`px-3 py-1 rounded-md text-xs font-medium border ${t.answers[q.questionCode] === opt ? 'bg-[var(--color-success)] text-white border-[var(--color-success)]' : 'border-gray-300 text-gray-600 hover:border-gray-400'}`}
-                            >
-                              {opt}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </section>
-
-        {submitError && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-3 rounded-lg">
-            {submitError}
-          </div>
-        )}
-      </form>
-
-      {/* Sticky Pay Footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-20">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs text-gray-400">Amount to Pay</p>
-            <p className="text-xl font-bold text-gray-800">₹{Math.round(priceToPay).toLocaleString()}</p>
-          </div>
-          <button
-            type="button"
-            onClick={(e) => handleSubmit(e as unknown as React.FormEvent)}
-            disabled={submitting}
-            className="px-6 py-2.5 bg-[var(--color-success)] text-white text-sm font-semibold rounded-lg hover:bg-green-700 disabled:opacity-60 transition-colors"
-          >
-            {submitting ? 'Processing…' : 'Confirm & Pay →'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Small field wrapper ────────────────────────────────────────────────────
-
-const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[var(--color-success)]';
-const selectCls = inputCls + ' bg-white';
-
-function Field({ label, span = 1, children }: { label: string; span?: 1 | 2 | 3; children: React.ReactNode }) {
-  const spanCls = span === 3 ? 'sm:col-span-3' : span === 2 ? 'sm:col-span-2' : '';
-  return (
-    <label className={`block ${spanCls}`}>
-      <span className="block text-xs text-gray-500 mb-1">{label}</span>
+    <label className={`block ${className}`}>
+      <span className="block text-xs font-medium text-gray-600 mb-1">{label}</span>
       {children}
+      {hint && <span className="block text-[11px] text-gray-400 mt-1">{hint}</span>}
     </label>
   );
 }
 
-// ── Page Export ────────────────────────────────────────────────────────────
+function Section({ title, aside, children }: { title: string; aside?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+        {aside}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function YesNo({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex gap-1.5 shrink-0">
+      {[true, false].map((opt) => (
+        <button
+          key={String(opt)}
+          type="button"
+          onClick={() => onChange(opt)}
+          className={`px-3.5 py-1.5 rounded-md text-xs font-semibold border ${
+            value === opt
+              ? 'bg-(--color-links) border-(--color-links) text-white'
+              : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400'
+          }`}
+        >
+          {opt ? 'Yes' : 'No'}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The plan's health questionnaire for one traveller. CheckBox, Radio and List
+ * questions are Yes/No; TextBox questions take a short free-text answer. The PED detail
+ * questions only appear once the traveller declares a pre-existing condition.
+ */
+function HealthDeclaration({
+  questions,
+  answers,
+  onChange,
+}: {
+  questions: PlanQuestion[];
+  answers: Record<string, string>;
+  onChange: (code: string, value: string) => void;
+}) {
+  const hasPed = answers[PED_MASTER] === 'true';
+  const isPedDetail = (q: PlanQuestion) => q.questionCode !== PED_MASTER && q.questionCode.startsWith('PED');
+  const shown = questions.filter((q) => !isPedDetail(q) || hasPed);
+
+  return (
+    <div className="space-y-2">
+      {shown.map((q) => (
+        <div
+          key={answerKey(q)}
+          className={`rounded-lg px-3 py-2.5 ${isPedDetail(q) ? 'ml-4 border-l-2 border-blue-100 bg-white' : 'bg-gray-50'}`}
+        >
+          {isYesNo(q) ? (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-gray-700">{q.title.trim()}</p>
+              <YesNo
+                value={answers[answerKey(q)] === 'true'}
+                onChange={(v) => onChange(answerKey(q), String(v))}
+              />
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm text-gray-700 mb-1.5">{q.title.trim()}</p>
+              <input
+                className={inputCls}
+                maxLength={200}
+                value={answers[answerKey(q)] ?? ''}
+                onChange={(e) => onChange(answerKey(q), e.target.value)}
+                placeholder="Leave blank if none"
+              />
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function emptyTraveller(t: InsuranceSearch['travellers'][number], questions: PlanQuestion[]): BookingTraveller {
+  const answers: Record<string, string> = {};
+  for (const q of questions) answers[answerKey(q)] = isYesNo(q) ? 'false' : '';
+  return {
+    title: 'Mr',
+    firstName: '',
+    lastName: '',
+    birthDate: t.birthdate,
+    relation: t.relation,
+    passportNumber: '',
+    nominee: { firstName: '', lastName: '', relation: '' },
+    answers,
+  };
+}
+
+function BookingForm({ search, plan, tui }: { search: InsuranceSearch; plan: InsurancePlan; tui: string }) {
+  const { user } = useAuth();
+  const [travellers, setTravellers] = useState<BookingTraveller[]>(() =>
+    search.travellers.map((t) => emptyTraveller(t, plan.questions)),
+  );
+  const [email, setEmail] = useState(user?.email ?? '');
+  const [mobile, setMobile] = useState('');
+  const [address, setAddress] = useState<Address>({ line1: '', line2: '', city: '', state: '', pinCode: '' });
+  const [pan, setPan] = useState('');
+  const [gstin, setGstin] = useState('');
+  const [kyc, setKyc] = useState<'idle' | 'checking' | 'verified' | 'action' | 'failed'>('idle');
+  const [kycMessage, setKycMessage] = useState('');
+  const [kycUrl, setKycUrl] = useState('');
+  const [agreed, setAgreed] = useState(false);
+  const [price, setPrice] = useState(plan.price);
+  const [priceNotice, setPriceNotice] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const proposerIndex = Math.max(0, travellers.findIndex((t) => t.relation === 'SELF'));
+  const proposer = travellers[proposerIndex];
+
+  const patch = (i: number, p: Partial<BookingTraveller>) =>
+    setTravellers((prev) => prev.map((t, idx) => (idx === i ? { ...t, ...p } : t)));
+
+  // A PAN verified for one name/DOB doesn't carry over if those change.
+  useEffect(() => {
+    if (kyc !== 'idle' && kyc !== 'checking') setKyc('idle');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pan, proposer.title, proposer.firstName, proposer.lastName]);
+
+  const runKyc = async () => {
+    setKycMessage('');
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) return setKycMessage('Enter a valid 10-character PAN.');
+    if (!proposer.firstName || !proposer.lastName) return setKycMessage('Fill in your name above first.');
+    setKyc('checking');
+    try {
+      const res = await verifyKyc({
+        pan,
+        title: proposer.title,
+        firstName: proposer.firstName,
+        lastName: proposer.lastName,
+        birthDate: proposer.birthDate,
+        providerName: plan.provider,
+        tui,
+      });
+      if (res.status === 'VERIFIED') {
+        setKyc('verified');
+        // Fill only what the customer hasn't typed themselves.
+        setAddress((a) => ({
+          line1: a.line1 || res.address.line1,
+          line2: a.line2 || res.address.line2,
+          city: a.city || res.address.city,
+          state: a.state || res.address.state,
+          pinCode: a.pinCode || res.address.pinCode,
+        }));
+      } else if (res.status === 'ACTION_REQUIRED') {
+        setKyc('action');
+        setKycUrl(res.url);
+      } else {
+        setKyc('failed');
+        setKycMessage(res.message);
+      }
+    } catch (e) {
+      setKyc('failed');
+      setKycMessage((e as Error).message);
+    }
+  };
+
+  const validate = (): string | null => {
+    const nameOk = (s: string) => /^[A-Za-z][A-Za-z .'-]*$/.test(s.trim());
+    for (let i = 0; i < travellers.length; i++) {
+      const t = travellers[i];
+      const who = travellerLabel(travellers, i);
+      if (!nameOk(t.firstName) || !nameOk(t.lastName)) return `${who}: enter first and last name as on the passport.`;
+      if (!/^[A-Z0-9]{6,12}$/.test(t.passportNumber)) return `${who}: enter a valid passport number.`;
+      if (!nameOk(t.nominee.firstName) || !nameOk(t.nominee.lastName) || !t.nominee.relation) {
+        return `${who}: add a nominee (name and relation).`;
+      }
+      if (
+        t.nominee.firstName.trim().toLowerCase() === t.firstName.trim().toLowerCase() &&
+        t.nominee.lastName.trim().toLowerCase() === t.lastName.trim().toLowerCase()
+      ) {
+        return `${who}: the nominee must be someone other than the traveller.`;
+      }
+    }
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) return 'Enter a valid email address.';
+    if (!/^[6-9]\d{9}$/.test(mobile)) return 'Enter a valid 10-digit mobile number.';
+    if (address.line1.trim().length < 3 || address.city.trim().length < 2 || address.state.trim().length < 2) {
+      return 'Enter your full address.';
+    }
+    if (!/^\d{6}$/.test(address.pinCode)) return 'Enter a 6-digit PIN code.';
+    if (plan.requiresKyc && kyc !== 'verified') return 'Verify your PAN for KYC before paying.';
+    if (gstin && !/^[0-9A-Z]{15}$/.test(gstin)) return 'Enter a valid 15-character GSTIN, or leave it blank.';
+    if (!agreed) return 'Please accept the policy terms to continue.';
+    return null;
+  };
+
+  const pay = async () => {
+    const problem = validate();
+    setError(problem ?? '');
+    if (problem) return;
+    setSubmitting(true);
+    try {
+      const res = await startInsuranceBooking({
+        policyType: search.policyType,
+        countryCodes: search.countryCodes,
+        countryNames: search.countryNames,
+        startDate: search.startDate,
+        endDate: search.endDate,
+        tenureInMonths: search.tenureInMonths,
+        planId: plan.planId,
+        tui,
+        expectedAmount: price,
+        travellers: travellers.map((t) => ({
+          ...t,
+          firstName: t.firstName.trim(),
+          lastName: t.lastName.trim(),
+          nominee: {
+            firstName: t.nominee.firstName.trim(),
+            lastName: t.nominee.lastName.trim(),
+            relation: t.nominee.relation,
+          },
+        })),
+        contact: { email: email.trim(), mobile },
+        address: {
+          line1: address.line1.trim(),
+          line2: address.line2.trim(),
+          city: address.city.trim(),
+          state: address.state.trim(),
+          pinCode: address.pinCode,
+        },
+        ...(plan.requiresKyc ? { pan } : {}),
+        ...(gstin ? { gstin } : {}),
+      });
+      window.location.href = res.redirectUrl;
+    } catch (e) {
+      if (e instanceof PriceChangedError) {
+        setPrice(e.amount);
+        setPriceNotice(e.message);
+      } else {
+        setError((e as Error).message);
+      }
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+      <div className="space-y-5 min-w-0">
+        {travellers.map((t, i) => (
+          <Section
+            key={i}
+            title={travellerLabel(travellers, i)}
+            aside={
+              <span className="text-xs text-gray-500">
+                Born {formatDay(t.birthDate)}
+                {i === proposerIndex ? ' · Policy holder' : ''}
+              </span>
+            }
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-[110px_1fr_1fr] gap-3">
+              <Field label="Title">
+                <select className={inputCls} value={t.title} onChange={(e) => patch(i, { title: e.target.value as Title })}>
+                  {TITLES.map((x) => (
+                    <option key={x}>{x}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="First name">
+                <input className={inputCls} autoComplete={i === proposerIndex ? 'given-name' : 'off'} value={t.firstName} onChange={(e) => patch(i, { firstName: e.target.value })} />
+              </Field>
+              <Field label="Last name">
+                <input className={inputCls} autoComplete={i === proposerIndex ? 'family-name' : 'off'} value={t.lastName} onChange={(e) => patch(i, { lastName: e.target.value })} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+              <Field label="Passport number" hint="Names must match the passport exactly.">
+                <input
+                  className={inputCls}
+                  value={t.passportNumber}
+                  maxLength={12}
+                  onChange={(e) => patch(i, { passportNumber: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })}
+                />
+              </Field>
+              <Field label="Date of birth" hint="From your search. Change it there to re-price.">
+                <input className={inputCls} value={formatDay(t.birthDate)} disabled />
+              </Field>
+            </div>
+
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mt-5 mb-2">Nominee</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Field label="First name">
+                <input className={inputCls} value={t.nominee.firstName} onChange={(e) => patch(i, { nominee: { ...t.nominee, firstName: e.target.value } })} />
+              </Field>
+              <Field label="Last name">
+                <input className={inputCls} value={t.nominee.lastName} onChange={(e) => patch(i, { nominee: { ...t.nominee, lastName: e.target.value } })} />
+              </Field>
+              <Field label="Relation to traveller">
+                <select className={inputCls} value={t.nominee.relation} onChange={(e) => patch(i, { nominee: { ...t.nominee, relation: e.target.value } })}>
+                  <option value="">Select</option>
+                  {NOMINEE_RELATIONS.map((r) => (
+                    <option key={r}>{r}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+
+            {plan.questions.length > 0 && (
+              <>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mt-5 mb-2">Health declaration</h3>
+                <HealthDeclaration
+                  questions={plan.questions}
+                  answers={t.answers}
+                  onChange={(code, value) => patch(i, { answers: { ...t.answers, [code]: value } })}
+                />
+              </>
+            )}
+          </Section>
+        ))}
+
+        <Section title="Contact & address" aside={<span className="text-xs text-gray-500">Your policy is sent here</span>}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Email">
+              <input type="email" autoComplete="email" className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} />
+            </Field>
+            <Field label="Mobile number">
+              <div className="flex">
+                <span className="px-3 flex items-center border border-r-0 border-gray-300 rounded-l-md bg-gray-50 text-sm text-gray-500">+91</span>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  className={`${inputCls} rounded-l-none`}
+                  maxLength={10}
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
+                />
+              </div>
+            </Field>
+            <Field label="Address line 1" className="sm:col-span-2">
+              <input autoComplete="address-line1" className={inputCls} value={address.line1} onChange={(e) => setAddress({ ...address, line1: e.target.value })} />
+            </Field>
+            <Field label="Address line 2 (optional)" className="sm:col-span-2">
+              <input autoComplete="address-line2" className={inputCls} value={address.line2} onChange={(e) => setAddress({ ...address, line2: e.target.value })} />
+            </Field>
+            <Field label="City">
+              <input autoComplete="address-level2" className={inputCls} value={address.city} onChange={(e) => setAddress({ ...address, city: e.target.value })} />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="State">
+                <input autoComplete="address-level1" className={inputCls} value={address.state} onChange={(e) => setAddress({ ...address, state: e.target.value })} />
+              </Field>
+              <Field label="PIN code">
+                <input
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  className={inputCls}
+                  maxLength={6}
+                  value={address.pinCode}
+                  onChange={(e) => setAddress({ ...address, pinCode: e.target.value.replace(/\D/g, '') })}
+                />
+              </Field>
+            </div>
+            {plan.wantsGstin && (
+              <Field label="GSTIN (optional)" hint="Only if you want a GST invoice." className="sm:col-span-2">
+                <input className={inputCls} maxLength={15} value={gstin} onChange={(e) => setGstin(e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, ''))} />
+              </Field>
+            )}
+          </div>
+        </Section>
+
+        {plan.requiresKyc && (
+          <Section
+            title="KYC verification"
+            aside={
+              kyc === 'verified' ? (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-(--color-success)">
+                  <BadgeCheck className="w-4 h-4" /> Verified
+                </span>
+              ) : null
+            }
+          >
+            <p className="text-sm text-gray-600 mb-3">
+              {plan.providerLabel} needs the policy holder&apos;s PAN to complete KYC. Your name and date of birth above
+              must match your PAN.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+              <Field label="PAN" className="sm:w-56">
+                <input
+                  className={inputCls}
+                  maxLength={10}
+                  value={pan}
+                  disabled={kyc === 'checking'}
+                  onChange={(e) => setPan(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                  placeholder="ABCDE1234F"
+                />
+              </Field>
+              {kyc !== 'verified' && (
+                <button
+                  type="button"
+                  onClick={runKyc}
+                  disabled={kyc === 'checking'}
+                  className="px-5 py-2.5 text-sm font-semibold rounded-md border border-(--color-links) text-(--color-links) hover:bg-blue-50 disabled:opacity-50"
+                >
+                  {kyc === 'checking' ? 'Verifying…' : kyc === 'action' ? 'Verify again' : 'Verify PAN'}
+                </button>
+              )}
+            </div>
+            {kyc === 'action' && (
+              <div className="mt-3 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                {plan.providerLabel} needs you to finish KYC on their website.{' '}
+                <a href={kycUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold underline">
+                  Complete KYC <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+                , then come back and press &quot;Verify again&quot;.
+              </div>
+            )}
+            {kycMessage && <p className="mt-3 text-sm text-(--color-danger)">{kycMessage}</p>}
+          </Section>
+        )}
+      </div>
+
+      {/* Summary + pay */}
+      <aside className="lg:sticky lg:top-4 space-y-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="flex items-start gap-3">
+            <ProviderLogo src={plan.providerLogo} label={plan.providerLabel} />
+            <div className="min-w-0">
+              <p className="font-semibold text-gray-900 leading-snug">{plan.planName}</p>
+              <p className="text-xs text-gray-500">{plan.providerLabel}</p>
+            </div>
+          </div>
+          <dl className="mt-4 space-y-2 text-sm">
+            <div className="flex justify-between gap-3">
+              <dt className="text-gray-500">Medical cover</dt>
+              <dd className="font-medium text-gray-800 text-right">{formatCoverage(plan.coverage)}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-gray-500">Covered</dt>
+              <dd className="font-medium text-gray-800 text-right">
+                {formatDay(search.startDate)} – {formatDay(search.endDate)}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-gray-500">Travellers</dt>
+              <dd className="font-medium text-gray-800">{travellers.length}</dd>
+            </div>
+          </dl>
+          <div className="mt-4 pt-4 border-t border-gray-100 flex items-baseline justify-between">
+            <span className="text-sm font-semibold text-gray-800">Total</span>
+            <span className="text-2xl font-bold text-gray-900">{formatInr(price)}</span>
+          </div>
+
+          {priceNotice && (
+            <div className="mt-4 flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /> {priceNotice}
+            </div>
+          )}
+
+          <label className="mt-4 flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
+            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 accent-(--color-links)" />
+            <span>
+              I confirm these details are correct and the health declaration is true, and I accept the{' '}
+              {plan.policyWordingURL ? (
+                <a href={plan.policyWordingURL} target="_blank" rel="noopener noreferrer" className="text-(--color-links) underline">
+                  policy wording
+                </a>
+              ) : (
+                'policy wording'
+              )}
+              {plan.termsAndConditions[0] && (
+                <>
+                  {' '}and{' '}
+                  <a href={plan.termsAndConditions[0]} target="_blank" rel="noopener noreferrer" className="text-(--color-links) underline">
+                    terms
+                  </a>
+                </>
+              )}
+              .
+            </span>
+          </label>
+
+          {error && <p className="mt-3 text-sm text-(--color-danger)">{error}</p>}
+
+          <button
+            type="button"
+            onClick={pay}
+            disabled={submitting}
+            className="mt-4 w-full inline-flex items-center justify-center gap-2 py-3 bg-(--color-links) text-white text-sm font-semibold rounded-md hover:opacity-90 disabled:opacity-60"
+          >
+            <Lock className="w-4 h-4" />
+            {submitting ? 'Taking you to payment…' : `Pay ${formatInr(price)}`}
+          </button>
+          <p className="mt-2 text-[11px] text-center text-gray-400">Secure payment via ICICI Bank</p>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function BookInsurance() {
+  const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
+  const { planId } = useParams<{ planId: string }>();
+  const params = useSearchParams();
+  const search = useMemo(() => searchFromParams(params), [params]);
+  const tui = params.get('tui') || '';
+  const [plan, setPlan] = useState<InsurancePlan | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated || !search || !tui) return;
+    let cancelled = false;
+    getPlanDetails(search, planId, tui)
+      .then((p) => !cancelled && setPlan(p))
+      .catch((e: Error) => !cancelled && setError(e.message));
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, isAuthenticated, search, planId, tui]);
+
+  if (!search || !tui) return <ErrorCard message="Your search session has expired. Please search again." />;
+  const planHref = `/booking/insurance/${encodeURIComponent(planId)}?${params.toString()}`;
+
+  return (
+    <main className="min-h-screen bg-gray-50">
+      <TripSummaryBar search={search} title="Traveller details" backHref={planHref} backLabel="Back to plan" />
+      {error ? (
+        <ErrorCard message={error} actionHref={planHref} actionLabel="Back to plan" />
+      ) : !plan ? (
+        <Spinner label="Preparing your booking…" />
+      ) : (
+        <BookingForm search={search} plan={plan} tui={tui} />
+      )}
+      <p className="text-center text-xs text-gray-400 pb-8">
+        Need to change dates or travellers?{' '}
+        <Link href="/?tab=insurance" className="text-(--color-links) hover:underline">
+          Start a new search
+        </Link>
+      </p>
+    </main>
+  );
+}
 
 export default function BookInsurancePage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-green-200 border-t-[var(--color-success)] rounded-full animate-spin" />
-      </div>
-    }>
-      <BookInsuranceInner />
+    <Suspense fallback={<Spinner label="Loading…" />}>
+      <BookInsurance />
     </Suspense>
   );
 }

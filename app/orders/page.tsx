@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import {
   Plane,
   CreditCard,
@@ -509,7 +510,7 @@ function InsuranceCard({ booking }: { booking: InsuranceBookingSummary }) {
           <p className="mt-1 text-sm text-(--color-inactive)">
             {booking.policyNumber
               ? `Policy ${booking.policyNumber}`
-              : `Txn ${booking.transactionId}`}
+              : `Booking ${booking.bookingId}`}
           </p>
         </div>
         <p className="text-base font-bold text-(--color-foreground)">
@@ -528,6 +529,14 @@ function InsuranceCard({ booking }: { booking: InsuranceBookingSummary }) {
           <MetaRow icon={Mail}>{booking.contactEmail}</MetaRow>
         )}
       </div>
+      {booking.transactionId && (
+        <Link
+          href={`/booking/insurance/confirmation/${encodeURIComponent(booking.transactionId)}`}
+          className="mt-3 inline-block text-sm font-semibold text-(--color-links) hover:underline"
+        >
+          View policy
+        </Link>
+      )}
     </CardShell>
   );
 }
