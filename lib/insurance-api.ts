@@ -5,8 +5,17 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v
 // ── Types (mirror soul_paradise_backend/src/insurance) ──
 
 export type PolicyType = 'INDIVIDUAL' | 'FAMILY' | 'FRIENDS' | 'STUDENT' | 'ANNUAL MULTITRIP';
-export type Relation = 'SELF' | 'SPOUSE' | 'SON' | 'DAUGHTER' | 'FATHER' | 'MOTHER' | 'FRIEND';
-export type Title = 'Mr' | 'Mrs' | 'Ms' | 'Miss' | 'Master';
+export type Relation =
+  | 'SELF'
+  | 'SPOUSE'
+  | 'SON'
+  | 'DAUGHTER'
+  | 'FATHER'
+  | 'MOTHER'
+  | 'BROTHER'
+  | 'SISTER'
+  | 'FRIEND';
+export type Title = 'Mr' | 'Mrs' | 'Ms' | 'Master';
 
 export interface PolicyTypeOption {
   value: PolicyType;
@@ -169,8 +178,16 @@ export const RELATION_LABELS: Record<Relation, string> = {
   DAUGHTER: 'Daughter',
   FATHER: 'Father',
   MOTHER: 'Mother',
+  BROTHER: 'Brother',
+  SISTER: 'Sister',
   FRIEND: 'Friend',
 };
+
+/** The only destinations Benzy accepts for an Annual Multi-Trip policy. */
+export const MULTITRIP_REGIONS = [
+  { code: '1A', name: 'Worldwide Including USA and Canada' },
+  { code: '2B', name: 'Worldwide Excluding USA and Canada' },
+] as const;
 
 export const POLICY_TYPE_LABELS: Record<PolicyType, string> = {
   INDIVIDUAL: 'Individual',

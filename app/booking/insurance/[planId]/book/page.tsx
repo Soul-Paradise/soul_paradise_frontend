@@ -22,7 +22,7 @@ import {
 } from '@/lib/insurance-api';
 import { ErrorCard, ProviderLogo, Spinner, TripSummaryBar, formatDay } from '@/components/Insurance/shared';
 
-const TITLES: Title[] = ['Mr', 'Mrs', 'Ms', 'Miss', 'Master'];
+const TITLES: Title[] = ['Mr', 'Mrs', 'Ms', 'Master'];
 const NOMINEE_RELATIONS = ['Spouse', 'Father', 'Mother', 'Son', 'Daughter', 'Brother', 'Sister', 'Other'];
 const PED_MASTER = 'ISPED';
 

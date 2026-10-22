@@ -7,6 +7,7 @@ import { CalendarPanel } from './CalendarPanel';
 import { usePersistentSearch, notBeforeToday } from '@/lib/hooks/useSearchPersistence';
 import {
   getInsuranceOptions,
+  MULTITRIP_REGIONS,
   searchToParams,
   type PolicyType,
   type PolicyTypeOption,
@@ -66,7 +67,7 @@ const RELATION_OPTIONS: Record<PolicyType, Relation[]> = {
   INDIVIDUAL: ['SELF'],
   'ANNUAL MULTITRIP': ['SELF'],
   STUDENT: ['SELF'],
-  FAMILY: ['SELF', 'SPOUSE', 'SON', 'DAUGHTER', 'FATHER', 'MOTHER'],
+  FAMILY: ['SELF', 'SPOUSE', 'SON', 'DAUGHTER', 'FATHER', 'MOTHER', 'BROTHER', 'SISTER'],
   FRIENDS: ['SELF', 'FRIEND'],
 };
 
@@ -77,8 +78,22 @@ const RELATION_DISPLAY: Record<Relation, string> = {
   DAUGHTER: 'Daughter',
   FATHER: 'Father',
   MOTHER: 'Mother',
+  BROTHER: 'Brother',
+  SISTER: 'Sister',
   FRIEND: 'Friend',
 };
+
+/** Multi-Trip covers a region, offered as fixed destinations (negative ids never clash with places). */
+const MULTITRIP_DESTINATIONS: SelectedLocation[] = MULTITRIP_REGIONS.map((r, i) => ({
+  placeId: -(i + 1),
+  displayName: r.name,
+  countryName: r.name,
+  countryCode: r.code,
+}));
+const isRegion = (d: SelectedLocation) => d.placeId < 0;
+
+/** An Annual Multi-Trip policy covers 365 days, counting the start date. */
+const MULTITRIP_DAYS = 365;
 
 /** Customer-facing name for a traveller row, e.g. "You", "Spouse", "Friend 2". */
 function travellerDisplayName(travellers: Traveller[], index: number): string {
@@ -127,11 +142,19 @@ function tomorrowStr(): string {
   return toDateStr(d);
 }
 
-/** Last day of cover for a policy that starts on `start` and runs `months` months. */
-function coverEndDate(start: string, months: number): string {
+/** Student end date: the start date plus the tenure (31 Jan + 1 month = 28/29 Feb). */
+function addMonths(start: string, months: number): string {
   const d = new Date(start + 'T00:00:00');
+  const day = d.getDate();
+  d.setDate(1);
   d.setMonth(d.getMonth() + months);
-  d.setDate(d.getDate() - 1);
+  d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+  return toDateStr(d);
+}
+
+function addDays(start: string, days: number): string {
+  const d = new Date(start + 'T00:00:00');
+  d.setDate(d.getDate() + days);
   return toDateStr(d);
 }
 
@@ -270,13 +293,15 @@ export const TravelInsurance = () => {
   const maxTravellers = MAX_TRAVELLERS[policyType];
   const isStudent = policyType === 'STUDENT';
   const isMultiTrip = policyType === 'ANNUAL MULTITRIP';
-  // Student runs for the chosen tenure and Multi-Trip for a year from the
-  // start date, so neither has an end date to pick.
+  // Student runs for the chosen tenure and Multi-Trip for 365 days (counting
+  // the start date), so neither has an end date to pick.
   const effectiveEndDate = isStudent
-    ? coverEndDate(startDate, tenureInMonths)
+    ? addMonths(startDate, tenureInMonths)
     : isMultiTrip
-      ? coverEndDate(startDate, 12)
+      ? addDays(startDate, MULTITRIP_DAYS - 1)
       : endDate;
+  // Multi-Trip takes one region; other policies take countries.
+  const tripDestinations = destinations.filter((d) => isRegion(d) === isMultiTrip);
   const isMultiPax = policyType === 'FAMILY' || policyType === 'FRIENDS';
 
   const addTraveller = () => {
@@ -301,8 +326,11 @@ export const TravelInsurance = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (destinations.length === 0) { setError('Please select at least one destination.'); return; }
-    if (destinations.some((d) => d.countryCode === 'IN')) {
+    if (tripDestinations.length === 0) {
+      setError(isMultiTrip ? 'Please choose the region to cover.' : 'Please select at least one destination.');
+      return;
+    }
+    if (tripDestinations.some((d) => d.countryCode === 'IN')) {
       setError('Travel insurance covers trips outside India. Please remove destinations in India.');
       return;
     }
@@ -315,7 +343,7 @@ export const TravelInsurance = () => {
 
     const uniqueCodes: string[] = [];
     const uniqueNames: string[] = [];
-    for (const d of destinations) {
+    for (const d of tripDestinations) {
       if (!uniqueCodes.includes(d.countryCode)) {
         uniqueCodes.push(d.countryCode);
         uniqueNames.push(d.countryName);
@@ -341,11 +369,11 @@ export const TravelInsurance = () => {
 
   const startDisplay = formatDisplayDate(startDate);
   const endDisplay = formatDisplayDate(effectiveEndDate);
-  const destinationLabel = destinations.length === 0
+  const destinationLabel = tripDestinations.length === 0
     ? null
-    : destinations.length === 1
-      ? destinations[0].displayName
-      : `${shortLocationName(destinations[0].displayName)} +${destinations.length - 1}`;
+    : tripDestinations.length === 1
+      ? tripDestinations[0].displayName
+      : `${shortLocationName(tripDestinations[0].displayName)} +${tripDestinations.length - 1}`;
 
   return (
     <form onSubmit={handleSearch} className="space-y-5" ref={wrapperRef}>
@@ -386,7 +414,7 @@ export const TravelInsurance = () => {
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
               <span className={`text-lg font-bold truncate ${destinationLabel ? 'text-gray-900' : 'text-gray-400'}`}>
-                {destinationLabel ?? 'Search city or country'}
+                {destinationLabel ?? (isMultiTrip ? 'Choose region' : 'Search city or country')}
               </span>
             </div>
           </button>
@@ -524,8 +552,32 @@ export const TravelInsurance = () => {
           </button>
         </div>
 
+        {/* Multi-Trip region picker */}
+        {activePanel === 'destination' && isMultiTrip && (
+          <div className="absolute top-full left-0 z-50 w-full sm:w-80 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 p-3">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-1">Region covered</p>
+            {MULTITRIP_DESTINATIONS.map((r) => {
+              const selected = tripDestinations[0]?.countryCode === r.countryCode;
+              return (
+                <button
+                  key={r.countryCode}
+                  type="button"
+                  onClick={() => {
+                    setDestinations((prev) => [...prev.filter((d) => !isRegion(d)), r]);
+                    setActivePanel(null);
+                  }}
+                  className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-3 ${selected ? 'bg-blue-50 text-[#1F7AC4]' : 'hover:bg-gray-50 text-gray-700'}`}
+                >
+                  <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  {r.displayName}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Destination Dropdown */}
-        {activePanel === 'destination' && (
+        {activePanel === 'destination' && !isMultiTrip && (
           <div className="absolute top-full left-0 z-50 w-full sm:w-80 bg-white rounded-xl shadow-2xl border border-gray-100 mt-1 overflow-hidden">
             <div className="p-3 border-b border-gray-100">
               <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg">
@@ -539,9 +591,9 @@ export const TravelInsurance = () => {
                   className="flex-1 outline-none text-sm text-gray-800 placeholder-gray-400"
                 />
               </div>
-              {destinations.length > 0 && (
+              {tripDestinations.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {destinations.map((d) => (
+                  {tripDestinations.map((d) => (
                     <span key={d.placeId} className="inline-flex items-center gap-1 max-w-full px-2 py-0.5 bg-blue-50 text-[#1F7AC4] text-xs font-medium rounded-full border border-blue-200">
                       <span className="truncate" title={d.displayName}>{d.displayName}</span>
                       <button type="button" onClick={() => removeDestination(d.placeId)} className="text-blue-300 hover:text-blue-600 flex-shrink-0">×</button>
