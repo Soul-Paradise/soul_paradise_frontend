@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, BookOpen, Clock, FileText, HelpCircle, ListOrdered, Mail, MapPin, type LucideIcon } from 'lucide-react';
+import { ArrowRight, BookOpen, FileText, HelpCircle, Mail, MapPin, type LucideIcon } from 'lucide-react';
 import { PageHero } from './PageHero';
 import { LegalToc } from './LegalToc';
 import { GRADIENTS, ACCENT_CYCLE } from './palette';
@@ -18,14 +18,6 @@ const POLICIES = [
 ];
 
 const sectionId = (n: number) => `section-${n}`;
-
-/** ~200 words per minute, at least one minute. */
-function readingMinutes(sections: LegalSection[]): number {
-  const text = sections
-    .flatMap((s) => [s.title, ...s.content, ...(s.subsections ?? []).flatMap((x) => [x.title, x.content])])
-    .join(' ');
-  return Math.max(1, Math.round(text.split(/\s+/).length / 200));
-}
 
 /**
  * Shared layout for the legal pages: compact hero, sticky table of contents,
@@ -54,17 +46,11 @@ export function LegalPage({
   return (
     <main className="min-h-screen bg-(--color-background)">
       <PageHero
-        eyebrow="Legal"
-        crumb={title}
         title={title}
         description={description}
         image="/hero_bg.jpg"
         imagePosition="center 70%"
         compact
-        chips={[
-          { icon: ListOrdered, label: `${sections.length} sections` },
-          { icon: Clock, label: `${readingMinutes(sections)} min read` },
-        ]}
       />
 
       <div className="relative z-10 mx-auto -mt-16 grid max-w-7xl grid-cols-1 gap-6 px-4 pb-16 sm:px-6 md:pb-20 lg:grid-cols-[280px_1fr] lg:gap-8 lg:px-8">

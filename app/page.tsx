@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BadgeCheck, Headphones, ShieldCheck } from 'lucide-react';
 import { BookingTabs, MobileBookingTabs } from '@/components/BookingTabs';
 import {
   LongWeekends,
@@ -10,12 +9,6 @@ import {
   PlanHolidayCta,
 } from '@/components/Home';
 import { SectionHeader } from '@/components/Home/SectionHeader';
-
-const HERO_CHIPS = [
-  { icon: BadgeCheck, label: 'IATA accredited' },
-  { icon: Headphones, label: '24/7 support' },
-  { icon: ShieldCheck, label: 'Secure payments' },
-];
 
 /** Hero photo with the same overlay and slow zoom as the other pages' heroes. */
 function HeroBackdrop() {
@@ -31,40 +24,23 @@ function HeroBackdrop() {
   );
 }
 
-/** Eyebrow, headline and chips above the booking card. */
+/** Headline above the booking card. */
 function HeroIntro({ compact = false }: { compact?: boolean }) {
   return (
     <div className={compact ? '' : 'mb-2'}>
-      <span className="animate-fade-up inline-block rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white ring-1 ring-inset ring-white/25 backdrop-blur-sm">
-        Soul Paradise Travels
-      </span>
       <h1
-        className={`animate-fade-up mt-3 font-extrabold leading-tight tracking-tight text-white ${
+        className={`animate-fade-up font-extrabold leading-tight tracking-tight text-white ${
           compact ? 'text-3xl' : 'text-4xl lg:text-5xl'
         }`}
-        style={{ animationDelay: '80ms' }}
       >
         Where to next?
       </h1>
       <p
         className={`animate-fade-up mt-2 max-w-2xl leading-relaxed text-white/85 ${compact ? 'text-sm' : 'text-base lg:text-lg'}`}
-        style={{ animationDelay: '140ms' }}
+        style={{ animationDelay: '80ms' }}
       >
-        Flights, hotels, travel insurance and holiday packages, all from one IATA-accredited agency.
+        Flights, hotels, travel insurance and holiday packages, all in one place.
       </p>
-      {!compact && (
-        <ul className="animate-fade-up mt-4 flex flex-wrap gap-2" style={{ animationDelay: '200ms' }}>
-          {HERO_CHIPS.map(({ icon: Icon, label }) => (
-            <li
-              key={label}
-              className="inline-flex items-center gap-1.5 rounded-full bg-black/25 px-3 py-1.5 text-xs font-semibold text-white ring-1 ring-inset ring-white/20 backdrop-blur-sm"
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }

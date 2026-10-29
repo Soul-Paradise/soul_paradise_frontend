@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Camera,
   ChevronLeft,
   ChevronRight,
   Expand,
@@ -74,8 +73,6 @@ export default function HallOfFamePage() {
   }, []);
 
   const categories = ['All', ...Array.from(new Set(galleryImages.map((img) => img.category)))];
-  const countFor = (category: string) =>
-    category === 'All' ? galleryImages.length : galleryImages.filter((img) => img.category === category).length;
   const filteredImages =
     selectedCategory === 'All' ? galleryImages : galleryImages.filter((img) => img.category === selectedCategory);
 
@@ -103,15 +100,11 @@ export default function HallOfFamePage() {
   return (
     <main className="min-h-screen bg-(--color-background)">
       <PageHero
-        eyebrow="Hall of Fame"
+        crumb="Hall of Fame"
         title="Real trips. Real travellers. Real smiles."
         description="Celebrating our valued customers and their unforgettable travel experiences. Browse through memories captured during amazing journeys with Soul Paradise."
         image="/dubai_1.jpg"
         imagePosition="center 35%"
-        chips={[
-          { icon: Camera, label: `${galleryImages.length} trip photos` },
-          { icon: MapPin, label: `${categories.length - 1} destinations` },
-        ]}
       />
 
       {/* Stats band, overlapping the hero */}
@@ -152,18 +145,13 @@ export default function HallOfFamePage() {
                 role="tab"
                 aria-selected={active}
                 onClick={() => setSelectedCategory(category)}
-                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
                   active
                     ? 'bg-(--color-primary-button) text-white shadow-lg'
                     : 'bg-(--color-peace) text-(--color-inactive) ring-1 ring-(--color-tertiary-button) hover:text-(--color-foreground) hover:ring-(--color-secondary-button)'
                 }`}
               >
                 {category}
-                <span
-                  className={`rounded-full px-1.5 text-[11px] ${active ? 'bg-white/20' : 'bg-(--color-background)'}`}
-                >
-                  {countFor(category)}
-                </span>
               </button>
             );
           })}

@@ -219,16 +219,11 @@ export default function ContactPage() {
   return (
     <main className="min-h-screen bg-(--color-background)">
       <PageHero
-        eyebrow="Contact Us"
+        crumb="Contact Us"
         title="Let's plan your next journey"
         description="We're here to help you plan your perfect journey. Reach out to us through any of the channels below, and our team will be happy to assist you."
         image="/ne_3.jpg"
         imagePosition="center 60%"
-        chips={[
-          { icon: Clock, label: 'Replies within 24 hours' },
-          { icon: Zap, label: 'WhatsApp 24/7' },
-          { icon: MapPin, label: 'Jalandhar, Punjab' },
-        ]}
       />
 
       {/* Contact channels, overlapping the hero */}

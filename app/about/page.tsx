@@ -7,7 +7,6 @@ import {
   Building2,
   FileText,
   Headphones,
-  MapPin,
   Plane,
   ShieldCheck,
   Sparkles,
@@ -95,16 +94,11 @@ export default function AboutPage() {
   return (
     <main className="min-h-screen bg-(--color-background)">
       <PageHero
-        eyebrow="About Us"
+        crumb="About Us"
         title="Your pocket-friendly tour planner"
         description="Soul Paradise makes travel accessible, affordable and memorable for everyone, from a first family holiday to a last-minute business trip."
         image="/kerala_2.jpg"
         imagePosition="center 30%"
-        chips={[
-          { icon: BadgeCheck, label: 'IATA accredited' },
-          { icon: MapPin, label: 'Jalandhar, Punjab' },
-          { icon: Headphones, label: '24/7 support' },
-        ]}
       />
 
       {/* Our Story + IATA, overlapping the hero */}
@@ -148,8 +142,7 @@ export default function AboutPage() {
             <div className="relative bg-gradient-to-br from-blue-500 to-indigo-600 px-6 pb-14 pt-6 text-white">
               <span className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-white/10" />
               <span className="pointer-events-none absolute -bottom-12 left-6 h-24 w-24 rounded-full bg-white/10" />
-              <p className="relative text-xs font-bold uppercase tracking-[0.18em] text-white/80">Accreditation</p>
-              <h3 className="relative mt-1 text-2xl font-extrabold">IATA Accredited</h3>
+              <h3 className="relative text-2xl font-extrabold">IATA Accredited</h3>
               <p className="relative mt-1 text-sm text-white/85">
                 Certified by the International Air Transport Association
               </p>

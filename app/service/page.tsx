@@ -100,17 +100,10 @@ export default function ServicePage() {
   return (
     <main className="min-h-screen bg-(--color-background)">
       <PageHero
-        eyebrow="Our Services"
+        crumb="Our Services"
         title="Everything your trip needs, in one place"
         description="Discover our comprehensive range of travel services designed to make your journey seamless, affordable, and memorable. From flight bookings to visa assistance, we've got you covered."
         image="/hero_bg.jpg"
-        chips={[
-          { icon: Plane, label: 'Flights' },
-          { icon: Building2, label: 'Hotels' },
-          { icon: Palmtree, label: 'Holidays' },
-          { icon: FileText, label: 'Visas' },
-          { icon: ShieldCheck, label: 'Insurance' },
-        ]}
       />
 
       {/* Services grid, overlapping the hero */}
@@ -157,7 +150,6 @@ export default function ServicePage() {
 
 function ServiceCard({ service: s }: { service: Service }) {
   const Icon = s.icon;
-  const bookable = Boolean(s.tab);
   const actionClass =
     'group/btn mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-(--color-links) hover:opacity-80';
 
@@ -166,13 +158,6 @@ function ServiceCard({ service: s }: { service: Service }) {
       <div className={`relative h-28 overflow-hidden bg-gradient-to-br ${GRADIENTS[s.accent]}`}>
         <span className="pointer-events-none absolute -right-6 -top-8 h-32 w-32 rounded-full bg-white/10 transition-transform duration-500 group-hover:scale-125" />
         <Icon className="absolute -bottom-4 right-4 h-24 w-24 text-white/15 transition-transform duration-500 group-hover:-rotate-12" />
-        <span
-          className={`absolute left-5 top-5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${
-            bookable ? 'bg-white text-(--color-foreground)' : 'bg-black/20 text-white'
-          }`}
-        >
-          {bookable ? 'Book online' : 'Personal assistance'}
-        </span>
       </div>
       <div className="flex flex-1 flex-col p-6">
         {/* relative + z-10 so the tile sits above the band it overlaps */}
