@@ -3,12 +3,25 @@
  * Handles all HTTP requests with proper error handling and token management
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
-export interface ApiError {
-  message: string;
+/**
+ * A real Error subclass so failures always carry a message + stack and never
+ * serialize to "{}" in the console. Consumers can read `.statusCode`/`.error`
+ * or use `instanceof ApiError`.
+ */
+export class ApiError extends Error {
   statusCode: number;
   error?: string;
+
+  constructor(message: string, statusCode: number, error?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.statusCode = statusCode;
+    this.error = error;
+    // Restore the prototype chain (needed when targeting ES5/older runtimes).
+    Object.setPrototypeOf(this, ApiError.prototype);
+  }
 }
 
 export interface LoginRequest {
@@ -37,6 +50,26 @@ export interface AuthResponse {
   };
 }
 
+export type PaymentStatus =
+  | 'INITIATED'
+  | 'REDIRECTED'
+  | 'PAID'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'REFUND_PENDING'
+  | 'REFUNDED'
+  | 'EXPIRED';
+
+/** A user-entered ad-hoc payment (the home page "Custom Payment" tab). */
+export interface CustomPayment {
+  merchantTxnNo: string;
+  /** Decimal as a string, e.g. "5000.00". */
+  amount: string;
+  status: PaymentStatus;
+  createdAt: string;
+  paidAt: string | null;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -44,9 +77,37 @@ export interface User {
   profilePicture: string | null;
   emailVerified: boolean;
   provider: string;
-  role: 'USER' | 'ADMIN';
+  role: 'USER' | 'AGENT' | 'ADMIN' | 'SUPER_ADMIN';
   createdAt: string;
   lastLoginAt: string;
+}
+
+export type AgentVerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+/** Non-sensitive agency details shown to a booking partner on their profile. */
+export interface AgentProfileSummary {
+  agencyName: string;
+  contactPhone: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+  gstNumber: string | null;
+  status: AgentVerificationStatus;
+  submittedAt: string;
+  reviewedAt: string | null;
+}
+
+/** The signed-in user's own account, as returned by GET /auth/profile. */
+export interface UserProfile extends Omit<User, 'lastLoginAt'> {
+  isActive: boolean;
+  updatedAt: string;
+  lastLoginAt: string | null;
+  passwordChangedAt: string | null;
+  /** False for Google-only accounts, which have no password to change. */
+  hasPassword: boolean;
+  agentProfile: AgentProfileSummary | null;
 }
 
 export interface ContactFormRequest {
@@ -129,29 +190,52 @@ class ApiClient {
 
       if (!response.ok) {
         // Backend returns error in format: { message, statusCode, error }
-        throw {
-          message: data.message || 'An error occurred',
-          statusCode: response.status,
-          error: data.error,
-        } as ApiError;
+        throw new ApiError(
+          data.message || 'An error occurred',
+          response.status,
+          data.error
+        );
       }
 
       return data as T;
     } catch (error) {
-      if ((error as ApiError).statusCode) {
+      if (error instanceof ApiError) {
         // Re-throw API errors
         throw error;
       }
-      // Network or other errors
-      throw {
-        message: 'Network error. Please check your connection.',
-        statusCode: 0,
-      } as ApiError;
+      // Network or other errors (fetch rejected, non-JSON body, etc.)
+      throw new ApiError('Network error. Please check your connection.', 0);
     }
   }
 
+  // De-duplicate concurrent refreshes: if several authenticated calls 401 at
+  // once, they all await the same in-flight refresh instead of each hitting
+  // /auth/refresh (which would rotate the stored refresh token repeatedly).
+  private refreshInFlight: Promise<boolean> | null = null;
+
+  private async tryRefresh(): Promise<boolean> {
+    if (!this.getRefreshToken()) return false;
+    if (!this.refreshInFlight) {
+      this.refreshInFlight = this.refreshToken()
+        .then(() => true)
+        .catch(() => {
+          // Refresh token is gone/expired - the session is truly dead.
+          this.clearTokens();
+          return false;
+        })
+        .finally(() => {
+          this.refreshInFlight = null;
+        });
+    }
+    return this.refreshInFlight;
+  }
+
   /**
-   * Authenticated request with access token
+   * Authenticated request with access token.
+   * Transparently recovers from an expired access token: on a 401 it refreshes
+   * the token once and retries the request a single time. This is what keeps a
+   * user signed in across the (long-lived) refresh-token window instead of
+   * being logged out the moment the short-lived access token expires.
    */
   private async authenticatedRequest<T>(
     endpoint: string,
@@ -160,19 +244,38 @@ class ApiClient {
     const accessToken = this.getAccessToken();
 
     if (!accessToken) {
-      throw {
-        message: 'Not authenticated',
-        statusCode: 401,
-      } as ApiError;
+      throw new ApiError('Not authenticated', 401);
     }
 
-    return this.request<T>(endpoint, {
+    const withAuth = (token: string): RequestInit => ({
       ...options,
       headers: {
         ...options.headers,
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${token}`,
       },
     });
+
+    try {
+      return await this.request<T>(endpoint, withAuth(accessToken));
+    } catch (err) {
+      // Only an expired/invalid access token is retryable here.
+      if (!(err instanceof ApiError) || err.statusCode !== 401) {
+        throw err;
+      }
+
+      const refreshed = await this.tryRefresh();
+      if (!refreshed) {
+        throw err;
+      }
+
+      const newToken = this.getAccessToken();
+      if (!newToken) {
+        throw err;
+      }
+
+      // Retry exactly once with the fresh access token.
+      return this.request<T>(endpoint, withAuth(newToken));
+    }
   }
 
   // Token Management
@@ -294,8 +397,42 @@ class ApiClient {
    * Get user profile
    * GET /auth/profile
    */
-  async getProfile(): Promise<User> {
-    return this.authenticatedRequest<User>('/auth/profile');
+  async getProfile(): Promise<UserProfile> {
+    return this.authenticatedRequest<UserProfile>('/auth/profile');
+  }
+
+  /**
+   * Update the signed-in user's profile
+   * PATCH /auth/profile
+   */
+  async updateProfile(data: { name: string }): Promise<UserProfile> {
+    return this.authenticatedRequest<UserProfile>('/auth/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Change password (requires the current one)
+   * POST /auth/change-password
+   *
+   * The backend revokes every other session and returns fresh tokens so this
+   * device stays signed in.
+   */
+  async changePassword(
+    currentPassword: string,
+    newPassword: string
+  ): Promise<{ message: string }> {
+    const response = await this.authenticatedRequest<
+      { message: string } & Pick<AuthResponse, 'accessToken' | 'refreshToken'>
+    >('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+
+    this.setTokens(response.accessToken, response.refreshToken);
+
+    return { message: response.message };
   }
 
   /**
@@ -314,10 +451,7 @@ class ApiClient {
     const refreshToken = this.getRefreshToken();
 
     if (!refreshToken) {
-      throw {
-        message: 'No refresh token available',
-        statusCode: 401,
-      } as ApiError;
+      throw new ApiError('No refresh token available', 401);
     }
 
     const response = await this.request<AuthResponse>('/auth/refresh', {
@@ -427,6 +561,28 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // Custom Payments (any signed-in user; each sees only their own)
+
+  /** Starts an ICICI PG payment; send the browser to `redirectUrl`. */
+  async createCustomPayment(
+    amount: number
+  ): Promise<{ merchantTxnNo: string; redirectUrl: string }> {
+    return this.authenticatedRequest('/custom-payments', {
+      method: 'POST',
+      body: JSON.stringify({ amount }),
+    });
+  }
+
+  async getCustomPayments(): Promise<CustomPayment[]> {
+    return this.authenticatedRequest<CustomPayment[]>('/custom-payments');
+  }
+
+  async getCustomPayment(merchantTxnNo: string): Promise<CustomPayment> {
+    return this.authenticatedRequest<CustomPayment>(
+      `/custom-payments/${encodeURIComponent(merchantTxnNo)}`
+    );
+  }
 }
 
 // Export singleton instance
@@ -451,7 +607,7 @@ async function refreshAccessToken(): Promise<boolean> {
       .refreshToken()
       .then(() => true)
       .catch(() => {
-        // Refresh token is gone/expired — the session is truly dead.
+        // Refresh token is gone/expired - the session is truly dead.
         api.clearTokens();
         return false;
       })
@@ -466,7 +622,7 @@ async function refreshAccessToken(): Promise<boolean> {
  * fetch() wrapper for authenticated calls that transparently recovers from an
  * expired access token: on a 401 it refreshes the token once and retries the
  * request a single time. If the refresh fails, it clears the session and sends
- * the user to /login. Always attaches the current Authorization header itself —
+ * the user to /login. Always attaches the current Authorization header itself -
  * callers should NOT spread authHeaders() into the request.
  */
 export async function authFetch(
@@ -481,7 +637,7 @@ export async function authFetch(
   const res = await fetch(input, build());
   if (res.status !== 401) return res;
 
-  // Access token likely expired — try one refresh + retry.
+  // Access token likely expired - try one refresh + retry.
   const refreshed = await refreshAccessToken();
   if (!refreshed) {
     if (

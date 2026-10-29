@@ -50,7 +50,7 @@ export default function AgentRegisterPage() {
    * Set when the applicant used "Continue with Google" instead of the form.
    *
    * We hold the raw credential and resend it at submit, where the backend
-   * re-verifies it — the email shown here is for display only and is never what
+   * re-verifies it - the email shown here is for display only and is never what
    * the account is created from.
    */
   const [google, setGoogle] = useState<{
@@ -77,8 +77,8 @@ export default function AgentRegisterPage() {
   });
 
   const onSubmitKyc = async (kyc: AgentKycData) => {
-    // Step 3 is only reachable once step 1 produced an identity — either the form
-    // or Google — and step 2 validated. Narrow rather than assert.
+    // Step 3 is only reachable once step 1 produced an identity - either the form
+    // or Google - and step 2 validated. Narrow rather than assert.
     if ((!account && !google) || !agency) {
       setStep(1);
       return;
@@ -178,7 +178,7 @@ export default function AgentRegisterPage() {
             </p>
           </div>
 
-          {/* Google identity, once proven. Note this does NOT log them in — an
+          {/* Google identity, once proven. Note this does NOT log them in - an
               agent gets no session until an admin approves their KYC. */}
           {step === 1 && google && (
             <div className="space-y-3.5">
@@ -204,7 +204,7 @@ export default function AgentRegisterPage() {
               </div>
 
               <p className="text-xs text-(--color-foreground) opacity-70">
-                No password needed — you&apos;ll sign in with Google once your agency
+                No password needed - you&apos;ll sign in with Google once your agency
                 is approved.
               </p>
 
@@ -410,7 +410,7 @@ export default function AgentRegisterPage() {
 
               <FileUpload
                 id="aadhaarFront"
-                label="Aadhaar — Front"
+                label="Aadhaar - Front"
                 required
                 value={kycForm.watch('aadhaarFront')}
                 onChange={(file) =>
@@ -423,7 +423,7 @@ export default function AgentRegisterPage() {
 
               <FileUpload
                 id="aadhaarBack"
-                label="Aadhaar — Back"
+                label="Aadhaar - Back"
                 required
                 value={kycForm.watch('aadhaarBack')}
                 onChange={(file) =>
@@ -558,7 +558,7 @@ function ApplicationSubmitted({
 
         <h1 className="text-2xl font-bold text-(--color-foreground)">
           {needsEmailVerification
-            ? 'Almost there — verify your email'
+            ? 'Almost there - verify your email'
             : 'Your account is ready'}
         </h1>
 

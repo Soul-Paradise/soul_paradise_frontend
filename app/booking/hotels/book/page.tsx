@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { jsPDF } from 'jspdf';
 import { authHeaders } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
+import { formatDeadline } from '@/components/HotelResults/FreeCancellationBadge';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -68,6 +69,9 @@ interface StashedPricing {
   gstAllowed: boolean;
   needsPriceCheck: boolean;
   cancellationPolicies?: CancellationPolicy[];
+  // ISO 8601 (+05:30) instant free cancellation stops; null when the supplier
+  // gave no parseable deadline.
+  freeCancellationUntil?: string | null;
 }
 
 interface StashedSelectedRoom {
@@ -123,14 +127,6 @@ interface ContactForm {
   title: Title;
   firstName: string;
   lastName: string;
-  mobile: string;
-  email: string;
-}
-
-interface GSTForm {
-  enabled: boolean;
-  companyName: string;
-  tin: string;
   mobile: string;
   email: string;
 }
@@ -203,6 +199,7 @@ interface BookingVoucher {
   };
   rooms: VoucherRoom[];
   cancellationPolicies: Array<{ text: string; fromDate: string; toDate: string; amount: string }>;
+  freeCancellationUntil?: string | null;
 }
 
 // ── Helpers ──
@@ -391,7 +388,6 @@ function HotelBookPageInner() {
   });
 
   const [guestsByRoom, setGuestsByRoom] = useState<GuestForm[][]>([]);
-  const [gst, setGst] = useState<GSTForm>({ enabled: false, companyName: '', tin: '', mobile: '', email: '' });
   const [specialRequest, setSpecialRequest] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
@@ -403,7 +399,6 @@ function HotelBookPageInner() {
   }, [stash]);
 
   const showAllGuests = pricing?.allGuestsInfoRequired ?? false;
-  const showGST = pricing?.gstAllowed ?? false;
   const showSpecial = pricing?.specialRequestSupported ?? false;
 
   const totalGuests = useMemo(
@@ -430,14 +425,9 @@ function HotelBookPageInner() {
     .filter(Boolean)
     .join(', ');
 
-  const taxTotal = useMemo(
-    () => (pricing?.taxes ?? []).reduce((s, t) => s + (t.amount || 0), 0) + (pricing?.tcsOnTotal || 0),
-    [pricing],
-  );
-  const discountTotal = useMemo(
-    () => (pricing?.discounts ?? []).reduce((s, d) => s + (d.amount || 0), 0),
-    [pricing],
-  );
+  // Fare summary shows a single all-inclusive room rate - taxes, TCS and
+  // discounts are already folded into pricing.totalRate and are not itemised.
+  const roomCount = pricing?.perRoomRates?.length || 1;
 
   function updateContact<K extends keyof ContactForm>(key: K, value: ContactForm[K]) {
     setContact((c) => ({ ...c, [key]: value }));
@@ -473,11 +463,6 @@ function HotelBookPageInner() {
           return `Please enter age for child in Room ${r + 1}.`;
         }
       }
-    }
-
-    if (showGST && gst.enabled) {
-      if (!gst.companyName.trim() || !gst.tin.trim()) return 'Please enter GST company name and TIN.';
-      if (gst.email && !isEmail(gst.email)) return 'Please enter a valid GST email.';
     }
 
     return null;
@@ -523,10 +508,10 @@ function HotelBookPageInner() {
         email: contact.email,
         countryCode: 'IN',
         mobileCountryCode: '+91',
-        gstCompanyName: gst.enabled ? gst.companyName : '',
-        gstTin: gst.enabled ? gst.tin : '',
-        gstMobile: gst.enabled ? gst.mobile : '',
-        gstEmail: gst.enabled ? gst.email : '',
+        gstCompanyName: '',
+        gstTin: '',
+        gstMobile: '',
+        gstEmail: '',
       },
       rooms: guestsByRoom.map((guests, roomIdx) => {
         const slot = bookingContext.roomSlots[roomIdx];
@@ -849,63 +834,6 @@ function HotelBookPageInner() {
                 </div>
               </div>
 
-              {showGST && (
-                <div className="border-t border-gray-200 pt-5">
-                  <div className="bg-gray-50 border border-gray-200 rounded px-4 py-3 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0">
-                      GST
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800">
-                        Use GSTIN for this booking <span className="font-normal text-gray-500">(Optional)</span>
-                      </p>
-                      <p className="text-xs text-gray-600 mt-0.5">
-                        Claim credit of GST charges. Your taxes may get updated post submitting your GST details
-                      </p>
-                    </div>
-                    <label className="flex items-center gap-2 shrink-0 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={gst.enabled}
-                        onChange={(e) => setGst((g) => ({ ...g, enabled: e.target.checked }))}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-sm text-slate-700 whitespace-nowrap">Include my GST number</span>
-                    </label>
-                  </div>
-
-                  {gst.enabled && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                      <input
-                        value={gst.companyName}
-                        onChange={(e) => setGst((g) => ({ ...g, companyName: e.target.value }))}
-                        placeholder="Company name"
-                        className="border border-gray-300 rounded px-3 py-2.5 text-sm sm:col-span-2"
-                      />
-                      <input
-                        value={gst.tin}
-                        onChange={(e) => setGst((g) => ({ ...g, tin: e.target.value.toUpperCase() }))}
-                        placeholder="GSTIN"
-                        className="border border-gray-300 rounded px-3 py-2.5 text-sm"
-                      />
-                      <input
-                        type="tel"
-                        value={gst.mobile}
-                        onChange={(e) => setGst((g) => ({ ...g, mobile: e.target.value.replace(/\D/g, '') }))}
-                        placeholder="GST mobile"
-                        className="border border-gray-300 rounded px-3 py-2.5 text-sm"
-                      />
-                      <input
-                        type="email"
-                        value={gst.email}
-                        onChange={(e) => setGst((g) => ({ ...g, email: e.target.value }))}
-                        placeholder="GST email"
-                        className="border border-gray-300 rounded px-3 py-2.5 text-sm sm:col-span-2"
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </section>
 
@@ -933,6 +861,18 @@ function HotelBookPageInner() {
                 <p className="text-sm font-semibold text-red-500 mb-1">INCLUSIONS</p>
                 <p className="text-sm text-slate-700">Room {1}</p>
                 <p className="text-xs text-gray-600 mt-1">{pricing.boardBasis}</p>
+              </div>
+            )}
+
+            {pricing.refundable && pricing.freeCancellationUntil && (
+              <div className="mb-4">
+                <p className="text-sm font-semibold text-red-500 mb-1">Cancellation</p>
+                <p className="text-sm text-green-700 font-medium">
+                  Free cancellation until {formatDeadline(pricing.freeCancellationUntil, true)}
+                </p>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  Cancel after this time and the hotel&apos;s cancellation charges apply.
+                </p>
               </div>
             )}
 
@@ -987,53 +927,19 @@ function HotelBookPageInner() {
             <h3 className="font-bold text-slate-800 text-base mb-3 pb-3 border-b border-gray-200">Fare Summary</h3>
 
             <DisclosureRow
-              label="Room Rates"
-              amount={pricing.baseRate}
+              label="Room Rate"
+              amount={pricing.totalRate}
               currency={pricing.currency}
-              initiallyOpen
-            >
-              {(pricing.perRoomRates?.length ? pricing.perRoomRates : [{ baseRate: pricing.baseRate, totalRate: pricing.totalRate }]).map((r, i) => (
-                <div key={i} className="flex justify-between text-gray-600">
-                  <span>Room {i + 1}</span>
-                  <span>{fmt(r.baseRate, pricing.currency)}</span>
-                </div>
-              ))}
-            </DisclosureRow>
+            />
 
-            <DisclosureRow
-              label="Tax & Charges"
-              amount={taxTotal}
-              currency={pricing.currency}
-            >
-              {pricing.taxes.map((t, i) => (
-                <div key={i} className="flex justify-between text-gray-600">
-                  <span>{t.description || 'Tax'}</span>
-                  <span>{fmt(t.amount, pricing.currency)}</span>
-                </div>
-              ))}
-              {pricing.tcsOnTotal > 0 && (
-                <div className="flex justify-between text-gray-600">
-                  <span>TCS</span>
-                  <span>{fmt(pricing.tcsOnTotal, pricing.currency)}</span>
-                </div>
-              )}
-            </DisclosureRow>
-
-            {discountTotal > 0 && (
-              <DisclosureRow
-                label="Discount"
-                amount={discountTotal}
-                currency={pricing.currency}
-                valueClassName="font-medium text-green-600"
-              >
-                {pricing.discounts.map((d, i) => (
-                  <div key={i} className="flex justify-between text-green-600">
-                    <span>{d.description || 'Discount'}</span>
-                    <span>{fmt(d.amount, pricing.currency)}</span>
-                  </div>
-                ))}
-              </DisclosureRow>
+            {roomCount > 1 && (
+              <div className="flex justify-between text-sm py-1.5">
+                <span className="text-gray-700">No. of Rooms</span>
+                <span className="font-medium text-gray-900">{roomCount}</span>
+              </div>
             )}
+
+            <p className="text-xs text-gray-400 pb-1">Inclusive of all taxes &amp; fees</p>
 
             <div className="flex justify-between items-baseline mt-3 pt-3 border-t border-gray-200">
               <span className="font-bold text-slate-800">Total Amount:</span>
@@ -1062,7 +968,13 @@ function HotelBookPageInner() {
               {submitting ? 'Booking...' : 'Continue to Payment'}
             </button>
             <p className="text-xs text-gray-400 text-center mt-2">
-              {pricing.payAtHotel ? 'Pay at hotel' : pricing.refundable ? 'Free cancellation' : 'Non-refundable'}
+              {pricing.payAtHotel
+                ? 'Pay at hotel'
+                : pricing.refundable
+                  ? pricing.freeCancellationUntil
+                    ? `Free cancellation until ${formatDeadline(pricing.freeCancellationUntil)}`
+                    : 'Free cancellation'
+                  : 'Non-refundable'}
             </p>
           </div>
         </aside>
@@ -1145,11 +1057,11 @@ function buildPdf(v: BookingVoucher, JsPDF: typeof jsPDF): jsPDF {
 
   const infoRows: Array<[string, string]> = [
     ['Booking ID', v.bookingId],
-    ['Confirmation ID', v.confirmationId || '—'],
-    ['Supplier Ref', v.supplierConfirmationId || '—'],
+    ['Confirmation ID', v.confirmationId || '-'],
+    ['Supplier Ref', v.supplierConfirmationId || '-'],
     ['Transaction', v.transactionId],
     ['Status', tone.label],
-    ['Payment Status', v.paymentStatus || '—'],
+    ['Payment Status', v.paymentStatus || '-'],
   ];
   doc.setFontSize(10);
   for (const [k, val] of infoRows) {
@@ -1176,7 +1088,7 @@ function buildPdf(v: BookingVoucher, JsPDF: typeof jsPDF): jsPDF {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(15, 23, 42);
-  doc.text(v.hotel.name || '—', margin, y);
+  doc.text(v.hotel.name || '-', margin, y);
   y += 16;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
@@ -1319,6 +1231,17 @@ function buildPdf(v: BookingVoucher, JsPDF: typeof jsPDF): jsPDF {
     y += 18;
     doc.line(margin, y, pageWidth - margin, y);
     y += 12;
+    if (v.freeCancellationUntil) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(21, 128, 61);
+      doc.text(
+        `Free cancellation until ${formatDeadline(v.freeCancellationUntil, true)}`,
+        margin,
+        y,
+      );
+      y += 16;
+    }
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(71, 85, 105);
@@ -1409,7 +1332,7 @@ function BookingConfirmation({ voucher, onDone }: { voucher: BookingVoucher; onD
             </div>
             <div className="text-right">
               <p className="text-[10px] tracking-widest opacity-80">CONFIRMATION</p>
-              <p className="font-mono text-lg font-bold">{voucher.confirmationId || '—'}</p>
+              <p className="font-mono text-lg font-bold">{voucher.confirmationId || '-'}</p>
             </div>
           </div>
 
@@ -1515,11 +1438,11 @@ function BookingConfirmation({ voucher, onDone }: { voucher: BookingVoucher; onD
               </div>
               <div>
                 <p className="text-xs text-gray-500">Mobile</p>
-                <p className="font-medium text-slate-800">{voucher.contactInfo.mobile || '—'}</p>
+                <p className="font-medium text-slate-800">{voucher.contactInfo.mobile || '-'}</p>
               </div>
               <div className="sm:col-span-2">
                 <p className="text-xs text-gray-500">Email</p>
-                <p className="font-medium text-slate-800 break-all">{voucher.contactInfo.email || '—'}</p>
+                <p className="font-medium text-slate-800 break-all">{voucher.contactInfo.email || '-'}</p>
               </div>
             </div>
           </div>

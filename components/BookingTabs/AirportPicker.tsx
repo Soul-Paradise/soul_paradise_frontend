@@ -149,7 +149,7 @@ export const AirportPicker = ({
         )}
       </button>
 
-      {/* Dropdown — portalled to <body> and fixed-positioned so it is never
+      {/* Dropdown - portalled to <body> and fixed-positioned so it is never
           clipped by a scrollable ancestor (e.g. the multi-city leg list). */}
       {isOpen && mounted && dropdownPos && createPortal(
         <div

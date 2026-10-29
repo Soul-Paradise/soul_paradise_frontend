@@ -154,6 +154,9 @@ function FlightDetailsContent() {
       return 'Contact mobile number is required.';
     }
 
+    // Fare-level booking requirements (from Benzy pricing).
+    const req = pricing?.bookingRequirements;
+
     // Validate travellers
     for (let i = 0; i < travellers.length; i++) {
       const t = travellers[i];
@@ -173,6 +176,23 @@ function FlightDetailsContent() {
         if (cl.passportExpiry && !t.passportExpiry) {
           return `Passport expiry is required for ${t.firstName || `Passenger ${i + 1}`}.`;
         }
+      }
+
+      // PAN required by fare-level booking requirements.
+      if (req?.panMandatory && !t.panNo) {
+        return `PAN number is required for ${t.firstName || `Passenger ${i + 1}`}.`;
+      }
+    }
+
+    // Baggage mandatory: at least one baggage SSR must be selected.
+    if (req?.baggageMandatory && pricing) {
+      const baggageSelected = selectedSSR.some((sel) =>
+        pricing.ssrOptions.baggage.some(
+          (b) => b.id === sel.ssrId && b.fuid === sel.fuid,
+        ),
+      );
+      if (!baggageSelected) {
+        return 'This fare requires baggage. Please add a baggage option in the Add-ons step.';
       }
     }
 
@@ -195,7 +215,7 @@ function FlightDetailsContent() {
               id: s.ssid,
               code: s.seatNumber,
               description: `Seat ${s.seatNumber}`,
-              charge: s.fare + s.tax,
+              charge: s.fare,
               type: 'seat' as const,
               fuid: sm.fuid,
             })),
@@ -263,10 +283,14 @@ function FlightDetailsContent() {
         lastName: firstAdult?.lastName || contactInfo.lastName || 'User',
       };
 
-      // Customer-facing grand total — must match the BookingSummary figure
+      // Customer-facing grand total - must match the BookingSummary figure
       // (gross fare + paid SSRs/seats − promo discount). This is what we charge.
+      // Match on BOTH fuid and id (keyed like the backend's ssrChargeMap) so a
+      // shared ssrId across segments can't pick the wrong charge.
       const ssrTotal = allSelections.reduce((sum, sel) => {
-        const option = allSSROptions.find((o) => o.id === sel.ssrId);
+        const option = allSSROptions.find(
+          (o) => o.id === sel.ssrId && o.fuid === sel.fuid,
+        );
         return sum + (option?.charge || 0);
       }, 0);
       const promoDiscount = appliedPromo?.valid ? appliedPromo.discountAmount : 0;
@@ -284,6 +308,7 @@ function FlightDetailsContent() {
         selectedSSR: allSelections,
         ssrChargeMap: pricing.ssrChargeMap,
         freeSSRs: pricing.freeSSRs,
+        enableFareMasking: pricing.bookingRequirements?.fareMaskingRequired ?? false,
         tripSummary: {
           fromCode: pricing.segments[0]?.from || '',
           toCode:
@@ -436,6 +461,32 @@ function FlightDetailsContent() {
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Main Content */}
           <div className="flex-1 space-y-6">
+            {/* Fare notices (airline / fare-level advisories from Benzy) */}
+            {!!pricing.fareNotices?.length && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-start gap-3">
+                <svg
+                  className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+                <div className="flex-1 min-w-0 space-y-1">
+                  {pricing.fareNotices.map((notice, i) => (
+                    <p key={i} className="text-sm text-amber-800">
+                      {notice}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* ========== Step 0: Traveller Details ========== */}
             {currentStep === 0 && (
               <>
@@ -456,6 +507,8 @@ function FlightDetailsContent() {
                         traveller={traveller}
                         travelChecklist={pricing.travelChecklist}
                         onChange={(updated) => updateTraveller(i, updated)}
+                        bookingRequirements={pricing.bookingRequirements}
+                        fnuLnuSettings={pricing.fnuLnuSettings}
                       />
                     ))}
                   </div>
@@ -613,7 +666,13 @@ function FlightDetailsContent() {
 
           {/* Sidebar - Desktop Only */}
           <div className="hidden lg:block w-80 flex-shrink-0">
-            <BookingSummary {...sidebarProps} />
+            {/* Summary + fare rules travel together: the rules have to stay
+                readable on the traveller step, not just on mobile. The column
+                scrolls on its own so a long rules table is never cut off. */}
+            <div className="sticky top-4 space-y-4 max-h-[calc(100vh-2rem)] overflow-y-auto">
+              <BookingSummary {...sidebarProps} />
+              <FareRulesAccordion fareRules={pricing.fareRules} />
+            </div>
           </div>
         </div>
       </div>

@@ -175,7 +175,7 @@ export const SelectionBar = ({
               Total
             </div>
             <div className="text-xl font-bold text-gray-900 leading-tight">
-              {canBook ? formatCurrency(total, currency) : '—'}
+              {canBook ? formatCurrency(total, currency) : '-'}
             </div>
           </div>
           <div className="flex flex-col items-center gap-1">

@@ -10,7 +10,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { api, type User, type LoginRequest, type RegisterRequest, type ApiError } from '@/lib/api';
+import { api, ApiError, type User, type LoginRequest, type RegisterRequest } from '@/lib/api';
 
 /**
  * Extract a safe ?next= redirect target from the current URL.
@@ -38,6 +38,7 @@ interface AuthActions {
   googleAuth: (idToken: string) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
+  logoutAll: () => Promise<void>;
   clearError: () => void;
   checkAuth: () => Promise<void>;
 }
@@ -84,7 +85,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const currentUser = await api.getCurrentUser();
       setUser(currentUser);
     } catch (err) {
-      console.error('Auth check failed:', err);
+      // A failed /auth/me on startup is EXPECTED when the stored token is
+      // missing/expired (401) or the backend is unreachable (statusCode 0):
+      // it just means "not signed in". Only log genuinely unexpected failures.
+      const status = err instanceof ApiError ? err.statusCode : undefined;
+      if (status !== 401 && status !== 0) {
+        console.error(
+          `Auth check failed (${status ?? 'unknown'}):`,
+          err instanceof Error ? err.message : err
+        );
+      }
       // Clear invalid tokens
       api.clearTokens();
       setUser(null);
@@ -191,6 +201,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [router]);
 
   /**
+   * Logout-everywhere Handler
+   * Revokes every session server-side, then cleans up like logout
+   */
+  const logoutAll = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      await api.logoutAll();
+    } catch (err) {
+      console.error('Logout-all error:', err);
+    } finally {
+      setUser(null);
+      api.clearTokens();
+      setIsLoading(false);
+      router.push('/login');
+    }
+  }, [router]);
+
+  /**
    * Clear Error Handler
    */
   const clearError = useCallback(() => {
@@ -228,10 +256,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       googleAuth,
       register,
       logout,
+      logoutAll,
       clearError,
       checkAuth,
     }),
-    [user, isAuthenticated, isLoading, error, login, googleAuth, register, logout, clearError, checkAuth]
+    [user, isAuthenticated, isLoading, error, login, googleAuth, register, logout, logoutAll, clearError, checkAuth]
   );
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;

@@ -49,8 +49,22 @@ export interface FlightResult {
   seats: number;
   fareClass: string;
   fareType: string;
+  // Fare identity - what the airline's rules attach to.
+  rbd?: string; // reservation booking class letter
+  fareBasisCode?: string; // Benzy FBC
+  fareHead?: string; // Benzy FCType, e.g. "PUBLISHED"
+  fareGroup?: string; // Benzy FCGroup
+  promo?: string;
+  alliances?: string;
+  hold?: boolean; // fare can be held before payment
+  holdInfo?: string; // raw Benzy HoldInfo, e.g. "E|01:00|1.00|SE|EE"
   recommended: boolean;
   aircraft: string;
+  mealsIncluded?: string | null;
+  pieceDescription?: string | null;
+  notice?: string; // per-flight travel/visa advisory
+  noticeLink?: string; // source link backing the advisory
+  isBusStation?: boolean; // surface/bus segment
 }
 
 export interface FlightSearchResponse {
@@ -104,6 +118,9 @@ export interface MultiCityLeg {
   fromName: string;
   toName: string;
   departDate: string;
+  // The search-session TUI this leg belongs to (DM: unique per leg; IM: shared).
+  // Echoed back per-leg at pricing time.
+  tui: string;
   flights: FlightResult[];
 }
 
@@ -119,8 +136,9 @@ export interface MultiCitySearchResponse {
   totalResults: number;
 }
 
-/** One selected leg for multi-city pricing. */
+/** One selected leg for multi-city pricing (its own search TUI + selection). */
 export interface MultiCityPriceLeg {
+  tui: string;
   flightIndex: string;
   netFare: number;
 }
@@ -144,12 +162,22 @@ export interface SegmentDetail {
   aircraft: string;
   cabin: string;
   fareClass: string;
+  rbd?: string;
   stops: number;
   baggage?: string | null;
+  mealsIncluded?: string | null;
+  pieceDescription?: string | null;
   refundable?: string;
   amenities?: string;
   equipmentType?: string;
   seatsAvailable?: number;
+  hops?: Array<{
+    arrivalCode: string;
+    arrivalName: string;
+    arrivalTime: string;
+    departureTime: string;
+    duration: string;
+  }>;
   direction?: 'ONWARD' | 'RETURN';
   // Zero-based index of the leg/journey this segment belongs to. Used to group
   // segments per hop for multi-city itineraries.
@@ -164,25 +192,38 @@ export interface FareBreakdownItem {
   currency: string;
 }
 
+/**
+ * Benzy penalty amounts are not always numeric - "Non Refundable" is a valid
+ * value and must reach the customer verbatim. `null` means the airline defined
+ * no amount for that pax type, which is NOT the same as a zero-rupee fee.
+ */
+export type FareRuleAmount = number | string | null;
+
 export interface FareRuleCharge {
   description: string;
-  adultAmount: number;
-  childAmount: number;
-  infantAmount: number;
+  adultAmount: FareRuleAmount;
+  childAmount: FareRuleAmount;
+  infantAmount: FareRuleAmount;
+  currency?: string;
 }
 
 export interface FareRule {
   category: string;
   charges: FareRuleCharge[];
+  sector?: string; // which O&D/leg the rule applies to
+  text?: string | null; // free-text narrative of the fare rule
 }
 
 export interface SSROption {
   id: number;
   code: string;
   description: string;
-  charge: number;
+  charge: number; // tax-inclusive: supplier VAT is already folded in
   type: 'baggage' | 'meal' | 'priority' | 'seat' | 'sports' | 'fastForward' | 'other';
   mealImage?: string;
+  pieceDescription?: string | null;
+  isFreeMeal?: boolean;
+  multiSelect?: boolean;
   fuid: number;
 }
 
@@ -192,10 +233,11 @@ export interface SeatInfo {
   seatInfo: string;
   seatType: string;
   available: boolean;
-  fare: number;
-  tax: number;
+  fare: number; // tax-inclusive: seat tax is already folded in
   x: number;
   y: number;
+  height?: number;
+  width?: number;
   seatGroup: string;
 }
 
@@ -226,6 +268,26 @@ export interface FreeSSR {
   ptc: string;
 }
 
+export interface FnuLnuSetting {
+  airlineCode: string;
+  titleMandatory: boolean;
+  fnuMessage: string;
+  lnuMessage: string;
+}
+
+export interface BookingRequirements {
+  baggageMandatory: boolean;
+  gstMandatory: boolean;
+  // PAN can be collected for this itinerary - shown as an optional field unless
+  // panMandatory is also set.
+  panApplicable?: boolean;
+  // PAN must be supplied: only for journeys arriving into India from abroad.
+  panMandatory: boolean;
+  fareMaskingRequired: boolean;
+  seatLayoutAvailable: boolean;
+  ssrAvailable: boolean;
+}
+
 export interface FlightPricingResponse {
   tui: string;
   netAmount: number;
@@ -246,6 +308,9 @@ export interface FlightPricingResponse {
   };
   seatMaps: SegmentSeatMap[];
   travelChecklist: TravelChecklist;
+  fnuLnuSettings: FnuLnuSetting[];
+  bookingRequirements: BookingRequirements;
+  fareNotices: string[];
   passengerCounts: {
     adults: number;
     children: number;
@@ -253,6 +318,9 @@ export interface FlightPricingResponse {
   };
   ssrChargeMap: Record<string, number>;
   freeSSRs: FreeSSR[];
+  // Multi-city only: one { tui, netAmount } per priced leg (DM: N, IM: 1).
+  // Echoed back on booking so the backend can ticket each leg.
+  multiCitySessions?: Array<{ tui: string; netAmount: number }>;
 }
 
 export interface ContactInfo {
@@ -306,6 +374,11 @@ export interface BookingRequest {
   selectedSSR: SSRSelection[];
   ssrChargeMap: Record<string, number>;
   freeSSRs: FreeSSR[];
+  // Echo of bookingRequirements.fareMaskingRequired - sets EnableFareMasking.
+  enableFareMasking?: boolean;
+  // Multi-city (DM) only: echoed straight back from the pricing response. When
+  // length > 1 the backend tickets each leg as its own itinerary.
+  multiCitySessions?: Array<{ tui: string; netAmount: number }>;
   // Route summary persisted for the orders list display.
   tripSummary?: {
     fromCode: string;
@@ -324,7 +397,7 @@ export interface BookingResponse {
   currency: string;
 }
 
-/** Returned by createBooking — frontend redirects the browser to redirectUrl. */
+/** Returned by createBooking - frontend redirects the browser to redirectUrl. */
 export interface BookingInitiateResponse {
   bookingId: string;
   merchantTxnNo: string;
@@ -364,21 +437,33 @@ export interface BookingFlightDetail {
   pnr: string;
   crsPnr?: string;
   webCheckinUrl: string;
+  airlineContact?: string;
+  refundable?: boolean;
 }
 
 export interface BookingPassenger {
   name: string;
   paxType: string;
   ticketNumber: string;
+  ticketStatus?: string;
   gender: string;
+  age?: number;
+  nationality?: string;
+  passportNo?: string;
+  passportPlaceOfIssue?: string;
+  passportExpiry?: string;
+}
+
+export interface BookingCrossSell {
+  code: string;
+  amount: number;
+  status: string;
+  transactionId: string;
 }
 
 export interface BookingFareBreakdown {
-  baseFare: number;
-  taxes: number;
-  ssrAmount: number;
-  gst: number;
-  atFare: number;
+  ticketFare: number; // all-inclusive ticket price for the whole party
+  addOns: number; // selected seats / baggage / meals
   total: number;
 }
 
@@ -396,15 +481,32 @@ export interface BookingDetailsResponse {
   bookingId: string;
   transactionId: string;
   status: string;
+  paymentStatus?: string;
+  sectorType?: 'DOMESTIC' | 'INTERNATIONAL' | '';
+  invoice?: string;
+  cumulativeNetAmount?: number;
+  cancellationId?: string;
+  refundAmount?: number;
+  cancellationCharge?: number;
   bookingDate?: string;
   flights: BookingFlightDetail[];
   journeys?: BookingJourneySummary[];
   passengers: BookingPassenger[];
+  crossSell?: BookingCrossSell[];
   totalAmount: number;
   currency: string;
   fareBreakdown?: BookingFareBreakdown;
   contactEmail: string;
   contactMobile: string;
+}
+
+export interface CancelFlightResponse {
+  transactionId: string;
+  cancellationId: string;
+  status: string;
+  message: string;
+  refundAmount: number;
+  cancellationCharge: number;
 }
 
 // ========== API Functions ==========
@@ -462,6 +564,96 @@ export async function priceAndGetDetails(
   return res.json();
 }
 
+export interface FareRulesLookupResponse {
+  fareRules: FareRule[];
+  unavailable: boolean;
+}
+
+/**
+ * Fetch real cancellation/change penalties for one searched flight.
+ *
+ * Search results carry no rule data, so this prices the fare against Benzy to
+ * obtain it. It is a billable upstream call - only invoke it when the customer
+ * actually asks to see the rules, never eagerly for a list of results.
+ */
+export async function getFareRules(
+  tui: string,
+  flightIndex: string,
+  netFare: number,
+): Promise<FareRulesLookupResponse> {
+  const res = await authFetch(`${API_BASE}/flights/fare-rules`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tui, flightIndex, netFare }),
+  });
+  if (!res.ok) {
+    const err = await res
+      .json()
+      .catch(() => ({ message: 'Could not load fare rules' }));
+    throw new Error(err.message || 'Could not load fare rules');
+  }
+  return res.json();
+}
+
+/** Free check-in allowance included in the fare, for one flown sector. */
+export interface BaggageAllowance {
+  fuid: number;
+  flightNo: string;
+  airlineCode: string;
+  from: string;
+  to: string;
+  checkIn: string | null;
+  pieceDescription: string | null;
+}
+
+/** Purchasable extra baggage for one sector of the itinerary. */
+export interface BaggageSectorOptions {
+  /** null when the airline's catalogue is not scoped to a priced segment. */
+  fuid: number | null;
+  /** "CCU - BOM", or null when the group maps to no specific sector. */
+  sector: string | null;
+  flightNo: string | null;
+  airlineCode: string | null;
+  /** Airline bills the add-on on another sector and carries the bag through. */
+  carriedThrough: boolean;
+  options: SSROption[];
+}
+
+export interface BaggageLookupResponse {
+  allowances: BaggageAllowance[];
+  /** Purchasable extra baggage. Charges are what the add-ons step will bill. */
+  extraBaggage: BaggageSectorOptions[];
+  unavailable: boolean;
+}
+
+/**
+ * Fetch the per-sector baggage allowance and paid-baggage catalogue for one
+ * searched flight.
+ *
+ * Search carries only one journey-level allowance string and nothing about
+ * add-ons, so this prices the fare against Benzy and pulls SSR. Billable
+ * upstream - only invoke when the customer opens the baggage view, never
+ * eagerly across a list of results.
+ */
+export async function getBaggage(
+  tui: string,
+  flightIndex: string,
+  netFare: number,
+): Promise<BaggageLookupResponse> {
+  const res = await authFetch(`${API_BASE}/flights/baggage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tui, flightIndex, netFare }),
+  });
+  if (!res.ok) {
+    const err = await res
+      .json()
+      .catch(() => ({ message: 'Could not load baggage details' }));
+    throw new Error(err.message || 'Could not load baggage details');
+  }
+  return res.json();
+}
+
 export async function searchMultiCityFlights(
   params: MultiCitySearchParams,
 ): Promise<MultiCitySearchResponse> {
@@ -478,14 +670,13 @@ export async function searchMultiCityFlights(
 }
 
 export async function priceMultiCityAndGetDetails(
-  tui: string,
   tripType: 'DM' | 'IM',
   legs: MultiCityPriceLeg[],
 ): Promise<FlightPricingResponse> {
   const res = await authFetch(`${API_BASE}/flights/price-multicity`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tui, tripType, legs }),
+    body: JSON.stringify({ tripType, legs }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Pricing failed' }));
@@ -496,7 +687,7 @@ export async function priceMultiCityAndGetDetails(
 
 /**
  * Starts a booking and returns the payment-gateway redirect URL. The ticket is
- * only issued (by the backend) after the customer completes payment — the
+ * only issued (by the backend) after the customer completes payment - the
  * caller should send the browser to `redirectUrl`.
  */
 export async function createBooking(
@@ -539,6 +730,27 @@ export async function getBookingDetails(
       .json()
       .catch(() => ({ message: 'Failed to fetch booking details' }));
     throw new Error(err.message || 'Failed to fetch booking details');
+  }
+  return res.json();
+}
+
+export async function cancelBooking(
+  transactionId: string,
+  remarks?: string,
+): Promise<CancelFlightResponse> {
+  const res = await authFetch(
+    `${API_BASE}/flights/booking/${transactionId}/cancel`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(remarks ? { remarks } : {}),
+    },
+  );
+  if (!res.ok) {
+    const err = await res
+      .json()
+      .catch(() => ({ message: 'Failed to cancel booking' }));
+    throw new Error(err.message || 'Failed to cancel booking');
   }
   return res.json();
 }

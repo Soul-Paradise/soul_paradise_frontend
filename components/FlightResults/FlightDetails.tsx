@@ -1,11 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import type { FlightResult } from '@/lib/flights-api';
+import { useCallback, useEffect, useState } from 'react';
+import { getBaggage, getFareRules } from '@/lib/flights-api';
+import type {
+  BaggageLookupResponse,
+  FareRule,
+  FlightResult,
+} from '@/lib/flights-api';
+import { FareRulesAccordion } from '@/components/FlightBookingDetails/FareRulesAccordion';
 
 interface FlightDetailsProps {
   flight: FlightResult;
   currency: string;
+  tui: string;
 }
 
 const AIRLINE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -22,6 +29,70 @@ const AIRLINE_COLORS: Record<string, { bg: string; text: string; border: string 
 const DEFAULT_COLOR = { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' };
 
 type Tab = 'flight' | 'fare' | 'baggage';
+
+/* ─── Shared building blocks ───
+   All three tabs render through these so the panes read as one interface
+   rather than three separately-designed screens. */
+
+/** A titled card: gray header strip, white body, optional footnote strip. */
+function Panel({
+  title,
+  subtitle,
+  children,
+  footnote,
+}: {
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
+  children: React.ReactNode;
+  footnote?: React.ReactNode;
+}) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="px-5 py-3 bg-gray-50 border-b border-gray-200">
+        <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide flex items-center flex-wrap gap-x-2">
+          {title}
+        </h2>
+        {subtitle && <p className="mt-0.5 text-[11px] text-gray-500">{subtitle}</p>}
+      </div>
+      {children}
+      {footnote && (
+        <div className="px-5 py-2.5 bg-gray-50 border-t border-gray-100 text-[11px] text-gray-500">
+          {footnote}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The one disclaimer treatment used at the foot of every tab. */
+function Notes({ items }: { items: string[] }) {
+  return (
+    <ul className="space-y-1 text-[11px] text-gray-400">
+      {items.map((note, i) => (
+        <li key={i} className="flex items-start gap-1.5">
+          <span className="mt-1.5 w-1 h-1 rounded-full bg-gray-300 flex-shrink-0" />
+          <span>{note}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Label/value row, shared by the fare-attribute and baggage tables. */
+function Row({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <tr className="border-b border-gray-100 last:border-b-0">
+      <td className="px-5 py-2.5 text-gray-500 align-top">{label}</td>
+      <td className="px-5 py-2.5 text-right font-medium text-gray-700">{children}</td>
+    </tr>
+  );
+}
 
 function formatFullDate(isoString: string) {
   const date = new Date(isoString);
@@ -86,7 +157,7 @@ function getCabinName(cabin: string) {
   return map[cabin] || cabin || 'Economy';
 }
 
-export const FlightDetails = ({ flight }: FlightDetailsProps) => {
+export const FlightDetails = ({ flight, tui }: FlightDetailsProps) => {
   const [activeTab, setActiveTab] = useState<Tab>('flight');
   const colors = AIRLINE_COLORS[flight.airlineCode] || DEFAULT_COLOR;
 
@@ -99,13 +170,17 @@ export const FlightDetails = ({ flight }: FlightDetailsProps) => {
   return (
     <div className="border-t border-gray-200 bg-white">
       {/* Tab bar */}
-      <div className="flex border-b border-gray-200">
+      <div role="tablist" className="flex border-b border-gray-200">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             type="button"
+            role="tab"
+            aria-selected={activeTab === tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-5 py-3 text-sm font-medium transition-colors relative ${
+            /* focus:outline-none replaces the browser's default focus box,
+               which drew a hard rectangle around the whole tab. */
+            className={`px-5 py-3 text-sm font-medium transition-colors relative focus:outline-none focus-visible:bg-gray-50 ${
               activeTab === tab.key
                 ? 'text-red-600'
                 : 'text-gray-500 hover:text-gray-700'
@@ -120,15 +195,15 @@ export const FlightDetails = ({ flight }: FlightDetailsProps) => {
       </div>
 
       {/* Tab content */}
-      <div className="p-5">
+      <div className="p-5 bg-gray-50/60">
         {activeTab === 'flight' && (
           <FlightInfoTab flight={flight} colors={colors} />
         )}
         {activeTab === 'fare' && (
-          <FareSummaryTab flight={flight} />
+          <FareSummaryTab flight={flight} tui={tui} />
         )}
         {activeTab === 'baggage' && (
-          <BaggageTab flight={flight} />
+          <BaggageTab flight={flight} tui={tui} />
         )}
       </div>
     </div>
@@ -185,232 +260,549 @@ function FlightInfoTab({
   ];
 
   return (
-    <div>
-      {/* Route header */}
-      <div className="bg-gray-700 text-white rounded-t-lg px-4 py-2.5 text-sm font-semibold flex items-center flex-wrap gap-x-2 gap-y-1">
-        <span>{flight.from}</span>
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-        </svg>
-        <span>{flight.to}</span>
-        <span className="text-gray-300 font-normal">· {formatRouteDate(flight.departureTime)}</span>
-        <span className="text-gray-300 font-normal">· {formatDuration(flight.duration)}</span>
-        <span className="text-gray-300 font-normal">· {stopsText}</span>
-      </div>
-
-      {/* Flight detail card */}
-      <div className="border border-gray-200 border-t-0 rounded-b-lg p-5">
-        {/* Airline + Aircraft info */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-10 h-10 rounded ${colors.bg} ${colors.border} border flex items-center justify-center`}
+    <div className="space-y-4">
+      <Panel
+        title={
+          <>
+            <span>{flight.from}</span>
+            <svg
+              className="w-4 h-4 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <span className={`text-xs font-bold ${colors.text}`}>{flight.airlineCode}</span>
-            </div>
-            <div>
-              <span className="text-sm font-semibold text-gray-900">{flight.airlineName}</span>
-              <span className="text-sm text-gray-400 ml-2">{flight.flightNo}</span>
-            </div>
-          </div>
-          <div className="flex gap-4">
-            {flight.aircraft && (
-              <div className="text-center">
-                <div className="text-[10px] text-gray-400 uppercase font-medium">Aircraft</div>
-                <div className="text-xs font-semibold text-gray-700">{flight.aircraft}</div>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 8l4 4m0 0l-4 4m4-4H3"
+              />
+            </svg>
+            <span>{flight.to}</span>
+          </>
+        }
+        subtitle={`${formatRouteDate(flight.departureTime)} · ${formatDuration(
+          flight.duration,
+        )} · ${stopsText}`}
+      >
+        <div className="p-5">
+          {/* Airline + Aircraft info */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-10 h-10 rounded ${colors.bg} ${colors.border} border flex items-center justify-center`}
+              >
+                <span className={`text-xs font-bold ${colors.text}`}>{flight.airlineCode}</span>
               </div>
-            )}
-            <div className="text-center">
-              <div className="text-[10px] text-gray-400 uppercase font-medium">Travel Class</div>
-              <div className="text-xs font-semibold text-gray-700">{cabin}</div>
+              <div>
+                <span className="text-sm font-semibold text-gray-900">{flight.airlineName}</span>
+                <span className="text-sm text-gray-400 ml-2">{flight.flightNo}</span>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              {flight.aircraft && (
+                <div className="text-center">
+                  <div className="text-[10px] text-gray-400 uppercase font-medium">Aircraft</div>
+                  <div className="text-xs font-semibold text-gray-700">{flight.aircraft}</div>
+                </div>
+              )}
+              <div className="text-center">
+                <div className="text-[10px] text-gray-400 uppercase font-medium">Travel Class</div>
+                <div className="text-xs font-semibold text-gray-700">{cabin}</div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Itinerary — one journey per hop (origin → halt → destination) */}
-        <ol className="relative">
-          {stops.map((s, i) => {
-            const last = i === stops.length - 1;
-            return (
-              <li key={i} className="flex gap-3">
-                {/* Timeline rail */}
-                <div className="flex flex-col items-center pt-1.5">
-                  <span
-                    className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                      s.kind === 'halt'
-                        ? 'bg-white border-2 border-orange-400'
-                        : 'bg-blue-500 border-2 border-blue-500'
-                    }`}
-                  />
-                  {!last && <span className="w-px flex-1 bg-gray-200 my-1" />}
-                </div>
+          {/* Itinerary - one journey per hop (origin → halt → destination) */}
+          <ol className="relative">
+            {stops.map((s, i) => {
+              const last = i === stops.length - 1;
+              return (
+                <li key={i} className="flex gap-3">
+                  {/* Timeline rail */}
+                  <div className="flex flex-col items-center pt-1.5">
+                    <span
+                      className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                        s.kind === 'halt'
+                          ? 'bg-white border-2 border-orange-400'
+                          : 'bg-blue-500 border-2 border-blue-500'
+                      }`}
+                    />
+                    {!last && <span className="w-px flex-1 bg-gray-200 my-1" />}
+                  </div>
 
-                {/* Stop content */}
-                <div className={`flex-1 min-w-0 ${last ? '' : 'pb-5'}`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold text-gray-800">
-                        {s.name} [<span className="font-bold">{s.code}</span>]
+                  {/* Stop content */}
+                  <div className={`flex-1 min-w-0 ${last ? '' : 'pb-5'}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-gray-800">
+                          {s.name} [<span className="font-bold">{s.code}</span>]
+                        </div>
+                        {s.terminal && (
+                          <div className="text-xs text-gray-400 mt-0.5">Terminal {s.terminal}</div>
+                        )}
+                        {s.kind === 'halt' && (
+                          <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-md bg-orange-50 border border-orange-200 px-2 py-0.5 text-[11px] font-medium text-orange-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+                            Layover {formatGap(s.layover || '')} · Change planes
+                          </div>
+                        )}
                       </div>
-                      {s.terminal && (
-                        <div className="text-xs text-gray-400 mt-0.5">Terminal {s.terminal}</div>
-                      )}
-                      {s.kind === 'halt' && (
-                        <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-md bg-orange-50 border border-orange-200 px-2 py-0.5 text-[11px] font-medium text-orange-700">
-                          <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
-                          Layover {formatGap(s.layover || '')} · Change planes
+                      {s.time && (
+                        <div className="text-right flex-shrink-0">
+                          <div className="text-lg font-bold text-gray-900 leading-tight">
+                            {formatTime(s.time)}
+                          </div>
+                          <div className="text-[11px] text-gray-500">{formatFullDate(s.time)}</div>
                         </div>
                       )}
                     </div>
-                    {s.time && (
-                      <div className="text-right flex-shrink-0">
-                        <div className="text-lg font-bold text-gray-900 leading-tight">
-                          {formatTime(s.time)}
+
+                    {/* Flight leg to the next stop */}
+                    {!last && (
+                      <div className="mt-3 flex items-center gap-2 text-[11px] text-gray-500">
+                        <div
+                          className={`w-6 h-6 rounded ${colors.bg} ${colors.border} border flex items-center justify-center flex-shrink-0`}
+                        >
+                          <span className={`text-[9px] font-bold ${colors.text}`}>
+                            {flight.airlineCode}
+                          </span>
                         </div>
-                        <div className="text-[11px] text-gray-500">{formatFullDate(s.time)}</div>
+                        <span className="font-medium text-gray-700">{airline}</span>
+                        <span className="text-gray-300">·</span>
+                        <span>{cabin}</span>
                       </div>
                     )}
                   </div>
-
-                  {/* Flight leg to the next stop */}
-                  {!last && (
-                    <div className="mt-3 flex items-center gap-2 text-[11px] text-gray-500">
-                      <div
-                        className={`w-6 h-6 rounded ${colors.bg} ${colors.border} border flex items-center justify-center flex-shrink-0`}
-                      >
-                        <span className={`text-[9px] font-bold ${colors.text}`}>
-                          {flight.airlineCode}
-                        </span>
-                      </div>
-                      <span className="font-medium text-gray-700">{airline}</span>
-                      <span className="text-gray-300">·</span>
-                      <span>{cabin}</span>
-                    </div>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ol>
-
-        {/* Info notice */}
-        <div className="mt-5 flex items-center gap-1.5 text-xs">
-          <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">
-            Info
-          </span>
-          <span className="text-gray-500">Meal, Seat are chargeable.</span>
+                </li>
+              );
+            })}
+          </ol>
         </div>
-      </div>
+
+        {/* Inclusions + advisories, divided off from the itinerary */}
+        <div className="border-t border-gray-100 px-5 py-3 space-y-2">
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+              Info
+            </span>
+            <span className="text-gray-500">
+              {flight.mealsIncluded ? 'Meal included' : 'Meal, Seat are chargeable.'}
+              {flight.pieceDescription ? ` · ${flight.pieceDescription}` : ''}
+            </span>
+          </div>
+
+          {flight.notice && (
+            <div className="flex items-start gap-1.5 text-xs">
+              <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase flex-shrink-0">
+                Note
+              </span>
+              <span className="text-gray-500">
+                {flight.notice}
+                {flight.noticeLink && (
+                  <a
+                    href={flight.noticeLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-1 text-red-600 underline font-medium"
+                  >
+                    Read more
+                  </a>
+                )}
+              </span>
+            </div>
+          )}
+        </div>
+      </Panel>
+
+      <Notes
+        items={[
+          'Times shown are local to each airport.',
+          'Connecting flights are subject to change by the airline.',
+        ]}
+      />
     </div>
   );
 }
 
 /* ─── Fare Summary & Rules Tab ─── */
 
-function FareSummaryTab({ flight }: { flight: FlightResult }) {
+/** Decode Benzy's HoldInfo ("E|01:00|1.00|SE|EE") into its hold duration. */
+function holdDuration(holdInfo?: string | null): string | null {
+  if (!holdInfo) return null;
+  const parts = holdInfo.split('|');
+  const hhmm = parts[1]?.trim();
+  if (!hhmm || !/^\d{1,2}:\d{2}$/.test(hhmm)) return null;
+  const [h, m] = hhmm.split(':').map(Number);
+  if (!h && !m) return null;
+  return [h ? `${h} hr` : '', m ? `${m} min` : ''].filter(Boolean).join(' ');
+}
+
+function FareSummaryTab({ flight, tui }: { flight: FlightResult; tui: string }) {
+  const [rules, setRules] = useState<FareRule[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Rules are only fetched when this tab is actually mounted (i.e. the customer
+  // clicked it). Pricing the fare upstream is a billable call, so it must never
+  // fire while merely browsing results.
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await getFareRules(tui, flight.index, flight.netFare);
+      setRules(res.fareRules);
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : 'Could not load fare rules.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [tui, flight.index, flight.netFare]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const hold = holdDuration(flight.holdInfo);
+
   return (
-    <div className="max-w-xl">
-      {/* Fare attributes */}
-      <div className="bg-sky-50 rounded-lg border border-sky-100 p-4">
-        <div className="text-sm font-semibold text-gray-800 mb-3">
-          {flight.from} - {flight.to}
-        </div>
+    <div className="space-y-4">
+      <Panel title="Fare Summary" subtitle={`${flight.from} - ${flight.to}`}>
         <table className="w-full text-sm">
           <tbody>
-            <tr className="border-b border-sky-100">
-              <td className="py-2 text-gray-500">Travel Class</td>
-              <td className="py-2 text-right font-medium text-gray-700">
-                {getCabinName(flight.cabin)}
-              </td>
-            </tr>
-            <tr className="border-b border-sky-100">
-              <td className="py-2 text-gray-500">Check-in Baggage</td>
-              <td className="py-2 text-right font-medium text-gray-700">
-                {flight.baggage || 'As per airline policy'}
-              </td>
-            </tr>
-            <tr>
-              <td className="py-2 text-gray-500">Refundable</td>
-              <td className="py-2 text-right">
-                <span
-                  className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                    flight.refundable
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-red-100 text-red-600'
-                  }`}
-                >
-                  {flight.refundable ? 'Yes' : 'No'}
+            <Row label="Travel Class">
+              {getCabinName(flight.cabin)}
+              {flight.rbd && (
+                <span className="text-xs text-gray-400 font-normal">
+                  {' '}
+                  · Booking class {flight.rbd}
                 </span>
-              </td>
-            </tr>
+              )}
+            </Row>
+            {(flight.fareHead || flight.fareBasisCode) && (
+              <Row label="Fare Type">
+                {flight.fareHead || '-'}
+                {flight.fareBasisCode && (
+                  <span className="block text-xs text-gray-400 font-normal">
+                    Fare basis {flight.fareBasisCode}
+                  </span>
+                )}
+              </Row>
+            )}
+            <Row label="Check-in Baggage">
+              {flight.baggage || 'As per airline policy'}
+              {flight.pieceDescription && (
+                <span className="block text-xs text-gray-400 font-normal">
+                  {flight.pieceDescription}
+                </span>
+              )}
+            </Row>
+            {flight.promo && (
+              <Row label="Promo Applied">
+                <span className="text-emerald-700">{flight.promo}</span>
+              </Row>
+            )}
+            {hold && <Row label="Hold Available">Up to {hold}</Row>}
+            <Row label="Refundable">
+              {/* Benzy's flag only says whether the fare is refundable at
+                  all - refundable fares still carry a cancellation penalty,
+                  so never present this as a full refund. */}
+              <span
+                className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                  flight.refundable
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-red-100 text-red-600'
+                }`}
+              >
+                {flight.refundable ? 'Refundable with penalty' : 'Non-Refundable'}
+              </span>
+            </Row>
           </tbody>
         </table>
-      </div>
+      </Panel>
 
-      <div className="mt-3 text-xs text-gray-400 space-y-1">
-        <p>
-          * The full fare breakdown (base fare, taxes &amp; fees, service charge) and
-          fare rules (change fee, cancellation fee) are shown on the booking page.
-        </p>
-        <p>
-          * The above data is indicatory, fare rules are subject to changes by the airline.
-        </p>
-      </div>
+      {/* Real cancellation / change penalties from the airline */}
+      {loading && (
+        <div className="flex items-center gap-2 text-sm text-gray-500 py-3">
+          <span className="w-4 h-4 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+          Fetching the airline&apos;s latest cancellation and change charges…
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="flex items-start justify-between gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+          <p className="text-xs text-red-600">{error}</p>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="text-xs font-semibold text-red-700 underline flex-shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && rules && rules.length > 0 && (
+        <FareRulesAccordion fareRules={rules} />
+      )}
+
+      {!loading && !error && rules && rules.length === 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-xs text-amber-700">
+          The airline has not published structured cancellation and change
+          charges for this fare. They will be confirmed on the booking page
+          before you pay.
+        </div>
+      )}
+
+      <Notes
+        items={[
+          'Charges are levied by the airline per passenger, per journey, and are in addition to the ticket fare.',
+          'Fare rules are subject to change by the airline. The amounts confirmed at the time of booking apply.',
+        ]}
+      />
     </div>
   );
 }
 
 /* ─── Baggage Information Tab ─── */
 
-function BaggageTab({ flight }: { flight: FlightResult }) {
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function BaggageTab({ flight, tui }: { flight: FlightResult; tui: string }) {
+  const [data, setData] = useState<BaggageLookupResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Same rule as the fare tab: pricing the fare upstream is billable, so this
+  // only runs once the customer has actually opened this tab.
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setData(await getBaggage(tui, flight.index, flight.netFare));
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : 'Could not load baggage details.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [tui, flight.index, flight.netFare]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Until the per-sector allowance arrives (or if it never does), fall back to
+  // the single journey-level string search already gave us, so the panel is
+  // never empty.
+  const allowances = data?.allowances.length
+    ? data.allowances
+    : [
+        {
+          fuid: 0,
+          flightNo: flight.flightNo,
+          airlineCode: flight.airlineCode,
+          from: flight.from,
+          to: flight.to,
+          checkIn: flight.baggage,
+          pieceDescription: flight.pieceDescription ?? null,
+        },
+      ];
+
+  // Already grouped and de-duplicated per sector by the backend.
+  const groups = data?.extraBaggage ?? [];
+  const chargedGroups = groups.filter((g) => !g.carriedThrough);
+  const carriedGroups = groups.filter((g) => g.carriedThrough);
+  // Which sector the customer actually pays on - named in the carried-through
+  // line so "charged here, not there" is explicit rather than implied.
+  const chargedSectorName =
+    chargedGroups.find((g) => g.sector)?.sector ?? 'the charged sector';
+
   return (
-    <div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-sky-50">
-              <th className="px-4 py-3 text-left font-semibold text-gray-700 border border-sky-100">
-                Sector/Flight
-              </th>
-              <th className="px-4 py-3 text-center font-semibold text-gray-700 border border-sky-100">
-                Check in Baggage
-              </th>
-              <th className="px-4 py-3 text-center font-semibold text-gray-700 border border-sky-100">
-                Cabin Baggage
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td className="px-4 py-3 text-gray-700 font-medium border border-gray-100">
-                {flight.from} - {flight.to}
-              </td>
-              <td className="px-4 py-3 text-center text-gray-600 border border-gray-100">
-                {flight.baggage || 'As per airline policy'}
-              </td>
-              <td className="px-4 py-3 text-center text-gray-600 border border-gray-100">
-                7Kg (Adult)
-              </td>
-            </tr>
-          </tbody>
-        </table>
+    <div className="space-y-4">
+      <Panel
+        title="Baggage Allowance"
+        subtitle="Free allowance included in this fare."
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 text-[11px] uppercase tracking-wide text-gray-500">
+                <th className="px-5 py-2.5 text-left font-medium">Sector/Flight</th>
+                <th className="px-5 py-2.5 text-right font-medium">
+                  Check-in Baggage
+                </th>
+                <th className="px-5 py-2.5 text-right font-medium">Cabin Baggage</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allowances.map((a, i) => (
+                <tr key={`${a.fuid}-${i}`} className="border-b border-gray-100 last:border-b-0">
+                  <td className="px-5 py-2.5 text-gray-500 align-top">
+                    {a.from} - {a.to}
+                    {a.flightNo && (
+                      <span className="block text-xs text-gray-400">
+                        {a.airlineCode} {a.flightNo}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-5 py-2.5 text-right font-medium text-gray-700 align-top">
+                    {a.checkIn || 'As per airline policy'}
+                    {a.pieceDescription && (
+                      <span className="block text-xs text-gray-400 font-normal">
+                        {a.pieceDescription}
+                      </span>
+                    )}
+                  </td>
+                  {/* Benzy carries no cabin-baggage field at any stage -
+                      Inclusions.Baggage is check-in only. Printing a fixed
+                      weight here would be inventing airline policy. */}
+                  <td className="px-5 py-2.5 text-right font-medium text-gray-700 align-top">
+                    As per airline policy
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+
+      {loading && (
+        <div className="flex items-center gap-2 text-sm text-gray-500 py-3">
+          <span className="w-4 h-4 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+          Checking the airline&apos;s per-sector allowance and extra baggage
+          prices…
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="flex items-start justify-between gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+          <p className="text-xs text-red-600">{error}</p>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="text-xs font-semibold text-red-700 underline flex-shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && chargedGroups.length > 0 && (
+        <Panel
+          title="Additional Baggage"
+          subtitle={
+            allowances.length > 1
+              ? 'Charged once per passenger, on the sector named below.'
+              : 'Prices are per passenger. Add these during booking.'
+          }
+        >
+          <div className="divide-y divide-gray-100">
+            {chargedGroups.map((group, gi) => (
+              <div key={group.fuid ?? `unmapped-${gi}`} className="px-5 py-3">
+                {/* On a connecting itinerary the customer has to know which leg
+                    the charge attaches to, so always name it - even when there
+                    is only one charging group. */}
+                {allowances.length > 1 && (
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-2">
+                    {group.sector ? (
+                      <>
+                        {group.sector}
+                        {group.flightNo && (
+                          <span className="text-gray-400 font-normal">
+                            {' · '}
+                            {group.airlineCode} {group.flightNo}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      /* The airline sent no segment scope, so attributing this
+                         to a leg would be a guess. */
+                      <>
+                        Whole journey ({flight.from} - {flight.to})
+                      </>
+                    )}
+                  </p>
+                )}
+                <ul className="space-y-1.5">
+                  {group.options.map((opt) => {
+                    const total = opt.charge || 0;
+                    return (
+                      <li
+                        key={opt.id}
+                        className="flex items-baseline justify-between gap-4 text-sm"
+                      >
+                        <span className="text-gray-700">
+                          {opt.description}
+                          {opt.pieceDescription && (
+                            <span className="block text-xs text-gray-400">
+                              {opt.pieceDescription}
+                            </span>
+                          )}
+                        </span>
+                        <span className="font-semibold text-gray-800 tabular-nums flex-shrink-0">
+                          {/* `charge` is already tax-inclusive - this is the
+                              total the customer will actually pay. */}
+                          {total > 0 ? formatCurrency(total) : 'Free'}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      )}
+
+      {/* The connecting sector(s) the airline does NOT bill separately. Stated
+          in words instead of a second ₹0 price list, which read as a rival
+          price for the same bag. */}
+      {!loading && !error && carriedGroups.length > 0 && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 text-xs text-emerald-800">
+          No separate baggage charge on{' '}
+          <span className="font-semibold">
+            {carriedGroups
+              .map(
+                (g, i) =>
+                  g.sector ?? `connecting sector ${g.fuid ?? i + 1}`,
+              )
+              .join(', ')}
+          </span>
+          . Baggage bought on {chargedSectorName} is carried through to your
+          final destination.
+        </div>
+      )}
+
+      {!loading && !error && data && groups.length === 0 && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-xs text-gray-500">
+          The airline is not offering pre-purchasable extra baggage on this
+          fare. Excess baggage will be charged at the airport.
+        </div>
+      )}
+
+      {/* Same amber treatment the Fare tab uses for airline-side caveats */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-xs text-amber-700">
+        Adding of additional baggage is subject to load factor of the flight. In
+        case baggage could not be added, payment for the additional baggage paid
+        will be reverted.
       </div>
 
-      <div className="mt-4 text-xs text-gray-400 space-y-1.5">
-        <p className="flex items-start gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1 flex-shrink-0" />
-          The baggage allowance may vary according to stop-overs, connecting flights and changes in airline rules.
-        </p>
-        <p className="flex items-start gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1 flex-shrink-0" />
-          Additional baggage can be added during the booking process.
-        </p>
-      </div>
-
-      {/* Warning */}
-      <div className="mt-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-xs text-red-600">
-        Adding of additional baggage is subject to load factor of the flight. In case baggage could not be added, payment for the additional baggage paid will be reverted.
-      </div>
+      <Notes
+        items={[
+          'The baggage allowance may vary according to stop-overs, connecting flights and changes in airline rules.',
+          'Additional baggage can be added during the booking process.',
+        ]}
+      />
     </div>
   );
 }

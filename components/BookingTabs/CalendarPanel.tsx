@@ -185,7 +185,7 @@ export function CalendarPanel({
   const displayEnd = isRange ? endDate : null;
 
   function formatTab(d: Date | null) {
-    if (!d) return '—';
+    if (!d) return '-';
     return `${d.toLocaleString('default', { month: 'short' })} ${d.getDate()}, ${d.getFullYear()}`;
   }
 

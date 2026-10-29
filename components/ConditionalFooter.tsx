@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { Footer } from './Footer';
 
 /**
- * Auth and onboarding routes are full-height, self-contained screens — a marketing
+ * Auth and onboarding routes are full-height, self-contained screens - a marketing
  * footer below them just adds a scrollbar to a page that should not scroll.
  *
  * Prefix-matched, not exact: these routes have children (/register/agent), and an

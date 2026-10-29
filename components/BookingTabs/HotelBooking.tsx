@@ -180,7 +180,7 @@ export const HotelBooking = () => {
       checkIn: toDateStr(checkIn),
       checkOut: toDateStr(checkOut),
       rooms: JSON.stringify(rooms),
-      // 2-letter ISO country code from the autosuggest result — drives destinationCountryCode / commission
+      // 2-letter ISO country code from the autosuggest result - drives destinationCountryCode / commission
       destinationCountryCode: destination.country || 'IN',
     });
     router.push(`/booking/hotels?${params.toString()}`);
@@ -193,7 +193,7 @@ export const HotelBooking = () => {
         {/* Mobile: 2-col grid (destination full-width, dates side-by-side, guests full-width) */}
         {/* sm+: single flex row */}
         <div className="grid grid-cols-2 sm:flex sm:items-stretch divide-y divide-gray-200 sm:divide-y-0">
-          {/* Destination — full width on mobile */}
+          {/* Destination - full width on mobile */}
           <button
             onClick={() => { setActivePanel(activePanel === 'destination' ? null : 'destination'); setSearchTerm(''); setSuggestions([]); }}
             className={[
@@ -212,7 +212,7 @@ export const HotelBooking = () => {
             </div>
           </button>
 
-          {/* Dates wrapper — relative so the calendar anchors under the date fields */}
+          {/* Dates wrapper - relative so the calendar anchors under the date fields */}
           <div className="col-span-2 grid grid-cols-2 sm:flex sm:flex-[2] relative">
             {/* Check In */}
             <button
@@ -273,7 +273,7 @@ export const HotelBooking = () => {
 
           </div>
 
-          {/* Rooms & Guests — full width on mobile */}
+          {/* Rooms & Guests - full width on mobile */}
           <button
             onClick={() => setActivePanel(activePanel === 'guests' ? null : 'guests')}
             className={[
@@ -422,7 +422,7 @@ export const HotelBooking = () => {
         )}
       </div>
 
-      {/* Search Button row — matches Flights tab */}
+      {/* Search Button row - matches Flights tab */}
       <div className="flex justify-end">
         <button
           onClick={handleSearch}

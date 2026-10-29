@@ -17,7 +17,7 @@ export function loadSearch<T>(key: string): T | null {
     const raw = window.localStorage.getItem(PREFIX + key);
     return raw ? (JSON.parse(raw) as T) : null;
   } catch {
-    // Corrupt JSON, private-mode restrictions, etc. — fall back to defaults.
+    // Corrupt JSON, private-mode restrictions, etc. - fall back to defaults.
     return null;
   }
 }
@@ -27,14 +27,14 @@ export function saveSearch<T>(key: string, value: T): void {
   try {
     window.localStorage.setItem(PREFIX + key, JSON.stringify(value));
   } catch {
-    // Quota exceeded / storage disabled — persistence is best-effort.
+    // Quota exceeded / storage disabled - persistence is best-effort.
   }
 }
 
 /**
  * A stored date string ('YYYY-MM-DD') is only useful if it hasn't already
  * passed. Returns the stored value when it is today or later, otherwise the
- * given fallback — so a returning user never resumes into a past-dated search.
+ * given fallback - so a returning user never resumes into a past-dated search.
  */
 export function notBeforeToday(dateStr: string | undefined, fallback: string): string {
   if (!dateStr) return fallback;
@@ -49,7 +49,7 @@ export function notBeforeToday(dateStr: string | undefined, fallback: string): s
  * Syncs a form's search inputs to localStorage.
  *
  * - On mount, reads any saved snapshot and hands it to `onRestore` (once).
- * - On every subsequent change to `snapshot`, writes it back — so overriding a
+ * - On every subsequent change to `snapshot`, writes it back - so overriding a
  *   value updates storage immediately.
  *
  * The `hydrated` gate is what prevents the write effect from clobbering saved

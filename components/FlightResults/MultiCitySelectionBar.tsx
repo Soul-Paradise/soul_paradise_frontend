@@ -58,7 +58,7 @@ export const MultiCitySelectionBar = ({
               Total ({selectedCount}/{legs.length})
             </div>
             <div className="text-xl font-bold text-gray-900 leading-tight">
-              {canBook ? formatCurrency(total, currency) : '—'}
+              {canBook ? formatCurrency(total, currency) : '-'}
             </div>
           </div>
           <button

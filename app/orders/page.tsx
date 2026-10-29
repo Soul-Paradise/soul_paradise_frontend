@@ -1,8 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import {
   Plane,
+  CreditCard,
+  Hash,
   Hotel,
   ShieldCheck,
   Loader2,
@@ -20,13 +24,17 @@ import {
   type HotelBookingSummary,
   type InsuranceBookingSummary,
 } from '@/lib/bookings-api';
+import { api, type CustomPayment, type PaymentStatus } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
 import { showToast } from '@/lib/toast';
 
-type TabKey = 'flights' | 'hotels' | 'insurance';
+type TabKey = 'flights' | 'hotels' | 'insurance' | 'payments';
+
+const isTabKey = (v: string | null): v is TabKey =>
+  v === 'flights' || v === 'hotels' || v === 'insurance' || v === 'payments';
 
 function formatDate(value: string | null | undefined) {
-  if (!value) return '—';
+  if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString('en-IN', {
@@ -94,18 +102,38 @@ const TABS: { key: TabKey; label: string; icon: typeof Plane }[] = [
   { key: 'flights', label: 'Flights', icon: Plane },
   { key: 'hotels', label: 'Hotels', icon: Hotel },
   { key: 'insurance', label: 'Insurance', icon: ShieldCheck },
+  { key: 'payments', label: 'Payments', icon: CreditCard },
 ];
 
 export default function OrdersPage() {
-  const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-(--color-foreground)" />
+        </div>
+      }
+    >
+      <OrdersContent />
+    </Suspense>
+  );
+}
 
-  const [activeTab, setActiveTab] = useState<TabKey>('flights');
+function OrdersContent() {
+  const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
+  // ?tab=payments deep-links from the home page's Custom Payment tab.
+  const tabParam = useSearchParams().get('tab');
+
+  const [activeTab, setActiveTab] = useState<TabKey>(
+    isTabKey(tabParam) ? tabParam : 'flights',
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [flights, setFlights] = useState<FlightBookingSummary[]>([]);
   const [hotels, setHotels] = useState<HotelBookingSummary[]>([]);
   const [insurance, setInsurance] = useState<InsuranceBookingSummary[]>([]);
+  const [payments, setPayments] = useState<CustomPayment[]>([]);
 
   // Cancellation modal state
   const [cancelTarget, setCancelTarget] = useState<HotelBookingSummary | null>(
@@ -117,16 +145,23 @@ export default function OrdersPage() {
   const loadAll = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const [f, h, i] = await Promise.allSettled([
+    const [f, h, i, p] = await Promise.allSettled([
       listFlightBookings(),
       listHotelBookings(),
       listInsuranceBookings(),
+      api.getCustomPayments(),
     ]);
     if (f.status === 'fulfilled') setFlights(f.value);
     if (h.status === 'fulfilled') setHotels(h.value);
     if (i.status === 'fulfilled') setInsurance(i.value);
+    if (p.status === 'fulfilled') setPayments(p.value);
 
-    if (f.status === 'rejected' && h.status === 'rejected' && i.status === 'rejected') {
+    if (
+      f.status === 'rejected' &&
+      h.status === 'rejected' &&
+      i.status === 'rejected' &&
+      p.status === 'rejected'
+    ) {
       setError('Failed to load your bookings. Please try again.');
     }
     setLoading(false);
@@ -175,6 +210,7 @@ export default function OrdersPage() {
     flights: flights.length,
     hotels: hotels.length,
     insurance: insurance.length,
+    payments: payments.length,
   };
 
   return (
@@ -185,8 +221,8 @@ export default function OrdersPage() {
             My Orders
           </h1>
           <p className="mt-1 text-sm text-(--color-inactive)">
-            View your flight, hotel and insurance bookings and manage
-            cancellations.
+            View your flight, hotel and insurance bookings, custom payments,
+            and manage cancellations.
           </p>
         </header>
 
@@ -261,6 +297,14 @@ export default function OrdersPage() {
                 ))}
               />
             )}
+            {activeTab === 'payments' && (
+              <BookingList
+                empty="You have not made any custom payments yet."
+                items={payments.map((p) => (
+                  <PaymentCard key={p.merchantTxnNo} payment={p} />
+                ))}
+              />
+            )}
           </section>
         )}
       </div>
@@ -283,7 +327,7 @@ export default function OrdersPage() {
                 </h2>
                 <p className="mt-1 text-sm text-(--color-inactive)">
                   {cancelTarget.hotelName || 'This hotel booking'}
-                  {cancelTarget.city ? `, ${cancelTarget.city}` : ''} — check-in{' '}
+                  {cancelTarget.city ? `, ${cancelTarget.city}` : ''} - check-in{' '}
                   {formatDate(cancelTarget.checkInDate)}. This action cannot be
                   undone.
                 </p>
@@ -466,7 +510,7 @@ function InsuranceCard({ booking }: { booking: InsuranceBookingSummary }) {
           <p className="mt-1 text-sm text-(--color-inactive)">
             {booking.policyNumber
               ? `Policy ${booking.policyNumber}`
-              : `Txn ${booking.transactionId}`}
+              : `Booking ${booking.bookingId}`}
           </p>
         </div>
         <p className="text-base font-bold text-(--color-foreground)">
@@ -484,6 +528,71 @@ function InsuranceCard({ booking }: { booking: InsuranceBookingSummary }) {
         {booking.contactEmail && (
           <MetaRow icon={Mail}>{booking.contactEmail}</MetaRow>
         )}
+      </div>
+      {booking.transactionId && (
+        <Link
+          href={`/booking/insurance/confirmation/${encodeURIComponent(booking.transactionId)}`}
+          className="mt-3 inline-block text-sm font-semibold text-(--color-links) hover:underline"
+        >
+          View policy
+        </Link>
+      )}
+    </CardShell>
+  );
+}
+
+const PAYMENT_STATUS: Record<PaymentStatus, { label: string; cls: string }> = {
+  PAID: { label: 'Paid', cls: STATUS_STYLES.Confirmed },
+  INITIATED: { label: 'Pending', cls: STATUS_STYLES.Pending },
+  REDIRECTED: { label: 'Pending', cls: STATUS_STYLES.Pending },
+  FAILED: { label: 'Failed', cls: STATUS_STYLES.Cancelled },
+  CANCELLED: { label: 'Cancelled', cls: STATUS_STYLES.Cancelled },
+  EXPIRED: { label: 'Expired', cls: STATUS_STYLES.Cancelled },
+  REFUND_PENDING: { label: 'Refund pending', cls: STATUS_STYLES.Refunded },
+  REFUNDED: { label: 'Refunded', cls: STATUS_STYLES.Refunded },
+};
+
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function PaymentCard({ payment }: { payment: CustomPayment }) {
+  const status = PAYMENT_STATUS[payment.status];
+  return (
+    <CardShell>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-base font-bold text-(--color-foreground)">
+              Custom payment
+            </h3>
+            <span
+              className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${status.cls}`}
+            >
+              {status.label}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-(--color-inactive)">Via ICICI Bank</p>
+        </div>
+        <p className="text-base font-bold text-(--color-foreground)">
+          {new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+            maximumFractionDigits: 2,
+          }).format(Number(payment.amount))}
+        </p>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+        <MetaRow icon={CalendarDays}>
+          {formatDateTime(payment.paidAt ?? payment.createdAt)}
+        </MetaRow>
+        <MetaRow icon={Hash}>Ref {payment.merchantTxnNo}</MetaRow>
       </div>
     </CardShell>
   );

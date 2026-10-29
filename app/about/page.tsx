@@ -25,7 +25,7 @@ export default function AboutPage() {
                 Soul Paradise is a proud initiative founded by <span className="font-semibold text-(--color-foreground)">Mr. Sanjay Srivastava</span> and <span className="font-semibold text-(--color-foreground)">Mrs. Shafali Srivastava</span>, driven by a passion for making travel accessible, affordable, and memorable for everyone.
               </p>
               <p>
-                What started as a vision to provide exceptional travel services has grown into a trusted name in the industry. We believe that every journey should be more than just a destination—it should be an experience that enriches your life.
+                What started as a vision to provide exceptional travel services has grown into a trusted name in the industry. We believe that every journey should be more than just a destination - it should be an experience that enriches your life.
               </p>
               <p>
                 Based in <span className="font-semibold text-(--color-foreground)">Jalandhar, Punjab</span>, we've built our reputation on three pillars: competitive pricing, personalized service, and unwavering commitment to quality.
@@ -249,7 +249,7 @@ export default function AboutPage() {
             Our Commitment to You
           </h2>
           <p className="text-lg sm:text-xl leading-relaxed mb-8">
-            At Soul Paradise, we don't just book tickets—we create experiences. Our commitment to service, quality, and operational excellence sets the benchmark for travel services in India. We continually innovate to bring you the best in tourism and hospitality, ensuring every journey with us is prompt, efficient, and memorable.
+            At Soul Paradise, we don't just book tickets - we create experiences. Our commitment to service, quality, and operational excellence sets the benchmark for travel services in India. We continually innovate to bring you the best in tourism and hospitality, ensuring every journey with us is prompt, efficient, and memorable.
           </p>
           <div className="flex flex-wrap justify-center gap-4 md:gap-6 mt-8">
             <div className="bg-(--color-background) px-6 py-4 rounded-lg min-w-[140px] shadow hover:shadow-md transition-shadow">

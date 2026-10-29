@@ -58,7 +58,11 @@ function parseLegs(raw: string): MultiCityPriceLeg[] {
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter((l) => l && typeof l.flightIndex === 'string')
-      .map((l) => ({ flightIndex: l.flightIndex, netFare: Number(l.netFare) || 0 }));
+      .map((l) => ({
+        tui: String(l.tui || ''),
+        flightIndex: l.flightIndex,
+        netFare: Number(l.netFare) || 0,
+      }));
   } catch {
     return [];
   }
@@ -70,7 +74,6 @@ function MultiCityDetailsContent() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const tui = searchParams.get('tui') || '';
   const tripType = (searchParams.get('tripType') === 'IM' ? 'IM' : 'DM') as 'DM' | 'IM';
   const legsRaw = searchParams.get('legs') || '';
 
@@ -102,7 +105,7 @@ function MultiCityDetailsContent() {
     if (pricingLoadedRef.current) return;
 
     const legs = parseLegs(legsRaw);
-    if (!tui || legs.length < 2) {
+    if (legs.length < 2 || legs.some((l) => !l.tui)) {
       setError('Missing itinerary. Please go back and search again.');
       setLoading(false);
       return;
@@ -112,7 +115,7 @@ function MultiCityDetailsContent() {
     setLoading(true);
     setError('');
 
-    priceMultiCityAndGetDetails(tui, tripType, legs)
+    priceMultiCityAndGetDetails(tripType, legs)
       .then((data) => {
         setPricing(data);
         const paxList: TravellerInfo[] = [];
@@ -125,7 +128,7 @@ function MultiCityDetailsContent() {
         setError(err.message || 'Failed to load flight pricing.');
       })
       .finally(() => setLoading(false));
-  }, [tui, tripType, legsRaw]);
+  }, [tripType, legsRaw]);
 
   const updateTraveller = (index: number, updated: TravellerInfo) => {
     setTravellers((prev) => prev.map((t, i) => (i === index ? updated : t)));
@@ -134,6 +137,9 @@ function MultiCityDetailsContent() {
   const validateTravellerForms = (): string | null => {
     if (!contactInfo.email) return 'Contact email is required.';
     if (!contactInfo.mobile) return 'Contact mobile number is required.';
+
+    // Fare-level booking requirements (from Benzy pricing).
+    const req = pricing?.bookingRequirements;
 
     for (let i = 0; i < travellers.length; i++) {
       const t = travellers[i];
@@ -145,6 +151,21 @@ function MultiCityDetailsContent() {
         if (cl.nationality && !t.nationality) return `Nationality is required for ${t.firstName || `Passenger ${i + 1}`}.`;
         if (cl.passportNo && !t.passportNo) return `Passport number is required for ${t.firstName || `Passenger ${i + 1}`}.`;
         if (cl.passportExpiry && !t.passportExpiry) return `Passport expiry is required for ${t.firstName || `Passenger ${i + 1}`}.`;
+      }
+      if (req?.panMandatory && !t.panNo) {
+        return `PAN number is required for ${t.firstName || `Passenger ${i + 1}`}.`;
+      }
+    }
+
+    // Baggage mandatory: at least one baggage SSR must be selected.
+    if (req?.baggageMandatory && pricing) {
+      const baggageSelected = selectedSSR.some((sel) =>
+        pricing.ssrOptions.baggage.some(
+          (b) => b.id === sel.ssrId && b.fuid === sel.fuid,
+        ),
+      );
+      if (!baggageSelected) {
+        return 'This fare requires baggage. Please add a baggage option in the Add-ons step.';
       }
     }
     return null;
@@ -164,7 +185,7 @@ function MultiCityDetailsContent() {
               id: s.ssid,
               code: s.seatNumber,
               description: `Seat ${s.seatNumber}`,
-              charge: s.fare + s.tax,
+              charge: s.fare,
               type: 'seat' as const,
               fuid: sm.fuid,
             })),
@@ -225,8 +246,13 @@ function MultiCityDetailsContent() {
         lastName: firstAdult?.lastName || contactInfo.lastName || 'User',
       };
 
+      // Match SSR charges on BOTH fuid and id (keyed like the backend's
+      // ssrChargeMap `${fuid}:${id}`). DM legs namespace their FUIDs, so an
+      // id-only match could pick another leg's charge and mis-total the payable.
       const ssrTotal = allSelections.reduce((sum, sel) => {
-        const option = allSSROptions.find((o) => o.id === sel.ssrId);
+        const option = allSSROptions.find(
+          (o) => o.id === sel.ssrId && o.fuid === sel.fuid,
+        );
         return sum + (option?.charge || 0);
       }, 0);
       const promoDiscount = appliedPromo?.valid ? appliedPromo.discountAmount : 0;
@@ -241,6 +267,10 @@ function MultiCityDetailsContent() {
         selectedSSR: allSelections,
         ssrChargeMap: pricing.ssrChargeMap,
         freeSSRs: pricing.freeSSRs,
+        enableFareMasking: pricing.bookingRequirements?.fareMaskingRequired ?? false,
+        // DM: one { tui, netAmount } per leg - the backend splits the flat SSR
+        // selections per leg by FUID namespace and tickets each leg separately.
+        multiCitySessions: pricing.multiCitySessions,
         tripSummary: {
           fromCode: pricing.segments[0]?.from || '',
           toCode: pricing.segments[pricing.segments.length - 1]?.to || '',
@@ -333,6 +363,32 @@ function MultiCityDetailsContent() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1 space-y-6">
+            {/* Fare notices (airline / fare-level advisories from Benzy) */}
+            {!!pricing.fareNotices?.length && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-start gap-3">
+                <svg
+                  className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+                <div className="flex-1 min-w-0 space-y-1">
+                  {pricing.fareNotices.map((notice, i) => (
+                    <p key={i} className="text-sm text-amber-800">
+                      {notice}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {currentStep === 0 && (
               <>
                 <MultiCitySegments segments={pricing.segments} />
@@ -350,12 +406,17 @@ function MultiCityDetailsContent() {
                         traveller={traveller}
                         travelChecklist={pricing.travelChecklist}
                         onChange={(updated) => updateTraveller(i, updated)}
+                        bookingRequirements={pricing.bookingRequirements}
+                        fnuLnuSettings={pricing.fnuLnuSettings}
                       />
                     ))}
                   </div>
                 </div>
 
-                <ContactInfoForm contactInfo={contactInfo} onChange={setContactInfo} />
+                <ContactInfoForm
+                  contactInfo={contactInfo}
+                  onChange={setContactInfo}
+                />
               </>
             )}
 
@@ -466,7 +527,10 @@ function MultiCityDetailsContent() {
           </div>
 
           <div className="hidden lg:block w-80 flex-shrink-0">
-            <BookingSummary {...sidebarProps} />
+            <div className="sticky top-4 space-y-4 max-h-[calc(100vh-2rem)] overflow-y-auto">
+              <BookingSummary {...sidebarProps} />
+              <FareRulesAccordion fareRules={pricing.fareRules} />
+            </div>
           </div>
         </div>
       </div>

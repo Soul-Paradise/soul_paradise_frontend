@@ -23,6 +23,11 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
+/** Total payable for an SSR option - `charge` already includes any tax. */
+function optTotal(opt: SSROption) {
+  return opt.charge || 0;
+}
+
 /* ─── Category Icons (inline SVG) ─── */
 
 const BaggageIcon = () => (
@@ -177,8 +182,16 @@ export const SSRSelector = ({
     const category = categories.find((c) =>
       c.options.some((o) => o.id === ssrId),
     );
-    if (category?.singleSelect) {
-      const categoryIds = new Set(category.options.map((o) => o.id));
+    // Prefer the airline-provided per-option cardinality: opt.multiSelect === true
+    // permits multiple picks in the category; when undefined, fall back to the
+    // category's static singleSelect flag.
+    const selectedOpt = category?.options.find((o) => o.id === ssrId);
+    const effectiveSingle =
+      selectedOpt?.multiSelect === undefined
+        ? category?.singleSelect
+        : !selectedOpt.multiSelect;
+    if (effectiveSingle) {
+      const categoryIds = new Set(category!.options.map((o) => o.id));
       updated = updated.filter(
         (s) =>
           !(s.fuid === fuid && s.paxId === paxId && categoryIds.has(s.ssrId)),
@@ -194,10 +207,10 @@ export const SSRSelector = ({
       (s) => s.fuid === fuid && s.paxId === paxId && s.ssrId === ssrId,
     );
 
-  // Total selected cost
+  // Total selected cost (tax-inclusive)
   const totalAddOnCost = selectedSSR.reduce((sum, sel) => {
     const opt = allOptions.find((o) => o.id === sel.ssrId && o.fuid === sel.fuid);
-    return sum + (opt?.charge || 0);
+    return sum + (opt ? optTotal(opt) : 0);
   }, 0);
 
   if (allOptions.length === 0) return null;
@@ -407,9 +420,14 @@ export const SSRSelector = ({
                     <span className="text-gray-800 font-medium">
                       {opt.description}
                     </span>
+                    {opt.isFreeMeal && (
+                      <span className="text-[9px] font-bold uppercase text-emerald-600">
+                        Included
+                      </span>
+                    )}
                   </span>
                   <span className="font-semibold text-gray-800 tabular-nums">
-                    {opt.charge > 0 ? formatCurrency(opt.charge) : 'Free'}
+                    {optTotal(opt) > 0 ? formatCurrency(optTotal(opt)) : 'Free'}
                   </span>
                 </div>
               );
@@ -599,11 +617,16 @@ function MealGrid({
               >
                 {opt.description}
               </p>
+              {opt.isFreeMeal && (
+                <span className="inline-block mt-1 text-[9px] font-bold uppercase tracking-wide text-emerald-600 bg-emerald-50 rounded px-1 py-0.5">
+                  Complimentary
+                </span>
+              )}
               <p
                 className="text-[11px] font-bold mt-1"
                 style={{ color: selected ? color : '#6b7280' }}
               >
-                {opt.charge > 0 ? formatCurrency(opt.charge) : 'Free'}
+                {optTotal(opt) > 0 ? formatCurrency(optTotal(opt)) : 'Free'}
               </p>
             </div>
 
@@ -680,8 +703,15 @@ function BaggageList({
                 style={{ color: selected ? color : '#374151' }}
               >
                 {opt.description}
+                {opt.isFreeMeal && (
+                  <span className="ml-1.5 text-[9px] font-bold uppercase tracking-wide text-emerald-600">
+                    Included
+                  </span>
+                )}
               </p>
-              <p className="text-[10px] text-gray-400">{opt.code}</p>
+              <p className="text-[10px] text-gray-400 truncate">
+                {opt.pieceDescription || opt.code}
+              </p>
             </div>
 
             {/* Price + check */}
@@ -690,7 +720,7 @@ function BaggageList({
                 className="text-[12px] font-bold tabular-nums"
                 style={{ color: selected ? color : '#374151' }}
               >
-                {opt.charge > 0 ? formatCurrency(opt.charge) : 'Free'}
+                {optTotal(opt) > 0 ? formatCurrency(optTotal(opt)) : 'Free'}
               </span>
               <div
                 className="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
@@ -767,7 +797,7 @@ function GenericOptions({
               className="text-[11px] font-bold tabular-nums"
               style={{ color: selected ? color : '#9ca3af' }}
             >
-              {opt.charge > 0 ? formatCurrency(opt.charge) : 'Free'}
+              {optTotal(opt) > 0 ? formatCurrency(optTotal(opt)) : 'Free'}
             </span>
           </button>
         );

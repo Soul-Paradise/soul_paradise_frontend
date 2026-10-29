@@ -2,15 +2,16 @@
 
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Hotel, Plane, ShieldCheck } from 'lucide-react';
+import { CreditCard, Hotel, Plane, ShieldCheck } from 'lucide-react';
 import { FlightBooking } from './FlightBooking';
 import { HotelBooking } from './HotelBooking';
 import { TravelInsurance } from './TravelInsurance';
+import { CustomPayment } from './CustomPayment';
 
-type TabType = 'flights' | 'hotel' | 'insurance';
+type TabType = 'flights' | 'hotel' | 'insurance' | 'payment';
 
 const isTabType = (v: string | null): v is TabType =>
-  v === 'flights' || v === 'hotel' || v === 'insurance';
+  v === 'flights' || v === 'hotel' || v === 'insurance' || v === 'payment';
 
 const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
   {
@@ -34,6 +35,13 @@ const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
       <ShieldCheck className="w-5 h-5" />
     ),
   },
+  {
+    id: 'payment',
+    label: 'Custom Payment',
+    icon: (
+      <CreditCard className="w-5 h-5" />
+    ),
+  },
 ];
 
 const BookingTabsInner = () => {
@@ -54,14 +62,14 @@ const BookingTabsInner = () => {
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-4">
       <div className="bg-white rounded-2xl overflow-visible" style={{ boxShadow: '0 25px 60px rgba(0,0,0,0.45)' }}>
-        {/* Tabs Navigation — MMT style: icons above labels, blue underline for active */}
-        <div className="border-b border-gray-100 overflow-x-auto scrollbar-hide">
+        {/* Tabs Navigation - MMT style: icons above labels, blue underline for active */}
+        <div className="border-b border-gray-100 overflow-x-auto scrollbar-hide rounded-t-2xl">
           <div className="flex">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative flex flex-col items-center gap-1 px-5 py-2.5 min-w-[80px] transition-colors ${
+                className={`relative flex flex-col items-center gap-1 px-5 py-2.5 min-w-[80px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#1F7AC4]/40 ${
                   activeTab === tab.id
                     ? 'text-[#1F7AC4]'
                     : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
@@ -84,6 +92,7 @@ const BookingTabsInner = () => {
           {activeTab === 'flights' && <FlightBooking />}
           {activeTab === 'hotel' && <HotelBooking />}
           {activeTab === 'insurance' && <TravelInsurance />}
+          {activeTab === 'payment' && <CustomPayment />}
         </div>
       </div>
     </div>

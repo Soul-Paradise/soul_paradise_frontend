@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Verhoeff checksum — the same algorithm UIDAI uses for the last Aadhaar digit.
+ * Verhoeff checksum - the same algorithm UIDAI uses for the last Aadhaar digit.
  * Mirrored from the backend so a typo is caught before the user uploads several
  * megabytes of document scans, rather than after.
  *

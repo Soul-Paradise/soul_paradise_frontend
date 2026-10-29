@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { authHeaders } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
+import FreeCancellationBadge from '@/components/HotelResults/FreeCancellationBadge';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -32,6 +33,8 @@ interface RoomOption {
   boardBasis: string | null;
   boardBasisType: string;
   cancellationPolicy: string | null;
+  cancellationPolicies: CancellationPolicy[];
+  freeCancellationUntil: string | null;
   facilities: RoomFacility[];
   images: string[];
   beds: unknown | null;
@@ -93,6 +96,7 @@ interface HotelPricingDetail {
   boardBasis: string | null;
   boardBasisType: string;
   cancellationPolicies: CancellationPolicy[];
+  freeCancellationUntil: string | null;
   currency: string;
   availability: number;
 }
@@ -534,7 +538,7 @@ function HotelHero({
         </div>
       </div>
 
-      {/* Gallery + info — fixed 420px height on lg+ so every hotel has the same layout.
+      {/* Gallery + info - fixed 420px height on lg+ so every hotel has the same layout.
           Images crop to fit their slot via object-cover on absolutely-positioned <img>. */}
       <div className="px-5 pb-5">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:h-[420px]">
@@ -765,7 +769,10 @@ function RoomCard({
             {/* Badges */}
             <div className="flex flex-wrap gap-1.5 mt-2">
               {room.refundable && (
-                <span className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded">Free Cancellation</span>
+                <FreeCancellationBadge
+                  until={room.freeCancellationUntil}
+                  policyText={room.cancellationPolicy}
+                />
               )}
               {room.payAtHotel && (
                 <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded">Pay at Hotel</span>
@@ -916,8 +923,8 @@ function PricingPanel({
   nights: number;
   onBook: () => void;
 }) {
-  const totalTaxes = pricing.taxes.reduce((sum, t) => sum + t.amount, 0);
   const hasSavings = pricing.publishedRate > pricing.totalRate && pricing.publishedRate > 0;
+  const roomCount = pricing.perRoomRates?.length || 1;
 
   return (
     <div className="bg-white rounded-lg border border-blue-200 shadow-md p-5 sticky top-4">
@@ -950,7 +957,7 @@ function PricingPanel({
 
       <div className="border-t border-gray-100 my-3" />
 
-      {/* Price breakdown */}
+      {/* Price - single all-inclusive line, taxes/fees are not itemised */}
       <div className="space-y-1.5 text-sm">
         {hasSavings && (
           <div className="flex justify-between text-gray-400">
@@ -960,47 +967,15 @@ function PricingPanel({
         )}
         <div className="flex justify-between text-gray-700">
           <span>Room Rate</span>
-          <span>{fmt(pricing.baseRate, pricing.currency)}</span>
+          <span>{fmt(pricing.totalRate, pricing.currency)}</span>
         </div>
-        {pricing.dailyRates && pricing.dailyRates.length > 1 && (
-          <details className="text-xs text-gray-500">
-            <summary className="cursor-pointer hover:text-gray-700">Per-night breakdown</summary>
-            <div className="mt-1 space-y-0.5 pl-2">
-              {pricing.dailyRates.map((d, i) => (
-                <div key={i} className="flex justify-between">
-                  <span>{formatDate(d.date)}</span>
-                  <span>{fmt(d.amount - (d.discount || 0), pricing.currency)}</span>
-                </div>
-              ))}
-            </div>
-          </details>
-        )}
-        {pricing.discounts.map((d, i) => (
-          <div key={i} className="flex justify-between text-green-600 text-xs">
-            <span>{d.description || 'Discount'}</span>
-            <span>-{fmt(d.amount, pricing.currency)}</span>
-          </div>
-        ))}
-        {pricing.taxes.length > 0 && (
-          pricing.taxes.map((tax, i) => (
-            <div key={i} className="flex justify-between text-gray-500 text-xs">
-              <span>{tax.description || 'Tax & Fees'}</span>
-              <span>{fmt(tax.amount, pricing.currency)}</span>
-            </div>
-          ))
-        )}
-        {pricing.tcsOnTotal > 0 && (
+        {roomCount > 1 && (
           <div className="flex justify-between text-gray-500 text-xs">
-            <span>TCS</span>
-            <span>{fmt(pricing.tcsOnTotal, pricing.currency)}</span>
+            <span>No. of Rooms</span>
+            <span>{roomCount}</span>
           </div>
         )}
-        {totalTaxes === 0 && (
-          <div className="flex justify-between text-gray-500 text-xs">
-            <span>Taxes & Fees</span>
-            <span className="italic text-gray-400">Included</span>
-          </div>
-        )}
+        <p className="text-xs text-gray-400">Inclusive of all taxes &amp; fees</p>
       </div>
 
       <div className="border-t border-gray-200 my-3" />
@@ -1033,7 +1008,10 @@ function PricingPanel({
       {/* Badges */}
       <div className="flex flex-wrap gap-1.5 mt-3">
         {pricing.refundable ? (
-          <span className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded">Free Cancellation</span>
+          <FreeCancellationBadge
+            until={pricing.freeCancellationUntil}
+            policyText={pricing.cancellationPolicies?.[0]?.text}
+          />
         ) : (
           <span className="text-xs bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded">Non-refundable</span>
         )}
@@ -1568,7 +1546,7 @@ function RoomsContent() {
         }),
       );
     } catch {
-      // sessionStorage unavailable — proceed anyway, booking page can show an error
+      // sessionStorage unavailable - proceed anyway, booking page can show an error
     }
     const params = new URLSearchParams({ searchId, hotelId, checkIn, checkOut });
     router.push(`/booking/hotels/book?${params.toString()}`);
