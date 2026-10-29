@@ -383,7 +383,7 @@ function FlightInfoTab({
         {/* Inclusions + advisories, divided off from the itinerary */}
         <div className="border-t border-gray-100 px-5 py-3 space-y-2">
           <div className="flex items-center gap-1.5 text-xs">
-            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+            <span className="bg-blue-100 text-(--color-secondary-button) px-2 py-0.5 rounded text-[10px] font-bold uppercase">
               Info
             </span>
             <span className="text-gray-500">

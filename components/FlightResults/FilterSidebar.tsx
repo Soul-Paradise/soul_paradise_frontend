@@ -208,7 +208,7 @@ export const FilterSidebar = ({
                   }
                   className={`flex-1 px-2 py-2 rounded-lg border text-center transition-colors ${
                     isActive
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      ? 'border-blue-500 bg-blue-50 text-(--color-secondary-button)'
                       : 'border-gray-200 text-gray-600 hover:border-gray-300'
                   }`}
                 >
@@ -279,7 +279,7 @@ export const FilterSidebar = ({
                   }
                   className={`flex items-center gap-1.5 px-2 py-2 rounded-lg border text-xs transition-colors ${
                     isActive
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      ? 'border-blue-500 bg-blue-50 text-(--color-secondary-button)'
                       : 'border-gray-200 text-gray-600 hover:border-gray-300'
                   }`}
                 >
@@ -312,7 +312,7 @@ export const FilterSidebar = ({
                   }
                   className={`flex items-center gap-1.5 px-2 py-2 rounded-lg border text-xs transition-colors ${
                     isActive
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      ? 'border-blue-500 bg-blue-50 text-(--color-secondary-button)'
                       : 'border-gray-200 text-gray-600 hover:border-gray-300'
                   }`}
                 >
@@ -359,7 +359,7 @@ export const FilterSidebar = ({
               <button
                 type="button"
                 onClick={() => setShowAllAirlines(!showAllAirlines)}
-                className="text-xs text-blue-600 font-medium mt-2 hover:underline"
+                className="text-xs text-(--color-links) font-medium mt-2 hover:underline"
               >
                 {showAllAirlines
                   ? 'Show less'
@@ -425,7 +425,7 @@ export const FilterSidebar = ({
               <button
                 type="button"
                 onClick={() => setShowAllAirports(!showAllAirports)}
-                className="text-xs text-blue-600 font-medium mt-2 hover:underline"
+                className="text-xs text-(--color-links) font-medium mt-2 hover:underline"
               >
                 {showAllAirports
                   ? 'Show less'

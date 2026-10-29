@@ -89,7 +89,7 @@ function CalendarMonth({
                 'h-9 w-full text-sm font-medium transition-colors',
                 isPast ? 'text-gray-300 cursor-not-allowed' : 'cursor-pointer hover:bg-blue-100',
                 isCheckIn || isCheckOut
-                  ? 'bg-[#1a2b6b] text-white rounded-full'
+                  ? 'bg-(--color-ink) text-white rounded-full'
                   : inRange
                   ? 'bg-blue-100 text-blue-900'
                   : 'text-gray-800',
@@ -331,9 +331,9 @@ export const HolidayPackages = () => {
           <label key={pt.value} className="flex items-center gap-2 cursor-pointer" onClick={() => setPackageType(pt.value)}>
             <div className={[
               'w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors',
-              packageType === pt.value ? 'border-[#e8262a]' : 'border-gray-400',
+              packageType === pt.value ? 'border-(--color-accent)' : 'border-gray-400',
             ].join(' ')}>
-              {packageType === pt.value && <div className="w-2 h-2 rounded-full bg-[#e8262a]" />}
+              {packageType === pt.value && <div className="w-2 h-2 rounded-full bg-(--color-accent)" />}
             </div>
             <span className="text-sm font-medium text-gray-700">{pt.label}</span>
           </label>
@@ -355,7 +355,7 @@ export const HolidayPackages = () => {
               activePanel === 'destination' ? 'bg-blue-50' : 'hover:bg-gray-50',
             ].join(' ')}
           >
-            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${activePanel === 'destination' ? 'text-blue-600' : 'text-gray-500'}`}>
+            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${activePanel === 'destination' ? 'text-(--color-links)' : 'text-gray-500'}`}>
               Destination
             </div>
             <div className="flex items-center gap-2">
@@ -384,7 +384,7 @@ export const HolidayPackages = () => {
               activePanel === 'departure' ? 'bg-blue-50' : 'hover:bg-gray-50',
             ].join(' ')}
           >
-            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${activePanel === 'departure' ? 'text-blue-600' : 'text-gray-500'}`}>
+            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${activePanel === 'departure' ? 'text-(--color-links)' : 'text-gray-500'}`}>
               Departure From
             </div>
             <div className="flex items-center gap-2">
@@ -410,7 +410,7 @@ export const HolidayPackages = () => {
               activePanel === 'dates' && dateTab === 'checkin' ? 'bg-blue-50' : 'hover:bg-gray-50',
             ].join(' ')}
           >
-            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'dates' && dateTab === 'checkin' ? 'text-blue-600' : 'text-gray-500'}`}>
+            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'dates' && dateTab === 'checkin' ? 'text-(--color-links)' : 'text-gray-500'}`}>
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
@@ -442,7 +442,7 @@ export const HolidayPackages = () => {
               activePanel === 'dates' && dateTab === 'checkout' ? 'bg-blue-50' : 'hover:bg-gray-50',
             ].join(' ')}
           >
-            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'dates' && dateTab === 'checkout' ? 'text-blue-600' : 'text-gray-500'}`}>
+            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'dates' && dateTab === 'checkout' ? 'text-(--color-links)' : 'text-gray-500'}`}>
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
@@ -466,7 +466,7 @@ export const HolidayPackages = () => {
               activePanel === 'guests' ? 'bg-blue-50' : 'hover:bg-gray-50',
             ].join(' ')}
           >
-            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${activePanel === 'guests' ? 'text-blue-600' : 'text-gray-500'}`}>
+            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${activePanel === 'guests' ? 'text-(--color-links)' : 'text-gray-500'}`}>
               Rooms &amp; Guests
             </div>
             <div className="text-lg font-bold text-gray-900 leading-tight">
@@ -479,7 +479,7 @@ export const HolidayPackages = () => {
           {/* ── Search Button ── */}
           <button
             onClick={handleSearch}
-            className="flex items-center gap-2 px-8 bg-[#e8262a] hover:bg-[#c9191d] text-white font-bold text-sm tracking-widest uppercase transition-colors flex-shrink-0 rounded-r-xl"
+            className="flex items-center gap-2 px-8 bg-(--color-accent) hover:bg-(--color-accent-hover) text-white font-bold text-sm tracking-widest uppercase transition-colors flex-shrink-0 rounded-r-xl"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -520,7 +520,7 @@ export const HolidayPackages = () => {
             <div className="flex gap-4 mb-4 border-b border-gray-100">
               <button
                 onClick={() => { setDateTab('checkin'); setSelectingCheckout(false); }}
-                className={`pb-2 text-sm font-bold border-b-2 transition-colors ${dateTab === 'checkin' ? 'border-[#1a2b6b] text-[#1a2b6b]' : 'border-transparent text-gray-400'}`}
+                className={`pb-2 text-sm font-bold border-b-2 transition-colors ${dateTab === 'checkin' ? 'border-(--color-ink) text-(--color-ink)' : 'border-transparent text-gray-400'}`}
               >
                 CHECK-IN<br />
                 <span className="text-base font-bold">
@@ -529,7 +529,7 @@ export const HolidayPackages = () => {
               </button>
               <button
                 onClick={() => { setDateTab('checkout'); setSelectingCheckout(true); }}
-                className={`pb-2 text-sm font-bold border-b-2 transition-colors ${dateTab === 'checkout' ? 'border-[#1a2b6b] text-[#1a2b6b]' : 'border-transparent text-gray-400'}`}
+                className={`pb-2 text-sm font-bold border-b-2 transition-colors ${dateTab === 'checkout' ? 'border-(--color-ink) text-(--color-ink)' : 'border-transparent text-gray-400'}`}
               >
                 CHECK-OUT<br />
                 <span className="text-base font-bold">
@@ -597,10 +597,10 @@ export const HolidayPackages = () => {
               ))}
             </div>
             <div className="flex items-center justify-between mt-4 pt-2">
-              <button onClick={addRoom} className="text-sm font-bold text-[#e8262a] flex items-center gap-1 hover:underline">
+              <button onClick={addRoom} className="text-sm font-bold text-(--color-accent) flex items-center gap-1 hover:underline">
                 <span className="text-base">+</span> Add Another Room
               </button>
-              <button onClick={() => setActivePanel(null)} className="px-5 py-2 bg-[#e8262a] text-white text-sm font-bold rounded hover:bg-[#c9191d] transition-colors">
+              <button onClick={() => setActivePanel(null)} className="px-5 py-2 bg-(--color-accent) text-white text-sm font-bold rounded hover:bg-(--color-accent-hover) transition-colors">
                 DONE
               </button>
             </div>

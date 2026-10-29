@@ -564,7 +564,7 @@ function HotelBookPageInner() {
           <p className="text-sm text-gray-600 mb-4">{stashError}</p>
           <button
             onClick={() => router.push('/booking/hotels')}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded transition-colors"
+            className="w-full bg-(--color-links) hover:bg-(--color-secondary-button) text-white font-semibold py-2 rounded transition-colors"
           >
             Start over
           </button>
@@ -662,7 +662,7 @@ function HotelBookPageInner() {
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 uppercase tracking-wider"
+                className="text-xs font-semibold text-(--color-links) hover:text-(--color-secondary-button) uppercase tracking-wider"
               >
                 Change Room
               </button>
@@ -1401,7 +1401,7 @@ function BookingConfirmation({ voucher, onDone }: { voucher: BookingVoucher; onD
                       )}
                     </div>
                     {room.supplierConfirmationNumber && (
-                      <span className="text-[10px] bg-blue-50 text-blue-700 font-mono px-2 py-1 rounded whitespace-nowrap">
+                      <span className="text-[10px] bg-blue-50 text-(--color-secondary-button) font-mono px-2 py-1 rounded whitespace-nowrap">
                         {room.supplierConfirmationNumber}
                       </span>
                     )}
@@ -1496,7 +1496,7 @@ function BookingConfirmation({ voucher, onDone }: { voucher: BookingVoucher; onD
           </button>
           <button
             onClick={onDone}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors"
+            className="flex-1 bg-(--color-links) hover:bg-(--color-secondary-button) text-white font-semibold py-3 rounded-lg transition-colors"
           >
             Done
           </button>

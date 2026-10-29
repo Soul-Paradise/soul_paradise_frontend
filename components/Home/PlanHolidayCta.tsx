@@ -14,7 +14,7 @@ export function PlanHolidayCta() {
             backgroundPosition: 'center 70%',
           }}
         >
-          <div className="absolute inset-0 bg-(--color-primary-button)/85" />
+          <div className="absolute inset-0 bg-(--color-ink)/85" />
           <div className="relative flex flex-col gap-6 px-6 py-10 sm:px-10 md:flex-row md:items-center md:justify-between">
             <div className="max-w-xl text-white">
               <h2 className="text-2xl font-bold sm:text-3xl">Planning something bigger?</h2>

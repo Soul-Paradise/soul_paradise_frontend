@@ -453,7 +453,7 @@ function HotelDescription({ descriptions }: { descriptions?: HotelDetailDescript
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-2 text-sm font-semibold text-[#e8262a] hover:text-[#c9191d] inline-flex items-center gap-1"
+          className="mt-2 text-sm font-semibold text-(--color-accent) hover:text-(--color-accent-hover) inline-flex items-center gap-1"
         >
           {expanded ? 'Read less' : 'Read more'}
           <svg
@@ -530,7 +530,7 @@ function HotelHero({
             )}
           </div>
           <div className="flex items-center gap-1.5 mt-1 text-sm text-gray-500">
-            <svg className="w-4 h-4 text-[#e8262a]" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4 text-(--color-accent)" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
             </svg>
             <span className="truncate">{[hotel.address, hotel.city].filter(Boolean).join(', ')}</span>
@@ -775,7 +775,7 @@ function RoomCard({
                 />
               )}
               {room.payAtHotel && (
-                <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded">Pay at Hotel</span>
+                <span className="text-xs bg-blue-50 text-(--color-secondary-button) border border-blue-200 px-2 py-0.5 rounded">Pay at Hotel</span>
               )}
               {room.smokingAllowed && (
                 <span className="text-xs bg-gray-50 text-gray-600 border border-gray-200 px-2 py-0.5 rounded">Smoking Allowed</span>
@@ -826,8 +826,8 @@ function RoomCard({
               disabled={loadingPrice && isSelected}
               className={`mt-3 px-4 py-2 text-sm font-bold rounded transition-colors w-full ${
                 isSelected
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                  : 'bg-[#e8262a] hover:bg-[#c9191d] text-white'
+                  ? 'bg-(--color-links) hover:bg-(--color-secondary-button) text-white'
+                  : 'bg-(--color-accent) hover:bg-(--color-accent-hover) text-white'
               } disabled:opacity-60`}
             >
               {loadingPrice && isSelected ? (
@@ -1016,7 +1016,7 @@ function PricingPanel({
           <span className="text-xs bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded">Non-refundable</span>
         )}
         {pricing.refundable && pricing.onlineCancellable && (
-          <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded">Cancel online</span>
+          <span className="text-xs bg-blue-50 text-(--color-secondary-button) border border-blue-200 px-2 py-0.5 rounded">Cancel online</span>
         )}
         {pricing.payAtHotel && (
           <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded">Pay at hotel</span>
@@ -1061,7 +1061,7 @@ function PricingPanel({
 
       <button
         onClick={onBook}
-        className="mt-4 w-full px-4 py-3 bg-[#e8262a] hover:bg-[#c9191d] text-white font-bold rounded-lg text-sm transition-colors"
+        className="mt-4 w-full px-4 py-3 bg-(--color-accent) hover:bg-(--color-accent-hover) text-white font-bold rounded-lg text-sm transition-colors"
       >
         Proceed to Book
       </button>
@@ -1094,12 +1094,12 @@ function SectionTabs({
               type="button"
               onClick={() => onSelect(s.key)}
               className={`relative flex-shrink-0 px-5 py-3 text-xs sm:text-sm font-semibold tracking-wide uppercase transition-colors ${
-                isActive ? 'text-[#e8262a]' : 'text-gray-500 hover:text-gray-800'
+                isActive ? 'text-(--color-accent)' : 'text-gray-500 hover:text-gray-800'
               }`}
             >
               {s.label}
               {isActive && (
-                <span className="absolute left-3 right-3 bottom-0 h-0.5 bg-[#e8262a] rounded-t" />
+                <span className="absolute left-3 right-3 bottom-0 h-0.5 bg-(--color-accent) rounded-t" />
               )}
             </button>
           );
@@ -1206,7 +1206,7 @@ function HotelAmenitiesSection({ hotel }: { hotel: HotelDetailInfo }) {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-4 text-sm font-semibold text-[#e8262a] hover:text-[#c9191d] inline-flex items-center gap-1"
+          className="mt-4 text-sm font-semibold text-(--color-accent) hover:text-(--color-accent-hover) inline-flex items-center gap-1"
         >
           {expanded ? 'Show less' : 'Show more'}
           <svg
@@ -1256,7 +1256,7 @@ function NearbyAttractionsSection({ hotel }: { hotel: HotelDetailInfo }) {
             <li key={`${a.name}-${i}`} className="flex items-center justify-between py-2.5">
               <div className="flex items-center gap-2.5 min-w-0">
                 <span className="w-7 h-7 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-4 h-4 text-[#e8262a]" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-4 h-4 text-(--color-accent)" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                   </svg>
                 </span>
@@ -1274,7 +1274,7 @@ function NearbyAttractionsSection({ hotel }: { hotel: HotelDetailInfo }) {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-3 text-sm font-semibold text-[#e8262a] hover:text-[#c9191d] inline-flex items-center gap-1"
+          className="mt-3 text-sm font-semibold text-(--color-accent) hover:text-(--color-accent-hover) inline-flex items-center gap-1"
         >
           {expanded ? 'Show less' : `Show more (${list.length - NEARBY_INITIAL_LIMIT})`}
           <svg
@@ -1291,12 +1291,12 @@ function NearbyAttractionsSection({ hotel }: { hotel: HotelDetailInfo }) {
       {airport && (
         <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded flex items-center justify-between text-sm">
           <div className="flex items-center gap-2 min-w-0">
-            <svg className="w-4 h-4 text-blue-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-(--color-secondary-button) flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 12l4-1 6 6 1-4 8-8 2 2-8 8-4 1-6-6-3 2z" />
             </svg>
             <span className="text-blue-900 truncate">{airport.name.replace(/^The nearest major airport is\s*/i, 'Nearest airport: ')}</span>
           </div>
-          <span className="text-blue-700 font-medium flex-shrink-0 ml-3">
+          <span className="text-(--color-secondary-button) font-medium flex-shrink-0 ml-3">
             {airport.distance} {airport.unit}
           </span>
         </div>
@@ -1333,7 +1333,7 @@ function HotelMapSection({ hotel }: { hotel: HotelDetailInfo }) {
             href={openUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-600 hover:underline"
+            className="text-(--color-links) hover:underline"
           >
             View larger map
           </a>
@@ -1341,7 +1341,7 @@ function HotelMapSection({ hotel }: { hotel: HotelDetailInfo }) {
             href={gmapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-600 hover:underline"
+            className="text-(--color-links) hover:underline"
           >
             Open in Google Maps
           </a>
@@ -1575,7 +1575,7 @@ function RoomsContent() {
       <div className="max-w-7xl mx-auto px-4 py-6">
         {loading && (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <svg className="animate-spin w-10 h-10 text-[#e8262a]" fill="none" viewBox="0 0 24 24">
+            <svg className="animate-spin w-10 h-10 text-(--color-accent)" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
@@ -1591,7 +1591,7 @@ function RoomsContent() {
             <p className="text-gray-600 font-medium">{error}</p>
             <button
               onClick={() => router.back()}
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-(--color-links) hover:underline"
             >
               Go back to hotel list
             </button>
@@ -1653,7 +1653,7 @@ function RoomsContent() {
                   <p className="text-sm text-gray-400 mt-1">Try different dates or search for another hotel</p>
                   <button
                     onClick={() => router.back()}
-                    className="mt-4 px-4 py-2 bg-[#e8262a] text-white text-sm font-bold rounded hover:bg-[#c9191d] transition-colors"
+                    className="mt-4 px-4 py-2 bg-(--color-accent) text-white text-sm font-bold rounded hover:bg-(--color-accent-hover) transition-colors"
                   >
                     Back to Hotels
                   </button>
@@ -1677,7 +1677,7 @@ function RoomsContent() {
                     <button
                       type="button"
                       onClick={() => setRoomsExpanded((v) => !v)}
-                      className="mt-4 w-full py-2.5 bg-white border border-gray-200 hover:border-[#e8262a] hover:text-[#c9191d] text-sm font-semibold text-[#e8262a] rounded-lg inline-flex items-center justify-center gap-1.5 transition-colors"
+                      className="mt-4 w-full py-2.5 bg-white border border-gray-200 hover:border-(--color-accent) hover:text-(--color-accent-hover) text-sm font-semibold text-(--color-accent) rounded-lg inline-flex items-center justify-center gap-1.5 transition-colors"
                     >
                       {roomsExpanded
                         ? 'Show fewer rooms'
@@ -1704,7 +1704,7 @@ function RoomsContent() {
 
               {pricingLoading && (
                 <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 flex flex-col items-center gap-3">
-                  <svg className="animate-spin w-8 h-8 text-[#e8262a]" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin w-8 h-8 text-(--color-accent)" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
@@ -1735,7 +1735,7 @@ function RoomsContent() {
                 <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
                   <div className="flex flex-col items-center text-center">
                     <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-3">
-                      <svg className="w-7 h-7 text-[#e8262a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-7 h-7 text-(--color-accent)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                       </svg>
                     </div>
@@ -1802,7 +1802,7 @@ export default function RoomsPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <svg className="animate-spin w-10 h-10 text-[#e8262a]" fill="none" viewBox="0 0 24 24">
+        <svg className="animate-spin w-10 h-10 text-(--color-accent)" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>

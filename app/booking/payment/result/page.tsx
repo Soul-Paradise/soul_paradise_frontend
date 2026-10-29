@@ -126,7 +126,7 @@ function PaymentResultContent() {
             </p>
             <Link
               href="/"
-              className="mt-6 inline-block rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+              className="mt-6 inline-block rounded-lg bg-(--color-links) px-5 py-2.5 text-sm font-medium text-white hover:bg-(--color-secondary-button)"
             >
               Back to home
             </Link>
@@ -144,7 +144,7 @@ function PaymentResultContent() {
             </p>
             <Link
               href="/booking/flights"
-              className="mt-6 inline-block rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+              className="mt-6 inline-block rounded-lg bg-(--color-links) px-5 py-2.5 text-sm font-medium text-white hover:bg-(--color-secondary-button)"
             >
               Search flights again
             </Link>
@@ -164,7 +164,7 @@ function PaymentResultContent() {
             </p>
             <Link
               href="/"
-              className="mt-6 inline-block rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+              className="mt-6 inline-block rounded-lg bg-(--color-links) px-5 py-2.5 text-sm font-medium text-white hover:bg-(--color-secondary-button)"
             >
               Back to home
             </Link>

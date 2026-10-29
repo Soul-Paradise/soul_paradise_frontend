@@ -275,7 +275,7 @@ export const FlightCard = ({
                   e.stopPropagation();
                   setShowDetails(!showDetails);
                 }}
-                className="text-[11px] text-blue-600 hover:underline font-medium"
+                className="text-[11px] text-(--color-links) hover:underline font-medium"
               >
                 + Details
               </button>
@@ -319,7 +319,7 @@ export const FlightCard = ({
                   e.stopPropagation();
                   setShowDetails(!showDetails);
                 }}
-                className="text-[11px] text-blue-600 hover:underline font-semibold"
+                className="text-[11px] text-(--color-links) hover:underline font-semibold"
               >
                 {showDetails ? '− Details' : '+ Details'}
               </button>

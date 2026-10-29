@@ -515,7 +515,7 @@ function MultiCityResults() {
                             {hasActiveFilters ? (
                               <>
                                 No flights match your filters for this leg.{' '}
-                                <button onClick={clearFilters} className="text-blue-600 hover:underline font-medium">
+                                <button onClick={clearFilters} className="text-(--color-links) hover:underline font-medium">
                                   Clear filters
                                 </button>
                               </>

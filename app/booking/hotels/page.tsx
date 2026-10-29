@@ -161,7 +161,7 @@ function Stars({ count }: { count: number }) {
 function Checkbox({ checked, onChange, label, count }: { checked: boolean; onChange: () => void; label: string; count?: number }) {
   return (
     <label onClick={onChange} className="flex items-center gap-2 cursor-pointer group py-1">
-      <span className={`w-4 h-4 flex-shrink-0 border rounded flex items-center justify-center transition-colors ${checked ? 'bg-blue-600 border-blue-600' : 'border-gray-400 group-hover:border-blue-400'}`}>
+      <span className={`w-4 h-4 flex-shrink-0 border rounded flex items-center justify-center transition-colors ${checked ? 'bg-(--color-links) border-blue-600' : 'border-gray-400 group-hover:border-blue-400'}`}>
         {checked && (
           <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -290,7 +290,7 @@ function HotelCard({
 
           {/* Distance */}
           {hotel.distance > 0 && (
-            <p className="text-xs text-blue-600 mt-0.5">{hotel.distance.toFixed(1)} km from city centre</p>
+            <p className="text-xs text-(--color-links) mt-0.5">{hotel.distance.toFixed(1)} km from city centre</p>
           )}
 
           {/* Facilities */}
@@ -322,7 +322,7 @@ function HotelCard({
               <span className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded">Free Cancellation</span>
             )}
             {hotel.payAtHotel && (
-              <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded">Pay at Hotel</span>
+              <span className="text-xs bg-blue-50 text-(--color-secondary-button) border border-blue-200 px-2 py-0.5 rounded">Pay at Hotel</span>
             )}
           </div>
 
@@ -369,7 +369,7 @@ function HotelCard({
                 <button
                   onClick={goToRooms}
                   disabled={hotel.isSoldOut}
-                  className="mt-2 w-full px-4 py-2 bg-[#e8262a] hover:bg-[#c9191d] disabled:bg-gray-400 text-white text-sm font-bold rounded transition-colors"
+                  className="mt-2 w-full px-4 py-2 bg-(--color-accent) hover:bg-(--color-accent-hover) disabled:bg-gray-400 text-white text-sm font-bold rounded transition-colors"
                 >
                   {hotel.isSoldOut ? 'Sold Out' : 'Select Room'}
                 </button>
@@ -386,7 +386,7 @@ function HotelCard({
                 <button
                   onClick={goToRooms}
                   disabled={hotel.isSoldOut}
-                  className="px-4 py-2 bg-[#e8262a] hover:bg-[#c9191d] disabled:bg-gray-400 text-white text-sm font-bold rounded transition-colors"
+                  className="px-4 py-2 bg-(--color-accent) hover:bg-(--color-accent-hover) disabled:bg-gray-400 text-white text-sm font-bold rounded transition-colors"
                 >
                   {hotel.isSoldOut ? 'Sold Out' : 'Check Rooms'}
                 </button>
@@ -422,7 +422,7 @@ function CompactHotelCard({
     <div
       onClick={onSelect}
       className={`bg-white rounded border transition-all cursor-pointer flex overflow-hidden flex-shrink-0 ${
-        selected ? 'border-[#1a2b6b] ring-2 ring-[#1a2b6b]/30 shadow-md' : 'border-gray-200 hover:shadow-sm'
+        selected ? 'border-(--color-ink) ring-2 ring-(--color-ink)/30 shadow-md' : 'border-gray-200 hover:shadow-sm'
       }`}
     >
       {/* Thumbnail */}
@@ -482,7 +482,7 @@ function CompactHotelCard({
           <button
             onClick={(e) => { e.stopPropagation(); onBook(); }}
             disabled={hotel.isSoldOut}
-            className="px-2.5 py-1.5 bg-[#e8262a] hover:bg-[#c9191d] disabled:bg-gray-400 text-white text-[11px] font-bold rounded transition-colors flex-shrink-0"
+            className="px-2.5 py-1.5 bg-(--color-accent) hover:bg-(--color-accent-hover) disabled:bg-gray-400 text-white text-[11px] font-bold rounded transition-colors flex-shrink-0"
           >
             {hotel.isSoldOut ? 'Sold' : 'Select Room'}
           </button>
@@ -675,22 +675,22 @@ function Sidebar({
           {/* Navigation route (dashed red) */}
           <path
             d="M20 40 Q55 32 90 22 Q130 16 180 12"
-            stroke="#e8262a"
+            stroke="#EF5A24"
             strokeWidth="1.5"
             strokeDasharray="3 2"
             fill="none"
             opacity="0.7"
           />
-          <circle cx="180" cy="12" r="2" fill="#e8262a" opacity="0.75" />
+          <circle cx="180" cy="12" r="2" fill="#EF5A24" opacity="0.75" />
         </svg>
         {/* Soft white scrim so label stays readable */}
         <span className="absolute inset-0 bg-white/30 group-hover:bg-white/20 transition-colors" />
         <MapPin
-          className="w-4 h-4 text-[#e8262a] relative z-10"
+          className="w-4 h-4 text-(--color-accent) relative z-10"
           style={{ filter: 'drop-shadow(0 1px 1px rgba(255,255,255,0.9))' }}
         />
         <span
-          className="font-bold text-sm text-[#1a2b6b] tracking-wide relative z-10"
+          className="font-bold text-sm text-(--color-ink) tracking-wide relative z-10"
           style={{ textShadow: '0 1px 2px rgba(255,255,255,0.95)' }}
         >
           SEE MAP VIEW
@@ -736,7 +736,7 @@ function Sidebar({
         <FilterSection title="Star Rating">
           {[5, 4, 3, 2, 1].map(s => (
             <label key={s} onClick={() => toggleStar(s)} className="flex items-center gap-2 cursor-pointer py-1 group">
-              <span className={`w-4 h-4 flex-shrink-0 border rounded flex items-center justify-center transition-colors ${starFilter.includes(s) ? 'bg-blue-600 border-blue-600' : 'border-gray-400 group-hover:border-blue-400'}`}>
+              <span className={`w-4 h-4 flex-shrink-0 border rounded flex items-center justify-center transition-colors ${starFilter.includes(s) ? 'bg-(--color-links) border-blue-600' : 'border-gray-400 group-hover:border-blue-400'}`}>
                 {starFilter.includes(s) && (
                   <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -781,7 +781,7 @@ function Sidebar({
             {amenityOptions.length > 8 && (
               <button
                 onClick={() => setShowAllAmenities(!showAllAmenities)}
-                className="text-xs text-blue-600 hover:underline mt-1 font-medium"
+                className="text-xs text-(--color-links) hover:underline mt-1 font-medium"
               >
                 {showAllAmenities ? 'Show less' : `Show ${amenityOptions.length - 8} more`}
               </button>
@@ -1026,7 +1026,7 @@ function HotelResults() {
           {/* City */}
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-red-100 rounded flex items-center justify-center flex-shrink-0">
-              <svg className="w-4 h-4 text-[#e8262a]" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-4 h-4 text-(--color-accent)" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
               </svg>
             </div>
@@ -1071,7 +1071,7 @@ function HotelResults() {
           </button>
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 px-4 py-2 border-2 border-[#1a2b6b] text-[#1a2b6b] font-bold text-sm rounded hover:bg-[#1a2b6b] hover:text-white transition-colors"
+            className="flex items-center gap-2 px-4 py-2 border-2 border-(--color-ink) text-(--color-ink) font-bold text-sm rounded hover:bg-(--color-ink) hover:text-white transition-colors"
           >
             Modify Search
           </button>
@@ -1083,7 +1083,7 @@ function HotelResults() {
         {/* Loading */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-32 gap-4">
-            <svg className="w-12 h-12 text-[#e8262a] animate-spin" fill="none" viewBox="0 0 24 24">
+            <svg className="w-12 h-12 text-(--color-accent) animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
             </svg>
@@ -1099,7 +1099,7 @@ function HotelResults() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
             </svg>
             <p className="text-gray-700 font-semibold text-lg">{error}</p>
-            <button onClick={() => router.back()} className="px-6 py-2 bg-[#e8262a] text-white rounded font-bold">Go Back</button>
+            <button onClick={() => router.back()} className="px-6 py-2 bg-(--color-accent) text-white rounded font-bold">Go Back</button>
           </div>
         )}
 
@@ -1142,7 +1142,7 @@ function HotelResults() {
                     <button
                       key={s}
                       onClick={() => setSort(s)}
-                      className={`px-3 py-1.5 text-xs font-bold rounded transition-colors uppercase tracking-wide ${sort === s ? 'text-[#e8262a] border-b-2 border-[#e8262a]' : 'text-gray-500 hover:text-gray-700'}`}
+                      className={`px-3 py-1.5 text-xs font-bold rounded transition-colors uppercase tracking-wide ${sort === s ? 'text-(--color-accent) border-b-2 border-(--color-accent)' : 'text-gray-500 hover:text-gray-700'}`}
                     >
                       {s === 'featured' ? (
                         <span className="flex items-center gap-1">
@@ -1163,25 +1163,25 @@ function HotelResults() {
               {hasActiveFilters && (
                 <div className="flex flex-wrap gap-2 mb-3">
                   {nameSearch && (
-                    <span className="flex items-center gap-1 bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                    <span className="flex items-center gap-1 bg-blue-100 text-(--color-secondary-button) text-xs px-2 py-1 rounded-full">
                       "{nameSearch}"
                       <button onClick={() => setNameSearch('')} className="hover:text-blue-900">×</button>
                     </span>
                   )}
                   {freeCancellation && (
-                    <span className="flex items-center gap-1 bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                    <span className="flex items-center gap-1 bg-blue-100 text-(--color-secondary-button) text-xs px-2 py-1 rounded-full">
                       Free Cancellation
                       <button onClick={() => setFreeCancellation(false)} className="hover:text-blue-900">×</button>
                     </span>
                   )}
                   {breakfast && (
-                    <span className="flex items-center gap-1 bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                    <span className="flex items-center gap-1 bg-blue-100 text-(--color-secondary-button) text-xs px-2 py-1 rounded-full">
                       Breakfast Available
                       <button onClick={() => setBreakfast(false)} className="hover:text-blue-900">×</button>
                     </span>
                   )}
                   {starFilter.map(s => (
-                    <span key={s} className="flex items-center gap-1 bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                    <span key={s} className="flex items-center gap-1 bg-blue-100 text-(--color-secondary-button) text-xs px-2 py-1 rounded-full">
                       {s}★
                       <button onClick={() => setStarFilter(starFilter.filter(x => x !== s))} className="hover:text-blue-900">×</button>
                     </span>
@@ -1198,7 +1198,7 @@ function HotelResults() {
                   </svg>
                   <p className="font-medium text-gray-500">No hotels match your filters.</p>
                   {hasActiveFilters && (
-                    <button onClick={clearFilters} className="text-sm text-[#e8262a] font-bold hover:underline">Clear filters</button>
+                    <button onClick={clearFilters} className="text-sm text-(--color-accent) font-bold hover:underline">Clear filters</button>
                   )}
                 </div>
               ) : showMap ? (
@@ -1208,7 +1208,7 @@ function HotelResults() {
                   <div className="w-[380px] flex-shrink-0 flex flex-col gap-2 overflow-y-auto pr-1">
                     <button
                       onClick={() => setShowMap(false)}
-                      className="text-sm font-semibold text-[#1a2b6b] hover:underline text-left px-1 flex-shrink-0"
+                      className="text-sm font-semibold text-(--color-ink) hover:underline text-left px-1 flex-shrink-0"
                     >
                       ← Back to List view
                     </button>
@@ -1227,7 +1227,7 @@ function HotelResults() {
                   <div className="flex-1 rounded border border-gray-200 overflow-hidden relative bg-gray-50">
                     <button
                       onClick={() => setShowMap(false)}
-                      className="absolute top-3 right-3 z-[1000] w-8 h-8 bg-[#e8262a] hover:bg-[#c9191d] text-white rounded-full flex items-center justify-center shadow-lg"
+                      className="absolute top-3 right-3 z-[1000] w-8 h-8 bg-(--color-accent) hover:bg-(--color-accent-hover) text-white rounded-full flex items-center justify-center shadow-lg"
                       aria-label="Close map"
                     >
                       <X className="w-4 h-4" />
@@ -1283,7 +1283,7 @@ export default function HotelResultsPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <svg className="w-10 h-10 text-[#e8262a] animate-spin" fill="none" viewBox="0 0 24 24">
+        <svg className="w-10 h-10 text-(--color-accent) animate-spin" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
         </svg>

@@ -16,7 +16,7 @@ function InsurerLogo({ src, label }: { src: string; label: string }) {
   if (!src || broken) {
     return (
       <div className="w-9 h-9 rounded bg-blue-50 border-blue-200 border flex items-center justify-center flex-shrink-0">
-        <span className="text-[10px] font-bold text-blue-700">{label.slice(0, 2).toUpperCase()}</span>
+        <span className="text-[10px] font-bold text-(--color-secondary-button)">{label.slice(0, 2).toUpperCase()}</span>
       </div>
     );
   }
@@ -106,7 +106,7 @@ function QuoteDetails({ quote }: { quote: InsuranceQuote }) {
                   href={quote.policyWordingURL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-blue-600 font-medium hover:underline"
+                  className="inline-flex items-center gap-1.5 text-(--color-links) font-medium hover:underline"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -197,7 +197,7 @@ export const InsuranceQuoteCard = ({ quote, href, days }: { quote: InsuranceQuot
             <button
               type="button"
               onClick={() => setShowDetails(!showDetails)}
-              className="text-[11px] text-blue-600 hover:underline font-medium"
+              className="text-[11px] text-(--color-links) hover:underline font-medium"
             >
               {showDetails ? '− Details' : '+ Details'}
             </button>
@@ -226,7 +226,7 @@ export const InsuranceQuoteCard = ({ quote, href, days }: { quote: InsuranceQuot
               href={quote.policyWordingURL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-shrink-0 ml-2 text-[11px] font-semibold text-blue-600 hover:underline"
+              className="flex-shrink-0 ml-2 text-[11px] font-semibold text-(--color-links) hover:underline"
             >
               Policy Wording
             </a>

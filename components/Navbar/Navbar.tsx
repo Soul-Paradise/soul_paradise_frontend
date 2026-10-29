@@ -123,8 +123,8 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
                      transition-all duration-200 ease-in-out
                     ${
                       isActive
-                        ? 'font-bold text-(--color-active)'
-                        : 'font-semibold text-(--color-inactive) hover:text-(--color-active)'
+                        ? 'font-bold text-(--color-links) bg-(--color-primary-tint)'
+                        : 'font-semibold text-(--color-inactive) hover:text-(--color-links) hover:bg-(--color-primary-tint)/60'
                     }
                   `}
                   aria-current={isActive ? 'page' : undefined}
@@ -147,8 +147,8 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
                     px-4 py-2 rounded-lg
                     text-sm font-semibold
                     border border-(--color-tertiary-button)
-                    text-(--color-secondary-button) hover:text-(--color-primary-button)
-                    hover:border-(--color-secondary-button)
+                    text-(--color-foreground) hover:text-(--color-links)
+                    hover:border-(--color-links) hover:bg-(--color-primary-tint)/60
                     bg-transparent
                     transition-colors duration-200
                   "
@@ -160,9 +160,10 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
                   className="
                     px-4 py-2 rounded-lg
                     text-sm font-semibold
-                    bg-(--color-secondary-button) text-(--color-peace)
-                    hover:bg-(--color-primary-button)
-                    transition-colors duration-200
+                    bg-(--color-primary-button) text-(--color-peace)
+                    hover:bg-(--color-secondary-button) hover:-translate-y-px
+                    shadow-sm shadow-blue-600/25 hover:shadow-md hover:shadow-blue-600/30
+                    transition-all duration-200
                   "
                 >
                   Register
@@ -182,7 +183,7 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
                   className="
                     px-3 py-1.5 rounded-lg
                     text-sm font-semibold
-                    text-(--color-secondary-button) hover:text-(--color-primary-button)
+                    text-(--color-foreground) hover:text-(--color-links)
                     transition-colors duration-200
                   "
                 >
@@ -193,9 +194,10 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
                   className="
                     px-3 py-1.5 rounded-lg
                     text-sm font-semibold
-                    bg-(--color-secondary-button) text-(--color-peace)
-                    hover:bg-(--color-primary-button)
-                    transition-colors duration-200
+                    bg-(--color-primary-button) text-(--color-peace)
+                    hover:bg-(--color-secondary-button) hover:-translate-y-px
+                    shadow-sm shadow-blue-600/25 hover:shadow-md hover:shadow-blue-600/30
+                    transition-all duration-200
                   "
                 >
                   Register

@@ -128,7 +128,7 @@ export function LegalPage({
           ))}
 
           {/* Help card */}
-          <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-700 to-(--color-primary-button) p-6 text-white shadow-lg sm:p-8">
+          <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-(--color-ink-soft) to-(--color-ink) p-6 text-white shadow-lg sm:p-8">
             <span className="pointer-events-none absolute -right-12 -top-12 h-44 w-44 rounded-full bg-white/10" />
             <Icon className="pointer-events-none absolute -bottom-6 right-6 h-32 w-32 text-white/5" />
             <div className="relative flex items-center gap-3">

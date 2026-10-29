@@ -516,7 +516,7 @@ export const TravelInsurance = () => {
                       key={o.value}
                       type="button"
                       onClick={() => { setTenureInMonths(o.value); setActivePanel(null); }}
-                      className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${tenureInMonths === o.value ? 'bg-blue-50 text-[#1F7AC4]' : 'hover:bg-gray-50 text-gray-700'}`}
+                      className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${tenureInMonths === o.value ? 'bg-blue-50 text-(--color-links)' : 'hover:bg-gray-50 text-gray-700'}`}
                     >
                       {o.label}
                     </button>
@@ -558,7 +558,7 @@ export const TravelInsurance = () => {
                     setDestinations((prev) => [...prev.filter((d) => !isRegion(d)), r]);
                     setActivePanel(null);
                   }}
-                  className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-3 ${selected ? 'bg-blue-50 text-[#1F7AC4]' : 'hover:bg-gray-50 text-gray-700'}`}
+                  className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-3 ${selected ? 'bg-blue-50 text-(--color-links)' : 'hover:bg-gray-50 text-gray-700'}`}
                 >
                   <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
                   {r.displayName}
@@ -586,9 +586,9 @@ export const TravelInsurance = () => {
               {tripDestinations.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
                   {tripDestinations.map((d) => (
-                    <span key={d.placeId} className="inline-flex items-center gap-1 max-w-full px-2 py-0.5 bg-blue-50 text-[#1F7AC4] text-xs font-medium rounded-full border border-blue-200">
+                    <span key={d.placeId} className="inline-flex items-center gap-1 max-w-full px-2 py-0.5 bg-blue-50 text-(--color-links) text-xs font-medium rounded-full border border-blue-200">
                       <span className="truncate" title={d.displayName}>{d.displayName}</span>
-                      <button type="button" onClick={() => removeDestination(d.placeId)} className="text-blue-300 hover:text-blue-600 flex-shrink-0">×</button>
+                      <button type="button" onClick={() => removeDestination(d.placeId)} className="text-blue-300 hover:text-(--color-links) flex-shrink-0">×</button>
                     </span>
                   ))}
                 </div>
@@ -619,7 +619,7 @@ export const TravelInsurance = () => {
                         <div className="text-sm font-semibold text-gray-800 truncate">{shortLocationName(r.display_name)}</div>
                         <div className="text-xs text-gray-400 truncate">{r.display_name}</div>
                       </div>
-                      {already && <span className="text-[10px] text-[#1F7AC4] font-semibold flex-shrink-0">ADDED</span>}
+                      {already && <span className="text-[10px] text-(--color-links) font-semibold flex-shrink-0">ADDED</span>}
                     </button>
                   );
                 })
@@ -640,7 +640,7 @@ export const TravelInsurance = () => {
                 return (
                   <div key={i} className="flex flex-wrap gap-2 items-end p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 w-24">
-                      <div className="w-6 h-6 rounded-full bg-blue-100 text-[#1F7AC4] flex items-center justify-center text-xs font-bold flex-shrink-0">{i + 1}</div>
+                      <div className="w-6 h-6 rounded-full bg-blue-100 text-(--color-links) flex items-center justify-center text-xs font-bold flex-shrink-0">{i + 1}</div>
                       <span className="truncate">{travellerDisplayName(travellers, i)}</span>
                     </div>
                     <div className="flex-1 min-w-[150px]">
@@ -650,7 +650,7 @@ export const TravelInsurance = () => {
                         value={t.birthdate}
                         max={todayStr()}
                         onChange={(e) => updateTraveller(i, { ...t, birthdate: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1F7AC4] outline-none"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-(--color-links) outline-none"
                       />
                     </div>
                     {allRelations.length > 1 && (
@@ -659,7 +659,7 @@ export const TravelInsurance = () => {
                         <select
                           value={t.relation}
                           onChange={(e) => updateTraveller(i, { ...t, relation: e.target.value as Relation })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1F7AC4] outline-none bg-white"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-(--color-links) outline-none bg-white"
                         >
                           {availableRelations.map((r) => (
                             <option key={r} value={r}>{r.charAt(0) + r.slice(1).toLowerCase()}</option>
@@ -680,11 +680,11 @@ export const TravelInsurance = () => {
             </div>
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
               {isMultiPax && travellers.length < maxTravellers ? (
-                <button type="button" onClick={addTraveller} className="text-sm font-bold text-[#D34E4E] flex items-center gap-1 hover:underline">
+                <button type="button" onClick={addTraveller} className="text-sm font-bold text-(--color-accent) flex items-center gap-1 hover:underline">
                   <span>+</span> Add Traveller
                 </button>
               ) : <div />}
-              <button type="button" onClick={() => setActivePanel(null)} className="px-5 py-2 bg-[#D34E4E] text-white text-sm font-bold rounded-lg">DONE</button>
+              <button type="button" onClick={() => setActivePanel(null)} className="px-5 py-2 bg-(--color-accent) text-white text-sm font-bold rounded-lg">DONE</button>
             </div>
           </div>
         )}

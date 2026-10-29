@@ -34,7 +34,7 @@ function fmt(amount: number, currency = 'INR'): string {
 
 // ── Custom price-pin icon (matches screenshot style) ──
 function makePriceIcon(label: string, selected: boolean, soldOut: boolean): L.DivIcon {
-  const bg = soldOut ? '#9ca3af' : selected ? '#1a2b6b' : '#e8262a';
+  const bg = soldOut ? '#9ca3af' : selected ? '#0E2238' : '#EF5A24';
   const html = `
     <div style="
       position: relative;
@@ -185,7 +185,7 @@ export default function HotelMap({
                   <button
                     onClick={() => onBookHotel(h.id)}
                     disabled={h.isSoldOut}
-                    className="mt-1 w-full px-2 py-1 bg-[#e8262a] hover:bg-[#c9191d] disabled:bg-gray-400 text-white text-xs font-bold rounded"
+                    className="mt-1 w-full px-2 py-1 bg-(--color-accent) hover:bg-(--color-accent-hover) disabled:bg-gray-400 text-white text-xs font-bold rounded"
                   >
                     {h.isSoldOut ? 'Sold Out' : 'Select Room'}
                   </button>

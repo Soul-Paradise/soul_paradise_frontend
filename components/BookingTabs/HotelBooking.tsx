@@ -404,12 +404,12 @@ export const HotelBooking = () => {
               ))}
             </div>
             <div className="flex items-center justify-between mt-4 pt-2">
-              <button onClick={addRoom} className="text-sm font-bold text-[#e8262a] flex items-center gap-1 hover:underline">
+              <button onClick={addRoom} className="text-sm font-bold text-(--color-accent) flex items-center gap-1 hover:underline">
                 <span className="text-base">+</span> Add Another Room
               </button>
               <button
                 onClick={() => setActivePanel(null)}
-                className="px-5 py-2 bg-[#e8262a] text-white text-sm font-bold rounded hover:bg-[#c9191d] transition-colors"
+                className="px-5 py-2 bg-(--color-accent) text-white text-sm font-bold rounded hover:bg-(--color-accent-hover) transition-colors"
               >
                 DONE
               </button>

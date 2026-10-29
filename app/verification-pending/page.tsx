@@ -99,7 +99,7 @@ function VerificationPendingContent() {
             <div className="mb-6">
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100">
                 <svg
-                  className="w-12 h-12 text-blue-600"
+                  className="w-12 h-12 text-(--color-links)"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -139,7 +139,7 @@ function VerificationPendingContent() {
             <div className="mt-6 pt-6 border-t border-gray-200">
               <Link
                 href="/login"
-                className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                className="text-(--color-links) hover:text-(--color-secondary-button) font-medium transition-colors"
               >
                 Back to Login
               </Link>

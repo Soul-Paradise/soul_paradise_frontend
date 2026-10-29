@@ -230,7 +230,7 @@ function InsuranceResults({ search }: { search: InsuranceSearch }) {
                     </svg>
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">No plans match your filters</h3>
                     <p className="text-sm text-gray-500 mb-3">Try adjusting or clearing your filters to see more plans.</p>
-                    <button type="button" onClick={clearFilters} className="text-sm font-medium text-blue-600 hover:underline">
+                    <button type="button" onClick={clearFilters} className="text-sm font-medium text-(--color-links) hover:underline">
                       Clear all filters
                     </button>
                   </div>

@@ -137,7 +137,7 @@ export function ActionButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className="group inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-9 py-3.5 text-sm font-bold uppercase tracking-wide text-white shadow-lg shadow-red-500/25 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-red-500/30 disabled:translate-y-0 disabled:opacity-70"
+      className="group inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-gradient-to-r from-(--color-accent-light) to-(--color-accent) px-9 py-3.5 text-sm font-bold uppercase tracking-wide text-white shadow-lg shadow-orange-500/30 transition-all hover:-translate-y-0.5 hover:from-(--color-accent) hover:to-(--color-accent-hover) hover:shadow-xl hover:shadow-orange-500/35 disabled:translate-y-0 disabled:opacity-70"
     >
       {children}
       <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />

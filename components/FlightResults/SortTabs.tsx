@@ -44,7 +44,7 @@ export const SortTabs = ({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
-      activeClass: 'bg-blue-50 border-blue-300 text-blue-700',
+      activeClass: 'bg-blue-50 border-blue-300 text-(--color-secondary-button)',
     },
   ];
 

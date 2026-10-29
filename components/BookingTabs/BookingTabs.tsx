@@ -49,7 +49,7 @@ const BookingTabsInner = () => {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   aria-pressed={active}
-                  className={`group relative flex items-center gap-2.5 px-3 sm:px-4 py-3.5 whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#1F7AC4]/40 ${
+                  className={`group relative flex items-center gap-2.5 px-3 sm:px-4 py-3.5 whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-(--color-links)/40 ${
                     active ? 'text-gray-900' : 'text-gray-500 hover:text-gray-800'
                   }`}
                 >

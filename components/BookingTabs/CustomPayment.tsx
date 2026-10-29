@@ -177,7 +177,7 @@ export const CustomPayment = () => {
       {/* PAY NOW button - same as every tab */}
       <ActionRow>
         {isAuthenticated && (
-          <Link href="/orders?tab=payments" className="text-sm font-semibold text-[#1F7AC4] hover:underline">
+          <Link href="/orders?tab=payments" className="text-sm font-semibold text-(--color-links) hover:underline">
             View past payments
           </Link>
         )}

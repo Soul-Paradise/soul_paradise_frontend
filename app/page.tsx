@@ -158,7 +158,7 @@ export default function Home() {
                 onClick={() => setActiveOfferTab(tab)}
                 className={`px-4 py-1.5 whitespace-nowrap text-sm font-semibold rounded-full transition-all ${
                   activeOfferTab === tab
-                    ? 'bg-[#1F7AC4] text-white'
+                    ? 'bg-(--color-links) text-white'
                     : 'bg-white border border-gray-200 text-gray-600 hover:border-blue-300'
                 }`}
               >

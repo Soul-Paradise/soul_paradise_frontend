@@ -220,7 +220,7 @@ export default function AboutPage() {
       </section>
 
       {/* Why Choose Us — dark band */}
-      <section className="relative overflow-hidden bg-(--color-primary-button) py-16 md:py-20">
+      <section className="relative overflow-hidden bg-(--color-ink) py-16 md:py-20">
         <span className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl" />
         <span className="pointer-events-none absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-orange-500/15 blur-3xl" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

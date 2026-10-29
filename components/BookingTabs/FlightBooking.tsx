@@ -513,7 +513,7 @@ export const FlightBooking = () => {
                 <button
                   type="button"
                   onClick={addLeg}
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1F7AC4] hover:underline"
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-(--color-links) hover:underline"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

@@ -592,7 +592,7 @@ function FlightSearchResults() {
                       {hasActiveFilters && (
                         <button
                           onClick={clearFilters}
-                          className="text-sm font-medium text-blue-600 hover:underline"
+                          className="text-sm font-medium text-(--color-links) hover:underline"
                         >
                           Clear all filters
                         </button>
@@ -625,7 +625,7 @@ function FlightSearchResults() {
                     {hasActiveFilters && (
                       <button
                         onClick={clearFilters}
-                        className="text-sm font-medium text-blue-600 hover:underline"
+                        className="text-sm font-medium text-(--color-links) hover:underline"
                       >
                         Clear all filters
                       </button>

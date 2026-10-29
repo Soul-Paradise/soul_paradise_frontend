@@ -82,9 +82,9 @@ function CalendarMonth({
                   'relative h-8 w-8 text-[13px] font-medium transition-colors rounded-full z-10',
                   isPast ? 'text-gray-300 cursor-not-allowed' : 'cursor-pointer',
                   isStart || isEnd
-                    ? 'bg-[#1a2b6b] text-white shadow-sm'
+                    ? 'bg-(--color-ink) text-white shadow-sm'
                     : inRange
-                    ? 'text-[#1a2b6b] hover:bg-blue-100'
+                    ? 'text-(--color-ink) hover:bg-blue-100'
                     : !isPast
                     ? 'text-gray-700 hover:bg-gray-100'
                     : '',
@@ -207,24 +207,24 @@ export function CalendarPanel({
           <button
             type="button"
             onClick={() => onActiveTabChange?.('start')}
-            className={`pb-2 text-left border-b-2 transition-colors ${activeTab === 'start' ? 'border-[#1a2b6b]' : 'border-transparent'}`}
+            className={`pb-2 text-left border-b-2 transition-colors ${activeTab === 'start' ? 'border-(--color-ink)' : 'border-transparent'}`}
           >
-            <div className={`text-[10px] font-semibold tracking-widest uppercase ${activeTab === 'start' ? 'text-[#1a2b6b]' : 'text-gray-400'}`}>
+            <div className={`text-[10px] font-semibold tracking-widest uppercase ${activeTab === 'start' ? 'text-(--color-ink)' : 'text-gray-400'}`}>
               {startLabel}
             </div>
-            <div className={`text-[13px] font-semibold ${activeTab === 'start' ? 'text-[#1a2b6b]' : 'text-gray-400'}`}>
+            <div className={`text-[13px] font-semibold ${activeTab === 'start' ? 'text-(--color-ink)' : 'text-gray-400'}`}>
               {formatTab(startDate)}
             </div>
           </button>
           <button
             type="button"
             onClick={() => onActiveTabChange?.('end')}
-            className={`pb-2 text-left border-b-2 transition-colors ${activeTab === 'end' ? 'border-[#1a2b6b]' : 'border-transparent'}`}
+            className={`pb-2 text-left border-b-2 transition-colors ${activeTab === 'end' ? 'border-(--color-ink)' : 'border-transparent'}`}
           >
-            <div className={`text-[10px] font-semibold tracking-widest uppercase ${activeTab === 'end' ? 'text-[#1a2b6b]' : 'text-gray-400'}`}>
+            <div className={`text-[10px] font-semibold tracking-widest uppercase ${activeTab === 'end' ? 'text-(--color-ink)' : 'text-gray-400'}`}>
               {endLabel}
             </div>
-            <div className={`text-[13px] font-semibold ${activeTab === 'end' ? 'text-[#1a2b6b]' : 'text-gray-400'}`}>
+            <div className={`text-[13px] font-semibold ${activeTab === 'end' ? 'text-(--color-ink)' : 'text-gray-400'}`}>
               {formatTab(endDate)}
             </div>
           </button>

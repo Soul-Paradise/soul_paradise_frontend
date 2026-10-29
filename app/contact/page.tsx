@@ -382,7 +382,7 @@ export default function ContactPage() {
             </div>
 
             {/* Urgent help */}
-            <div className="relative flex-1 overflow-hidden rounded-2xl bg-gradient-to-br from-slate-700 to-(--color-primary-button) p-6 text-white shadow-lg">
+            <div className="relative flex-1 overflow-hidden rounded-2xl bg-gradient-to-br from-(--color-ink-soft) to-(--color-ink) p-6 text-white shadow-lg">
               <span className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-white/10" />
               <Zap className="relative h-7 w-7 text-amber-300" />
               <h3 className="relative mt-3 text-lg font-bold">Need Urgent Assistance?</h3>

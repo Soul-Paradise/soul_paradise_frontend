@@ -191,7 +191,7 @@ export const SelectionBar = ({
               type="button"
               disabled={!canBook}
               onClick={onBook}
-              className="text-[11px] text-blue-600 hover:underline font-medium disabled:text-gray-300 disabled:no-underline disabled:cursor-not-allowed"
+              className="text-[11px] text-(--color-links) hover:underline font-medium disabled:text-gray-300 disabled:no-underline disabled:cursor-not-allowed"
             >
               Flight Details
             </button>
