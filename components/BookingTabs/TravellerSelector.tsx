@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { Users } from 'lucide-react';
+import { FIELD_SUB, FIELD_VALUE, FieldLabel, fieldCell } from './ui';
 
 export interface TravellerCounts {
   adults: number;
@@ -119,18 +121,16 @@ export const TravellerSelector = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full text-left px-4 py-3 transition-all min-h-[80px]`}
+        className={`w-full h-full ${fieldCell(isOpen)}`}
       >
-        <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">
-          Travellers & Class
+        {/* The class is on the line below, so the label stays short and on one line */}
+        <FieldLabel icon={Users} active={isOpen}>
+          Travellers
+        </FieldLabel>
+        <div className={FIELD_VALUE}>
+          {totalPax} {totalPax === 1 ? 'Traveller' : 'Travellers'}
         </div>
-        <div className="text-xl font-bold text-gray-900 leading-tight">
-          {totalPax}{' '}
-          <span className="text-base font-normal">
-            {totalPax === 1 ? 'Traveller' : 'Travellers'}
-          </span>
-        </div>
-        <div className="text-xs text-gray-500">{CABIN_LABELS[cabinClass]}</div>
+        <div className={FIELD_SUB}>{CABIN_LABELS[cabinClass]}</div>
       </button>
 
       {/* Popup */}

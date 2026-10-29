@@ -12,9 +12,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AlertCircle, CheckCircle2, Clock, IndianRupee, Landmark, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, IndianRupee, Landmark, Wallet, XCircle } from 'lucide-react';
 import { api, type CustomPayment as CustomPaymentEntry, type PaymentStatus } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { ActionButton, ActionRow, FIELD_GROUP, FIELD_SUB, FIELD_VALUE, FieldLabel, TabHeader, fieldCell } from './ui';
 
 /** Statuses where the bank hasn't told us the outcome yet. */
 const PENDING: PaymentStatus[] = ['INITIATED', 'REDIRECTED'];
@@ -124,16 +125,18 @@ export const CustomPayment = () => {
         <ResultBanner payment={result} timedOut={resultTimedOut} onDismiss={dismissResult} />
       )}
 
-      {/* Main fields row - same bordered container as Flights/Hotels/Insurance */}
-      <div className="relative border-2 border-gray-200 rounded-xl overflow-visible bg-white">
+      <TabHeader tagline="Make a Payment to Soul Paradise" />
+
+      {/* Main fields row - same bordered container as every tab */}
+      <div className={FIELD_GROUP}>
         <div className="grid grid-cols-1 sm:flex sm:items-stretch divide-y divide-gray-200 sm:divide-y-0">
           {/* Amount */}
           <label
             htmlFor="custom-amount"
-            className="sm:flex-[2] text-left px-5 py-4 sm:border-r sm:border-gray-200 transition-colors min-w-0 cursor-text hover:bg-gray-50 focus-within:bg-blue-50 group"
+            className={`sm:flex-[2] min-w-0 cursor-text sm:border-r sm:border-gray-200 focus-within:bg-blue-50/70 group ${fieldCell()}`}
           >
-            <div className="text-[10px] font-bold tracking-widest uppercase mb-1 text-gray-500 group-focus-within:text-blue-600">
-              Amount (INR)
+            <div className="group-focus-within:[&>div]:text-(--color-links)">
+              <FieldLabel icon={Wallet}>Amount (INR)</FieldLabel>
             </div>
             <div className="flex items-center gap-1">
               <IndianRupee className="w-6 h-6 text-gray-900 flex-shrink-0" strokeWidth={2.5} />
@@ -149,22 +152,17 @@ export const CustomPayment = () => {
                   setError(null);
                 }}
                 placeholder="0"
-                className="w-full min-w-0 bg-transparent text-3xl font-bold leading-none text-gray-900 placeholder:text-gray-400 focus:outline-none disabled:opacity-50"
+                className="w-full min-w-0 bg-transparent text-3xl font-extrabold leading-none text-gray-900 placeholder:text-gray-400 focus:outline-none disabled:opacity-50"
               />
             </div>
-            <div className="text-xs text-gray-500 mt-1">Enter the amount you want to pay</div>
+            <div className={FIELD_SUB}>Enter the amount you want to pay</div>
           </label>
 
           {/* Pay via */}
-          <div className="sm:flex-1 text-left px-5 py-4 min-w-0">
-            <div className="text-[10px] font-bold tracking-widest uppercase mb-1 text-gray-500">
-              Pay Via
-            </div>
-            <div className="flex items-center gap-2">
-              <Landmark className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              <span className="text-lg font-bold text-gray-900 truncate">ICICI Bank</span>
-            </div>
-            <div className="text-xs text-gray-500 mt-0.5">UPI, Cards &amp; Net Banking</div>
+          <div className="sm:flex-1 min-w-0 text-left px-5 py-4 min-h-[88px]">
+            <FieldLabel icon={Landmark}>Pay Via</FieldLabel>
+            <div className={`${FIELD_VALUE} truncate`}>ICICI Bank</div>
+            <div className={FIELD_SUB}>UPI, Cards &amp; Net Banking</div>
           </div>
         </div>
       </div>
@@ -176,21 +174,17 @@ export const CustomPayment = () => {
         </div>
       )}
 
-      {/* PAY NOW button - matches Flights/Hotels SEARCH button */}
-      <div className="flex items-center justify-end gap-4">
+      {/* PAY NOW button - same as every tab */}
+      <ActionRow>
         {isAuthenticated && (
           <Link href="/orders?tab=payments" className="text-sm font-semibold text-[#1F7AC4] hover:underline">
             View past payments
           </Link>
         )}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="px-10 py-3.5 bg-[#D34E4E] hover:bg-red-600 text-white text-sm font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all uppercase tracking-wide disabled:opacity-70 disabled:hover:scale-100"
-        >
-          {submitting ? 'REDIRECTING…' : 'PAY NOW'}
-        </button>
-      </div>
+        <ActionButton type="submit" disabled={submitting}>
+          {submitting ? 'Redirecting…' : 'Pay Now'}
+        </ActionButton>
+      </ActionRow>
     </form>
   );
 };

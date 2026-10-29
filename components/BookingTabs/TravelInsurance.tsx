@@ -1,9 +1,22 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { MapPin, CalendarDays, Search, AlertCircle } from 'lucide-react';
+import { MapPin, CalendarDays, Search, AlertCircle, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CalendarPanel } from './CalendarPanel';
+import {
+  ActionButton,
+  ActionRow,
+  DateValue,
+  FIELD_GROUP,
+  FIELD_PLACEHOLDER,
+  FIELD_SUB,
+  FIELD_VALUE,
+  FieldLabel,
+  OptionPills,
+  TabHeader,
+  fieldCell,
+} from './ui';
 import { usePersistentSearch, notBeforeToday, useDatePrefill } from '@/lib/hooks/useSearchPersistence';
 import {
   getInsuranceOptions,
@@ -383,45 +396,32 @@ export const TravelInsurance = () => {
 
   return (
     <form onSubmit={handleSearch} className="space-y-5" ref={wrapperRef}>
-      {/* Policy Type row - like Special Fares in Flights */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Policy Type</span>
-        <div className="flex flex-wrap gap-2">
-          {policyTypes.map(({ value, label }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setPolicyType(value)}
-              className={`px-3 py-1.5 rounded border text-xs font-semibold transition-all ${
-                policyType === value
-                  ? 'border-[#1F7AC4] bg-blue-50 text-[#1F7AC4]'
-                  : 'border-gray-200 text-gray-600 hover:border-gray-300 bg-white'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Policy Type row - same pill switch as the Flights trip type */}
+      <TabHeader tagline="Travel Insurance for Every Kind of Trip">
+        <OptionPills
+          name="policyType"
+          label="Policy type"
+          options={policyTypes}
+          value={policyType}
+          onChange={setPolicyType}
+        />
+      </TabHeader>
 
-      {/* Main fields row - same bordered container as Flights/Hotels */}
-      <div className="relative border-2 border-gray-200 rounded-xl overflow-visible bg-white">
+      {/* Main fields row - same bordered container as every tab */}
+      <div className={FIELD_GROUP}>
         <div className="grid grid-cols-2 sm:flex sm:items-stretch divide-y divide-gray-200 sm:divide-y-0">
 
           {/* Destination */}
           <button
             type="button"
             onClick={() => { setActivePanel(activePanel === 'destination' ? null : 'destination'); setLocationQuery(''); }}
-            className={`col-span-2 sm:flex-[2] text-left px-5 py-4 transition-colors min-w-0 sm:border-r sm:border-gray-200 ${activePanel === 'destination' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+            className={`col-span-2 sm:flex-[2] min-w-0 sm:border-r sm:border-gray-200 ${fieldCell(activePanel === 'destination')}`}
           >
-            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${activePanel === 'destination' ? 'text-[#1F7AC4]' : 'text-gray-500'}`}>
+            <FieldLabel icon={MapPin} active={activePanel === 'destination'}>
               Destination
-            </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              <span className={`text-lg font-bold truncate ${destinationLabel ? 'text-gray-900' : 'text-gray-400'}`}>
-                {destinationLabel ?? (isMultiTrip ? 'Choose region' : 'Search city or country')}
-              </span>
+            </FieldLabel>
+            <div className={`truncate ${destinationLabel ? FIELD_VALUE : FIELD_PLACEHOLDER}`}>
+              {destinationLabel ?? (isMultiTrip ? 'Choose region' : 'Search city or country')}
             </div>
           </button>
 
@@ -431,22 +431,15 @@ export const TravelInsurance = () => {
             <button
               type="button"
               onClick={() => { setDateTab('start'); setActivePanel('dates'); }}
-              className={`sm:flex-1 text-left px-5 py-4 transition-colors border-r border-gray-200 ${activePanel === 'dates' && dateTab === 'start' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+              className={`sm:flex-1 border-r border-gray-200 ${fieldCell(activePanel === 'dates' && dateTab === 'start')}`}
             >
-              <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'dates' && dateTab === 'start' ? 'text-[#1F7AC4]' : 'text-gray-500'}`}>
-                <CalendarDays className="w-3 h-3" />
+              <FieldLabel icon={CalendarDays} active={activePanel === 'dates' && dateTab === 'start'}>
                 Start Date
-              </div>
+              </FieldLabel>
               {startDisplay ? (
-                <>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-gray-900 leading-none">{startDisplay.day}</span>
-                    <span className="text-base font-bold text-gray-900">{startDisplay.monthYear}</span>
-                  </div>
-                  <div className="text-xs text-gray-500 mt-0.5">{startDisplay.weekday}</div>
-                </>
+                <DateValue day={startDisplay.day} monthYear={startDisplay.monthYear} weekday={startDisplay.weekday} />
               ) : (
-                <span className="text-lg font-bold text-gray-400">Select date</span>
+                <div className={FIELD_PLACEHOLDER}>Select date</div>
               )}
             </button>
 
@@ -464,29 +457,22 @@ export const TravelInsurance = () => {
                   setActivePanel('dates');
                 }
               }}
-              className={`sm:flex-1 text-left px-5 py-4 transition-colors ${(activePanel === 'dates' && dateTab === 'end') || activePanel === 'tenure' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+              className={`sm:flex-1 ${fieldCell((activePanel === 'dates' && dateTab === 'end') || activePanel === 'tenure')}`}
             >
-              <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${(activePanel === 'dates' && dateTab === 'end') || activePanel === 'tenure' ? 'text-[#1F7AC4]' : 'text-gray-500'}`}>
-                <CalendarDays className="w-3 h-3" />
+              <FieldLabel icon={CalendarDays} active={(activePanel === 'dates' && dateTab === 'end') || activePanel === 'tenure'}>
                 {isStudent ? 'Tenure' : isMultiTrip ? 'Covered Until' : 'End Date'}
-              </div>
+              </FieldLabel>
               {isStudent ? (
                 <>
-                  <span className="text-lg font-bold text-gray-900">
+                  <div className={FIELD_VALUE}>
                     {TENURE_OPTIONS.find((o) => o.value === tenureInMonths)?.label}
-                  </span>
-                  <div className="text-xs text-gray-500 mt-0.5">Until {formatDisplayDate(effectiveEndDate)?.day} {formatDisplayDate(effectiveEndDate)?.monthYear}</div>
+                  </div>
+                  <div className={FIELD_SUB}>Until {formatDisplayDate(effectiveEndDate)?.day} {formatDisplayDate(effectiveEndDate)?.monthYear}</div>
                 </>
               ) : endDisplay ? (
-                <>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-gray-900 leading-none">{endDisplay.day}</span>
-                    <span className="text-base font-bold text-gray-900">{endDisplay.monthYear}</span>
-                  </div>
-                  <div className="text-xs text-gray-500 mt-0.5">{endDisplay.weekday}</div>
-                </>
+                <DateValue day={endDisplay.day} monthYear={endDisplay.monthYear} weekday={endDisplay.weekday} />
               ) : (
-                <span className="text-lg font-bold text-gray-400">Select date</span>
+                <div className={FIELD_PLACEHOLDER}>Select date</div>
               )}
             </button>
 
@@ -544,15 +530,15 @@ export const TravelInsurance = () => {
           <button
             type="button"
             onClick={() => setActivePanel(activePanel === 'travellers' ? null : 'travellers')}
-            className={`col-span-2 sm:flex-[1.3] text-left px-5 py-4 transition-colors ${activePanel === 'travellers' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+            className={`col-span-2 sm:flex-[1.3] ${fieldCell(activePanel === 'travellers')}`}
           >
-            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${activePanel === 'travellers' ? 'text-[#1F7AC4]' : 'text-gray-500'}`}>
+            <FieldLabel icon={Users} active={activePanel === 'travellers'}>
               Travellers
-            </div>
-            <div className="text-lg font-bold text-gray-900 leading-tight">
+            </FieldLabel>
+            <div className={FIELD_VALUE}>
               {travellers.length} Traveller{travellers.length !== 1 ? 's' : ''}
             </div>
-            <div className="text-xs text-gray-500 mt-0.5">
+            <div className={FIELD_SUB}>
               {travellers.every((t) => t.birthdate) ? 'DOB added' : 'DOB required'}
             </div>
           </button>
@@ -712,15 +698,10 @@ export const TravelInsurance = () => {
         </div>
       )}
 
-      {/* GET QUOTE button - matches Flights/Hotels SEARCH button */}
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          className="px-10 py-3.5 bg-[#D34E4E] hover:bg-red-600 text-white text-sm font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all uppercase tracking-wide"
-        >
-          GET QUOTE
-        </button>
-      </div>
+      {/* GET QUOTE button - same as every tab */}
+      <ActionRow>
+        <ActionButton type="submit">Get Quote</ActionButton>
+      </ActionRow>
     </form>
   );
 };

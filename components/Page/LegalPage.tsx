@@ -50,7 +50,6 @@ export function LegalPage({
         description={description}
         image="/hero_bg.jpg"
         imagePosition="center 70%"
-        compact
       />
 
       <div className="relative z-10 mx-auto -mt-16 grid max-w-7xl grid-cols-1 gap-6 px-4 pb-16 sm:px-6 md:pb-20 lg:grid-cols-[280px_1fr] lg:gap-8 lg:px-8">

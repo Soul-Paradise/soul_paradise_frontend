@@ -2,14 +2,17 @@
 
 import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { MapPin, Search } from 'lucide-react';
+import { MapPin, PlaneLanding, PlaneTakeoff, Search } from 'lucide-react';
 import { searchAirports, type Airport } from '@/lib/flights-api';
+import { FIELD_PLACEHOLDER, FIELD_SUB, FIELD_VALUE, FieldLabel, fieldCell } from './ui';
 
 interface AirportPickerProps {
   label: string;
   value: Airport | null;
   onChange: (airport: Airport) => void;
   placeholder?: string;
+  /** Extra left padding, for a field that sits beside the overlapping swap button. */
+  insetLeft?: boolean;
 }
 
 export const AirportPicker = ({
@@ -17,6 +20,7 @@ export const AirportPicker = ({
   value,
   onChange,
   placeholder = 'City or Airport',
+  insetLeft = false,
 }: AirportPickerProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -130,22 +134,20 @@ export const AirportPicker = ({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className={`w-full text-left pl-6 py-3 transition-all min-h-[80px]`}
+        className={`w-full h-full ${fieldCell(isOpen)} ${insetLeft ? 'pl-8!' : ''}`}
       >
-        <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">
+        <FieldLabel icon={label.toLowerCase() === 'to' ? PlaneLanding : PlaneTakeoff} active={isOpen}>
           {label}
-        </div>
+        </FieldLabel>
         {value ? (
           <div>
-            <div className="text-xl font-bold text-gray-900 leading-tight">
-              {value.cityName}
-            </div>
-            <div className="text-xs text-gray-500 truncate mt-0.5">
+            <div className={`${FIELD_VALUE} truncate`}>{value.cityName}</div>
+            <div className={FIELD_SUB}>
               {value.code}, {value.name}
             </div>
           </div>
         ) : (
-          <div className="text-gray-400 text-sm mt-1">{placeholder}</div>
+          <div className={FIELD_PLACEHOLDER}>{placeholder}</div>
         )}
       </button>
 
