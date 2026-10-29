@@ -38,6 +38,7 @@ interface AuthActions {
   googleAuth: (idToken: string) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
+  logoutAll: () => Promise<void>;
   clearError: () => void;
   checkAuth: () => Promise<void>;
 }
@@ -200,6 +201,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [router]);
 
   /**
+   * Logout-everywhere Handler
+   * Revokes every session server-side, then cleans up like logout
+   */
+  const logoutAll = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      await api.logoutAll();
+    } catch (err) {
+      console.error('Logout-all error:', err);
+    } finally {
+      setUser(null);
+      api.clearTokens();
+      setIsLoading(false);
+      router.push('/login');
+    }
+  }, [router]);
+
+  /**
    * Clear Error Handler
    */
   const clearError = useCallback(() => {
@@ -237,10 +256,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       googleAuth,
       register,
       logout,
+      logoutAll,
       clearError,
       checkAuth,
     }),
-    [user, isAuthenticated, isLoading, error, login, googleAuth, register, logout, clearError, checkAuth]
+    [user, isAuthenticated, isLoading, error, login, googleAuth, register, logout, logoutAll, clearError, checkAuth]
   );
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;

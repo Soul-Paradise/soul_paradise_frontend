@@ -71,9 +71,14 @@ export const Avatar = ({
 }: {
   src: string | null;
   name: string;
-  size?: 'md' | 'lg';
+  size?: 'md' | 'lg' | 'xl';
 }) => {
-  const dimensions = size === 'lg' ? 'h-10 w-10 text-sm' : 'h-9 w-9 text-xs';
+  const dimensions =
+    size === 'xl'
+      ? 'h-20 w-20 text-2xl'
+      : size === 'lg'
+        ? 'h-10 w-10 text-sm'
+        : 'h-9 w-9 text-xs';
   const [errored, setErrored] = useState(false);
 
   // Reset the error flag if the source changes (e.g. after re-login)
@@ -197,7 +202,10 @@ export const UserMenu = ({ compact = false }: { compact?: boolean } = {}) => {
       ) : (
         <button
           type="button"
-          onClick={() => setOpen((prev) => !prev)}
+          // Hover has already opened the menu by the time a mouse click lands,
+          // so toggling here would immediately close it. Click (or Enter) only
+          // opens; leaving, outside click and Escape close it.
+          onClick={openMenu}
           className="
             flex items-center gap-2 pl-1 pr-2 py-1 rounded-full
             border border-(--color-tertiary-button)

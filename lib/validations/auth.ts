@@ -98,3 +98,47 @@ export const resetPasswordSchema = z
   });
 
 export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
+
+/**
+ * Update Profile Schema
+ */
+export const updateProfileSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, 'Name must be at least 2 characters')
+    .max(100, 'Name must not exceed 100 characters'),
+});
+
+export type UpdateProfileFormData = z.infer<typeof updateProfileSchema>;
+
+/**
+ * Change Password Schema (signed-in user)
+ */
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z
+      .string()
+      .min(1, 'Current password is required'),
+    newPassword: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .max(128, 'Password must not exceed 128 characters')
+      .regex(
+        PASSWORD_REGEX,
+        'Password must contain uppercase, lowercase, and number or special character'
+      ),
+    confirmPassword: z
+      .string()
+      .min(1, 'Please confirm your new password'),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  })
+  .refine((data) => data.newPassword !== data.currentPassword, {
+    message: 'New password must be different from your current password',
+    path: ['newPassword'],
+  });
+
+export type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;

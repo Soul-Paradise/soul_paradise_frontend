@@ -82,6 +82,34 @@ export interface User {
   lastLoginAt: string;
 }
 
+export type AgentVerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+/** Non-sensitive agency details shown to a booking partner on their profile. */
+export interface AgentProfileSummary {
+  agencyName: string;
+  contactPhone: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+  gstNumber: string | null;
+  status: AgentVerificationStatus;
+  submittedAt: string;
+  reviewedAt: string | null;
+}
+
+/** The signed-in user's own account, as returned by GET /auth/profile. */
+export interface UserProfile extends Omit<User, 'lastLoginAt'> {
+  isActive: boolean;
+  updatedAt: string;
+  lastLoginAt: string | null;
+  passwordChangedAt: string | null;
+  /** False for Google-only accounts, which have no password to change. */
+  hasPassword: boolean;
+  agentProfile: AgentProfileSummary | null;
+}
+
 export interface ContactFormRequest {
   fullName: string;
   email: string;
@@ -369,8 +397,42 @@ class ApiClient {
    * Get user profile
    * GET /auth/profile
    */
-  async getProfile(): Promise<User> {
-    return this.authenticatedRequest<User>('/auth/profile');
+  async getProfile(): Promise<UserProfile> {
+    return this.authenticatedRequest<UserProfile>('/auth/profile');
+  }
+
+  /**
+   * Update the signed-in user's profile
+   * PATCH /auth/profile
+   */
+  async updateProfile(data: { name: string }): Promise<UserProfile> {
+    return this.authenticatedRequest<UserProfile>('/auth/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Change password (requires the current one)
+   * POST /auth/change-password
+   *
+   * The backend revokes every other session and returns fresh tokens so this
+   * device stays signed in.
+   */
+  async changePassword(
+    currentPassword: string,
+    newPassword: string
+  ): Promise<{ message: string }> {
+    const response = await this.authenticatedRequest<
+      { message: string } & Pick<AuthResponse, 'accessToken' | 'refreshToken'>
+    >('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+
+    this.setTokens(response.accessToken, response.refreshToken);
+
+    return { message: response.message };
   }
 
   /**
