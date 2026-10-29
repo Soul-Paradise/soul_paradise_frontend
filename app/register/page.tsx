@@ -8,8 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { registerSchema, type RegisterFormData } from '@/lib/validations/auth';
 import { showToast } from '@/lib/toast';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
-import Logo from '@/components/Logo';
-import BackgroundVideo from '@/components/BackgroundVideo';
+import AuthLayout, { AuthDivider, AuthFooterLink } from '@/components/AuthLayout';
 import FormInput from '@/components/FormInput';
 import AccountTypeLink from '@/components/AccountTypeLink';
 
@@ -52,141 +51,103 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="h-screen max-h-screen flex bg-(--color-peace)">
-      {/* Left side - Video Background */}
-      <div className="hidden lg:flex lg:flex-3 relative overflow-hidden">
-        {/* Logo */}
-        <Logo />
-        <BackgroundVideo src="/register_video.mp4" />
-      </div>
+    <AuthLayout
+      video="/register_video.mp4"
+      title="Create Account"
+      subtitle="Join Soul Paradise Travels today!"
+      footer={
+        <>
+          <AuthFooterLink question="Already have an account?" href="/login" action="Sign in" />
+          {/* B2B cross-link. Agents register on a separate page because they
+              submit KYC documents. */}
+          <AccountTypeLink current="customer" />
+        </>
+      }
+    >
+      <div className="space-y-3.5">
+        <GoogleSignInButton disabled={isLoading || isSubmitting} />
 
-      {/* Right side - Register Form */}
-      <div className="flex-2 flex items-center justify-center px-4 py-6 lg:px-8 relative overflow-y-auto bg-(--color-background)">
-        <div className="w-full max-w-[420px]">
-          {/* Header */}
-          <div className="mb-6">
-            <p className="text-3xl font-bold tracking-tight font-[sans-serif] text-(--color-foreground)">
-              Create Account
-            </p>
-            <p className="mt-2 text-sm text-(--color-foreground)">
-              Join Soul Paradise Travels today!
-            </p>
-          </div>
+        <AuthDivider />
 
-          {/* Form Container */}
-          <div className="space-y-3.5">
-            {/* Google Register Button */}
-            <GoogleSignInButton disabled={isLoading || isSubmitting} />
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
+          <FormInput
+            id="name"
+            label="Full Name"
+            type="text"
+            placeholder="Enter Your Full Name"
+            autoComplete="name"
+            register={register('name')}
+            error={errors.name?.message}
+            disabled={isLoading || isSubmitting}
+          />
 
-            {/* Divider */}
-            <div className="relative py-2">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-(--color-tertiary-button)" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="px-2 font-medium bg-(--color-background) text-(--color-foreground)">Or</span>
-              </div>
-            </div>
+          <FormInput
+            id="email"
+            label="Email"
+            type="email"
+            placeholder="Enter Your Email Address"
+            autoComplete="email"
+            register={register('email')}
+            error={errors.email?.message}
+            disabled={isLoading || isSubmitting}
+          />
 
-            {/* Register Form */}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
-              {/* Full Name Field */}
-              <FormInput
-                id="name"
-                label="Full Name"
-                type="text"
-                placeholder="Enter Your Full Name"
-                autoComplete="name"
-                register={register('name')}
-                error={errors.name?.message}
-                disabled={isLoading || isSubmitting}
-              />
-
-              {/* Email Field */}
-              <FormInput
-                id="email"
-                label="Email"
-                type="email"
-                placeholder="Enter Your Email Address"
-                autoComplete="email"
-                register={register('email')}
-                error={errors.email?.message}
-                disabled={isLoading || isSubmitting}
-              />
-
-              {/* Password Field */}
+          {/* Side by side so the form fits short laptop screens without scrolling */}
+          <div>
+            <div className="grid grid-cols-2 gap-3">
               <FormInput
                 id="password"
                 label="Password"
                 type="password"
-                placeholder="Create Your Password"
+                placeholder="Create password"
                 autoComplete="new-password"
                 register={register('password')}
                 error={errors.password?.message}
                 disabled={isLoading || isSubmitting}
-                helperText="Min 8 chars, uppercase, lowercase, number/special character"
               />
-
-              {/* Confirm Password Field */}
               <FormInput
                 id="confirmPassword"
                 label="Confirm Password"
                 type="password"
-                placeholder="Confirm Your Password"
+                placeholder="Re-enter"
                 autoComplete="new-password"
                 register={register('confirmPassword')}
                 error={errors.confirmPassword?.message}
                 disabled={isLoading || isSubmitting}
               />
-
-              {/* Terms and Conditions */}
-              <div className="flex items-start">
-                <input
-                  id="terms"
-                  type="checkbox"
-                  required
-                  disabled={isLoading || isSubmitting}
-                  className="h-3.5 w-3.5 mt-0.5 border border-(--color-tertiary-button) rounded disabled:cursor-not-allowed accent-(--color-primary-button)"
-                />
-                <label htmlFor="terms" className="ml-2 block text-xs text-(--color-foreground)">
-                  I agree to the{' '}
-                  <Link
-                    href="/terms"
-                    className="font-medium transition-colors duration-200 text-(--color-links) hover:opacity-80"
-                  >
-                    Terms and Conditions
-                  </Link>
-                </label>
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isLoading || isSubmitting}
-                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold transition-all duration-200 mt-4 disabled:cursor-not-allowed bg-(--color-primary-button) text-(--color-peace) hover:bg-(--color-secondary-button) disabled:bg-(--color-inactive)"
-              >
-                {isLoading || isSubmitting ? 'Creating Account...' : 'Create Account'}
-              </button>
-            </form>
-
-            {/* Login link + the B2B cross-link. Agents register on a separate
-                page because they submit KYC documents. */}
-            <div className="text-center pt-2 space-y-1">
-              <p className="text-sm text-(--color-foreground)">
-                Already have an account?{' '}
-                <Link
-                  href="/login"
-                  className="font-semibold transition-colors duration-200 text-(--color-links) hover:opacity-80"
-                >
-                  Sign in
-                </Link>
-              </p>
-
-              <AccountTypeLink current="customer" />
             </div>
+            <p className="mt-1 text-xs text-gray-500">Min 8 chars, uppercase, lowercase, number/special character</p>
           </div>
-        </div>
+
+          {/* Terms and Conditions */}
+          <div className="flex items-start">
+            <input
+              id="terms"
+              type="checkbox"
+              required
+              disabled={isLoading || isSubmitting}
+              className="h-3.5 w-3.5 mt-0.5 border border-(--color-tertiary-button) rounded disabled:cursor-not-allowed accent-(--color-primary-button)"
+            />
+            <label htmlFor="terms" className="ml-2 block text-xs text-(--color-foreground)">
+              I agree to the{' '}
+              <Link
+                href="/terms"
+                className="font-medium transition-colors duration-200 text-(--color-links) hover:opacity-80"
+              >
+                Terms and Conditions
+              </Link>
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading || isSubmitting}
+            className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold transition-all duration-200 mt-4 disabled:cursor-not-allowed bg-(--color-primary-button) text-(--color-peace) hover:bg-(--color-secondary-button) disabled:bg-(--color-inactive)"
+          >
+            {isLoading || isSubmitting ? 'Creating Account...' : 'Create Account'}
+          </button>
+        </form>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

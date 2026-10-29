@@ -14,9 +14,10 @@ const TRIPS = [
 
 export function PopularTrips() {
   return (
-    <section className="py-10">
+    <section className="bg-(--color-peace) py-14 md:py-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <SectionHeader
+          eyebrow="Holiday Packages"
           title="Trips our travellers loved"
           subtitle="Holiday packages we plan end to end: flights, stays and sightseeing."
           link={{ href: '/hall-of-fame', label: 'See the gallery' }}
@@ -33,7 +34,7 @@ export function PopularTrips() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`Enquire about a ${trip.name} holiday on WhatsApp`}
-              className="group relative aspect-[3/4] w-56 shrink-0 snap-start overflow-hidden rounded-xl shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg sm:w-60 lg:w-auto"
+              className="group relative aspect-[3/4] w-56 shrink-0 snap-start overflow-hidden rounded-2xl shadow-sm ring-1 ring-black/5 transition-all hover:-translate-y-1 hover:shadow-xl sm:w-60 lg:w-auto"
             >
               <Image
                 src={trip.src}

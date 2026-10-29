@@ -1,122 +1,200 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
+import {
+  ArrowRight,
+  BadgeCheck,
+  Building2,
+  FileText,
+  Globe2,
+  Headphones,
+  MessageCircle,
+  Palmtree,
+  Plane,
+  Search,
+  ShieldCheck,
+  type LucideIcon,
+} from 'lucide-react';
+import { PageHero, SectionHeading, IconTile, GRADIENTS, type Accent } from '@/components/Page';
+import { PlanHolidayCta } from '@/components/Home';
+import { whatsappLink } from '@/components/Home/constants';
 
 export const metadata: Metadata = {
   title: 'Our Services - Soul Paradise Travels',
   description: 'Explore our travel services including international & domestic flights, holiday packages, hotels, visa & insurance',
 };
 
+interface Service {
+  icon: LucideIcon;
+  accent: Accent;
+  title: string;
+  body: string;
+  /** Bookable on the site: link to that search tab. Otherwise: WhatsApp enquiry. */
+  tab?: 'flights' | 'hotel' | 'insurance';
+  enquiry?: string;
+}
+
+const SERVICES: Service[] = [
+  {
+    icon: Globe2,
+    accent: 'blue',
+    title: 'International Air Tickets',
+    body: 'Competitive fares on international flights to destinations worldwide. We compare routes across multiple airlines to find you the best deals for your global travel.',
+    tab: 'flights',
+  },
+  {
+    icon: Plane,
+    accent: 'green',
+    title: 'Domestic Air Tickets',
+    body: 'Affordable domestic flight bookings across India. Get instant confirmations and the most competitive prices for all major Indian airlines.',
+    tab: 'flights',
+  },
+  {
+    icon: Palmtree,
+    accent: 'orange',
+    title: 'Holiday Packages',
+    body: 'Carefully curated holiday packages designed to suit every budget and preference, from adventure trips to relaxing getaways and family vacations.',
+    enquiry: "Hi Soul Paradise, I'd like a quote for a holiday package.",
+  },
+  {
+    icon: Building2,
+    accent: 'teal',
+    title: 'Hotel Booking',
+    body: 'Access to a wide range of accommodations worldwide, from budget-friendly options to luxury stays, tailored to your needs and preferences.',
+    tab: 'hotel',
+  },
+  {
+    icon: FileText,
+    accent: 'purple',
+    title: 'Tourist Visa',
+    body: 'Expert guidance for various tourist visas, handled by our highly experienced and skilled staff dedicated exclusively to visa processing.',
+    enquiry: 'Hi Soul Paradise, I need help with a tourist visa.',
+  },
+  {
+    icon: ShieldCheck,
+    accent: 'pink',
+    title: 'Travel Insurance',
+    body: 'Comprehensive travel insurance solutions to ensure peace of mind throughout your journey, covering unforeseen circumstances and emergencies.',
+    tab: 'insurance',
+  },
+];
+
+const STEPS = [
+  {
+    icon: Search,
+    title: 'Tell us your plan',
+    body: 'Search flights, hotels or insurance right here, or message us about a package or visa.',
+  },
+  {
+    icon: BadgeCheck,
+    title: 'We find the best option',
+    body: 'We compare airlines, routes and stays to match your budget and preferences.',
+  },
+  {
+    icon: Headphones,
+    title: 'Travel with support',
+    body: 'Our team is on call around the clock, before, during and after your trip.',
+  },
+];
+
 export default function ServicePage() {
   return (
     <main className="min-h-screen bg-(--color-background)">
-      {/* Header Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12 md:pt-28 md:pb-16">
-        <div className="flex items-center mb-6">
-          <div className="w-16 h-1 bg-(--color-links) mr-4 rounded-xl"></div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-(--color-foreground)">
-            Our Services
-          </h1>
-        </div>
-        <p className="text-lg text-(--color-inactive) max-w-3xl">
-          Discover our comprehensive range of travel services designed to make your journey seamless, affordable, and memorable. From flight bookings to visa assistance, we've got you covered.
-        </p>
-      </section>
+      <PageHero
+        eyebrow="Our Services"
+        title="Everything your trip needs, in one place"
+        description="Discover our comprehensive range of travel services designed to make your journey seamless, affordable, and memorable. From flight bookings to visa assistance, we've got you covered."
+        image="/hero_bg.jpg"
+        chips={[
+          { icon: Plane, label: 'Flights' },
+          { icon: Building2, label: 'Hotels' },
+          { icon: Palmtree, label: 'Holidays' },
+          { icon: FileText, label: 'Visas' },
+          { icon: ShieldCheck, label: 'Insurance' },
+        ]}
+      />
 
-      {/* Services Grid */}
-      <section className="bg-(--color-peace) py-12 md:py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {/* Service 1 - International Air Tickets */}
-            <div className="bg-(--color-background) p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-(--color-links) rounded-full flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-(--color-peace)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-(--color-foreground) mb-3">
-                International Air Tickets
-              </h3>
-              <p className="text-(--color-inactive)">
-                Competitive fares on international flights to destinations worldwide. We compare routes across multiple airlines to find you the best deals for your global travel.
-              </p>
-            </div>
-
-            {/* Service 2 - Domestic Air Tickets */}
-            <div className="bg-(--color-background) p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-(--color-success) rounded-full flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-(--color-peace)" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-(--color-foreground) mb-3">
-                Domestic Air Tickets
-              </h3>
-              <p className="text-(--color-inactive)">
-                Affordable domestic flight bookings across India. Get instant confirmations and the most competitive prices for all major Indian airlines.
-              </p>
-            </div>
-
-            {/* Service 3 - Holiday Packages */}
-            <div className="bg-(--color-background) p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-(--color-warn) rounded-full flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-(--color-peace)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-(--color-foreground) mb-3">
-                Holiday Packages
-              </h3>
-              <p className="text-(--color-inactive)">
-                Carefully curated holiday packages designed to suit every budget and preference, from adventure trips to relaxing getaways and family vacations.
-              </p>
-            </div>
-
-            {/* Service 4 - Hotel Booking */}
-            <div className="bg-(--color-background) p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-(--color-secondary-button) rounded-full flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-(--color-peace)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-(--color-foreground) mb-3">
-                Hotel Booking
-              </h3>
-              <p className="text-(--color-inactive)">
-                Access to a wide range of accommodations worldwide, from budget-friendly options to luxury stays, tailored to your needs and preferences.
-              </p>
-            </div>
-
-            {/* Service 5 - Tourist Visa */}
-            <div className="bg-(--color-background) p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-(--color-primary-button) rounded-full flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-(--color-peace)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-(--color-foreground) mb-3">
-                Tourist Visa
-              </h3>
-              <p className="text-(--color-inactive)">
-                Expert guidance for various tourist visas, handled by our highly experienced and skilled staff dedicated exclusively to visa processing.
-              </p>
-            </div>
-
-            {/* Service 6 - Travel Insurance */}
-            <div className="bg-(--color-background) p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-(--color-danger) rounded-full flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-(--color-peace)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-(--color-foreground) mb-3">
-                Travel Insurance
-              </h3>
-              <p className="text-(--color-inactive)">
-                Comprehensive travel insurance solutions to ensure peace of mind throughout your journey, covering unforeseen circumstances and emergencies.
-              </p>
-            </div>
-          </div>
+      {/* Services grid, overlapping the hero */}
+      <section className="relative z-10 mx-auto -mt-16 max-w-7xl px-4 pb-16 sm:px-6 md:pb-20 lg:px-8">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {SERVICES.map((s) => (
+            <ServiceCard key={s.title} service={s} />
+          ))}
         </div>
       </section>
+
+      {/* How it works */}
+      <section className="bg-(--color-peace) py-16 md:py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <SectionHeading eyebrow="How It Works" title="From idea to itinerary in three steps" />
+          <ol className="relative grid grid-cols-1 gap-6 md:grid-cols-3">
+            {/* Connector line behind the steps on desktop */}
+            <span
+              className="pointer-events-none absolute left-[16%] right-[16%] top-7 hidden h-0.5 bg-gradient-to-r from-blue-500 via-emerald-500 to-orange-500 opacity-30 md:block"
+              aria-hidden="true"
+            />
+            {STEPS.map(({ icon, title, body }, i) => (
+              <li key={title} className="group relative text-center">
+                <span className="relative mx-auto flex w-fit">
+                  <IconTile icon={icon} accent={(['blue', 'green', 'orange'] as const)[i]} size="lg" />
+                  <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-(--color-primary-button) text-[11px] font-bold text-white ring-2 ring-(--color-peace)">
+                    {i + 1}
+                  </span>
+                </span>
+                <h3 className="mt-4 text-lg font-bold text-(--color-foreground)">{title}</h3>
+                <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-(--color-inactive)">{body}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <div className="pt-12">
+        <PlanHolidayCta />
+      </div>
     </main>
+  );
+}
+
+function ServiceCard({ service: s }: { service: Service }) {
+  const Icon = s.icon;
+  const bookable = Boolean(s.tab);
+  const actionClass =
+    'group/btn mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-(--color-links) hover:opacity-80';
+
+  return (
+    <article className="group flex flex-col overflow-hidden rounded-2xl bg-(--color-peace) shadow-lg ring-1 ring-(--color-tertiary-button) transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+      <div className={`relative h-28 overflow-hidden bg-gradient-to-br ${GRADIENTS[s.accent]}`}>
+        <span className="pointer-events-none absolute -right-6 -top-8 h-32 w-32 rounded-full bg-white/10 transition-transform duration-500 group-hover:scale-125" />
+        <Icon className="absolute -bottom-4 right-4 h-24 w-24 text-white/15 transition-transform duration-500 group-hover:-rotate-12" />
+        <span
+          className={`absolute left-5 top-5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${
+            bookable ? 'bg-white text-(--color-foreground)' : 'bg-black/20 text-white'
+          }`}
+        >
+          {bookable ? 'Book online' : 'Personal assistance'}
+        </span>
+      </div>
+      <div className="flex flex-1 flex-col p-6">
+        {/* relative + z-10 so the tile sits above the band it overlaps */}
+        <span className="relative z-10 -mt-12 mb-3">
+          <span className="inline-flex rounded-2xl bg-(--color-peace) p-1.5 shadow-md">
+            <IconTile icon={s.icon} accent={s.accent} />
+          </span>
+        </span>
+        <h3 className="text-lg font-bold text-(--color-foreground)">{s.title}</h3>
+        <p className="mb-5 mt-2 text-sm leading-relaxed text-(--color-inactive)">{s.body}</p>
+        {s.tab ? (
+          <Link href={`/?tab=${s.tab}#booking`} className={actionClass}>
+            Search & book
+            <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
+          </Link>
+        ) : (
+          <a href={whatsappLink(s.enquiry)} target="_blank" rel="noopener noreferrer" className={actionClass}>
+            <MessageCircle className="h-4 w-4" />
+            Get a quote on WhatsApp
+          </a>
+        )}
+      </div>
+    </article>
   );
 }

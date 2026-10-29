@@ -98,9 +98,10 @@ export function TravellerReviews() {
     'absolute top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white text-(--color-foreground) shadow-md transition hover:scale-105 hover:text-(--color-links) focus-visible:outline-2 focus-visible:outline-(--color-links)';
 
   return (
-    <section className="py-10">
+    <section className="py-14 md:py-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <SectionHeader
+          eyebrow="Testimonials"
           title="What our travellers say"
           link={{ href: '/hall-of-fame', label: 'Read more stories' }}
         />
@@ -146,8 +147,8 @@ export function TravellerReviews() {
                   aria-hidden={copy > 0 || undefined}
                   className="flex gap-4 pr-4"
                 >
-                  {reviews.map((review) => (
-                    <ReviewCard key={review.id} review={review} />
+                  {reviews.map((review, i) => (
+                    <ReviewCard key={review.id} review={review} accent={ACCENTS[i % ACCENTS.length]} />
                   ))}
                 </div>
               ))}
@@ -159,9 +160,18 @@ export function TravellerReviews() {
   );
 }
 
-function ReviewCard({ review }: { review: Testimonial }) {
+/** Same accent family as the Hall of Fame review cards. */
+const ACCENTS = [
+  'from-blue-500 to-indigo-600',
+  'from-emerald-500 to-teal-600',
+  'from-orange-500 to-red-500',
+  'from-purple-500 to-violet-600',
+];
+
+function ReviewCard({ review, accent }: { review: Testimonial; accent: string }) {
   return (
-    <figure className="relative flex w-[280px] shrink-0 flex-col rounded-xl bg-(--color-peace) p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg sm:w-[340px]">
+    <figure className="relative flex w-[280px] shrink-0 flex-col overflow-hidden rounded-2xl bg-(--color-peace) p-6 shadow-sm ring-1 ring-(--color-tertiary-button) transition-all hover:-translate-y-1 hover:shadow-xl sm:w-[340px]">
+      <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} aria-hidden="true" />
       <Quote className="absolute right-5 top-5 h-8 w-8 text-(--color-tertiary-button)" />
       <div className="mb-3 flex gap-0.5" aria-label={`${review.rating} out of 5 stars`}>
         {Array.from({ length: 5 }, (_, i) => (
@@ -179,7 +189,7 @@ function ReviewCard({ review }: { review: Testimonial }) {
         “{review.review}”
       </blockquote>
       <figcaption className="mt-5 flex items-center gap-3 border-t border-(--color-tertiary-button) pt-4">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-(--color-links) text-sm font-bold text-white">
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${accent} text-sm font-bold text-white`}>
           {review.name
             .split(/\s+/)
             .map((part) => part[0])

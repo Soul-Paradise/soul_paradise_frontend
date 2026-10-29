@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { BadgeCheck, Headphones, ShieldCheck } from 'lucide-react';
 import { BookingTabs, MobileBookingTabs } from '@/components/BookingTabs';
 import {
   LongWeekends,
@@ -8,6 +9,65 @@ import {
   TravellerReviews,
   PlanHolidayCta,
 } from '@/components/Home';
+import { SectionHeader } from '@/components/Home/SectionHeader';
+
+const HERO_CHIPS = [
+  { icon: BadgeCheck, label: 'IATA accredited' },
+  { icon: Headphones, label: '24/7 support' },
+  { icon: ShieldCheck, label: 'Secure payments' },
+];
+
+/** Hero photo with the same overlay and slow zoom as the other pages' heroes. */
+function HeroBackdrop() {
+  return (
+    <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
+      <div
+        className="animate-hero-zoom absolute inset-0"
+        style={{ backgroundImage: 'url(/hero_bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20" />
+      <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/30 to-transparent" />
+    </div>
+  );
+}
+
+/** Eyebrow, headline and chips above the booking card. */
+function HeroIntro({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={compact ? '' : 'mb-2'}>
+      <span className="animate-fade-up inline-block rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white ring-1 ring-inset ring-white/25 backdrop-blur-sm">
+        Soul Paradise Travels
+      </span>
+      <h1
+        className={`animate-fade-up mt-3 font-extrabold leading-tight tracking-tight text-white ${
+          compact ? 'text-3xl' : 'text-4xl lg:text-5xl'
+        }`}
+        style={{ animationDelay: '80ms' }}
+      >
+        Where to next?
+      </h1>
+      <p
+        className={`animate-fade-up mt-2 max-w-2xl leading-relaxed text-white/85 ${compact ? 'text-sm' : 'text-base lg:text-lg'}`}
+        style={{ animationDelay: '140ms' }}
+      >
+        Flights, hotels, travel insurance and holiday packages, all from one IATA-accredited agency.
+      </p>
+      {!compact && (
+        <ul className="animate-fade-up mt-4 flex flex-wrap gap-2" style={{ animationDelay: '200ms' }}>
+          {HERO_CHIPS.map(({ icon: Icon, label }) => (
+            <li
+              key={label}
+              className="inline-flex items-center gap-1.5 rounded-full bg-black/25 px-3 py-1.5 text-xs font-semibold text-white ring-1 ring-inset ring-white/20 backdrop-blur-sm"
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -75,26 +135,33 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-(--color-background)">
       <div id="booking" className="scroll-mt-20">
-        {/* ── Mobile Icon View (small screens only) ── */}
-        <section className="sm:hidden bg-white shadow-sm">
-          <MobileBookingTabs />
+        {/* ── Mobile: photo hero, booking icons on a card overlapping it ── */}
+        <section className="sm:hidden">
+          <div className="relative overflow-hidden px-4 pb-16 pt-8">
+            <HeroBackdrop />
+            <div className="relative">
+              <HeroIntro compact />
+            </div>
+          </div>
+          <div className="relative z-10 mx-4 -mt-10 overflow-hidden rounded-2xl shadow-xl ring-1 ring-(--color-tertiary-button)">
+            <MobileBookingTabs />
+          </div>
         </section>
 
         {/* ── Hero Section (sm+ only) ── */}
         {/* min-h (not fixed h) so a taller card - e.g. multi-city with several
             legs - grows the hero and pushes the next section down instead of
-            overflowing it. One-way/round-trip are shorter than 400px, so their
-            layout is unchanged. */}
-        <section
-          className="relative min-h-[400px] hidden sm:flex items-center pb-10 z-10"
-        >
-          {/* Background image + overlay */}
-          <div className="absolute inset-0 overflow-hidden" style={{ backgroundImage: 'url(/hero_bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-            <div className="absolute inset-0 bg-black/40" />
+            overflowing it. */}
+        <section className="relative z-10 hidden min-h-[400px] flex-col justify-center pb-10 pt-12 sm:flex">
+          <HeroBackdrop />
+
+          {/* Same container as the booking card, so the text lines up with it */}
+          <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-6">
+            <HeroIntro />
           </div>
 
           {/* Booking card */}
-          <div className="relative z-20 w-full mt-16">
+          <div className="relative z-20 w-full">
             <BookingTabs />
           </div>
         </section>
@@ -103,9 +170,9 @@ export default function Home() {
       {/* ── Offers Section ── (only when there are offers; an empty state
           shouldn't be the first thing below the search) */}
       {offers.length > 0 && (
-      <section className="py-10">
+      <section className="py-14 md:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <h2 className="text-2xl font-bold text-(--color-foreground) mb-5">Offers</h2>
+          <SectionHeader eyebrow="Deals" title="Offers" />
 
           {/* Offer tabs */}
           <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 border-b border-gray-200 mb-6">
@@ -130,7 +197,7 @@ export default function Home() {
               {filteredOffers.map((offer) => (
                 <div
                   key={offer.id}
-                  className={`bg-gradient-to-br ${COLOR_GRADIENTS[offer.colorTheme] ?? COLOR_GRADIENTS.blue} rounded-xl p-5 text-white cursor-pointer hover:shadow-lg transition-all hover:-translate-y-0.5`}
+                  className={`bg-gradient-to-br ${COLOR_GRADIENTS[offer.colorTheme] ?? COLOR_GRADIENTS.blue} rounded-2xl p-5 text-white cursor-pointer hover:shadow-xl transition-all hover:-translate-y-1`}
                 >
                   <span className="text-[11px] font-bold uppercase tracking-wider bg-white/20 px-2 py-1 rounded-full">
                     {CATEGORY_LABELS[offer.category]}

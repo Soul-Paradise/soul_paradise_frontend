@@ -14,6 +14,8 @@ const FOOTERLESS_ROUTES = [
   '/login',
   '/register', // covers /register/agent
   '/agent', // covers /agent/resubmit
+  '/forgot-password',
+  '/reset-password',
 ];
 
 export default function ConditionalFooter() {

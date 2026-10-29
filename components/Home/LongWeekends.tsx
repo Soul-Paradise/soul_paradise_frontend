@@ -49,9 +49,10 @@ export function LongWeekends() {
   if (weekends.length === 0) return null;
 
   return (
-    <section className="py-10">
+    <section className="py-14 md:py-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <SectionHeader
+          eyebrow="Holiday Planner"
           title="Plan your next long weekend"
           subtitle="Upcoming holidays, the smartest leave to take, and everything you need to book for them."
         />
@@ -97,7 +98,7 @@ function WeekendCard({ weekend: w, gradient }: { weekend: LongWeekend; gradient:
   ];
 
   return (
-    <article className="group/card flex w-72 shrink-0 snap-start flex-col overflow-hidden rounded-xl bg-(--color-peace) shadow-sm ring-1 ring-(--color-tertiary-button) transition-all hover:-translate-y-1 hover:shadow-xl sm:w-auto">
+    <article className="group/card flex w-72 shrink-0 snap-start flex-col overflow-hidden rounded-2xl bg-(--color-peace) shadow-sm ring-1 ring-(--color-tertiary-button) transition-all hover:-translate-y-1 hover:shadow-xl sm:w-auto">
       {/* Headline: the break itself */}
       <div className={`relative overflow-hidden bg-gradient-to-br ${gradient} p-5 text-white`}>
         {/* Soft decorative circles, like a sports-ticket stub */}

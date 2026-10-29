@@ -11,6 +11,8 @@ interface FileUploadProps {
   helperText?: string;
   disabled?: boolean;
   required?: boolean;
+  /** Shorter drop zone, for laying several uploads out in a grid. */
+  compact?: boolean;
 }
 
 const ACCEPT = 'image/jpeg,image/png,application/pdf';
@@ -37,6 +39,7 @@ export default function FileUpload({
   helperText,
   disabled,
   required,
+  compact = false,
 }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -90,7 +93,9 @@ export default function FileUpload({
           type="button"
           disabled={disabled}
           onClick={() => inputRef.current?.click()}
-          className={`w-full flex flex-col items-center justify-center gap-1.5 px-4 py-6 rounded-lg border-2 border-dashed transition-colors duration-200 disabled:cursor-not-allowed ${
+          className={`w-full flex flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors duration-200 disabled:cursor-not-allowed ${
+            compact ? 'gap-0.5 px-2 py-2.5' : 'gap-1.5 px-4 py-6'
+          } ${
             error
               ? 'border-red-400'
               : 'border-(--color-tertiary-button) hover:border-(--color-primary-button)'
@@ -113,7 +118,7 @@ export default function FileUpload({
           <span className="text-sm font-medium text-(--color-foreground)">
             Click to upload
           </span>
-          <span className="text-xs text-(--color-foreground) opacity-60">
+          <span className={`text-(--color-foreground) opacity-60 ${compact ? 'text-[11px]' : 'text-xs'}`}>
             JPG, PNG or PDF · max 5MB
           </span>
         </button>

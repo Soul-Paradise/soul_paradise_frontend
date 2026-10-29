@@ -1,10 +1,125 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
+import { ZodError } from 'zod';
+import {
+  ArrowRight,
+  Clock,
+  Loader2,
+  Mail,
+  MapPin,
+  Navigation,
+  Phone,
+  Send,
+  Store,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react';
 import { api, type ApiError } from '@/lib/api';
 import { contactFormSchema } from '@/lib/validations/contact';
 import { showToast } from '@/lib/toast';
-import { ZodError } from 'zod';
+import { PageHero, IconTile, WhatsAppIcon, type Accent } from '@/components/Page';
+
+const DIRECTIONS_URL = 'https://www.google.com/maps/search/?api=1&query=SOUL+PARADISE+JALANDHAR+INDIA';
+
+/** Office hours in IST. `null` = closed that day. Index = getDay() (0 = Sunday). */
+const HOURS: ({ open: number; close: number } | null)[] = [
+  null,
+  { open: 9, close: 19 },
+  { open: 9, close: 19 },
+  { open: 9, close: 19 },
+  { open: 9, close: 19 },
+  { open: 9, close: 19 },
+  { open: 10, close: 18 },
+];
+
+const HOURS_ROWS = [
+  { days: 'Monday - Friday', time: '9:00 AM - 7:00 PM', dayIdx: [1, 2, 3, 4, 5] },
+  { days: 'Saturday', time: '10:00 AM - 6:00 PM', dayIdx: [6] },
+  { days: 'Sunday', time: 'Closed', dayIdx: [0] },
+];
+
+/** Current weekday and fractional hour in India, whatever the visitor's timezone. */
+function nowInIndia() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'short',
+    hour: 'numeric',
+    minute: 'numeric',
+    hourCycle: 'h23',
+  }).formatToParts(new Date());
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+  const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(get('weekday'));
+  return { day, hour: Number(get('hour')) + Number(get('minute')) / 60 };
+}
+
+function officeStatus(): string {
+  const { day, hour } = nowInIndia();
+  const h = HOURS[day];
+  return h && hour >= h.open && hour < h.close ? `open:${day}` : `closed:${day}`;
+}
+
+/** Live open/closed status; rendered only on the client (server snapshot is null). */
+function useOfficeStatus() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const id = setInterval(onChange, 60_000);
+      return () => clearInterval(id);
+    },
+    officeStatus,
+    () => null
+  );
+}
+
+const CHANNELS: {
+  icon: LucideIcon | 'whatsapp';
+  accent: Accent;
+  title: string;
+  caption: string;
+  lines: string[];
+  href?: string;
+  action?: string;
+  external?: boolean;
+}[] = [
+  {
+    icon: Phone,
+    accent: 'blue',
+    title: 'Call Us',
+    caption: 'Mobile & office',
+    lines: ['+91-9876816688', '0181-4673955'],
+    href: 'tel:+919876816688',
+    action: 'Call now',
+  },
+  {
+    icon: 'whatsapp',
+    accent: 'green',
+    title: 'WhatsApp',
+    caption: 'Quick replies · Available 24/7',
+    lines: ['Chat with us'],
+    href: 'https://wa.me/919876816688',
+    action: 'Start chat',
+    external: true,
+  },
+  {
+    icon: Mail,
+    accent: 'orange',
+    title: 'Email Us',
+    caption: 'We reply within 24 hours',
+    lines: ['soulparadise21@gmail.com'],
+    href: 'mailto:soulparadise21@gmail.com',
+    action: 'Send email',
+  },
+  {
+    icon: Store,
+    accent: 'purple',
+    title: 'Visit Our Office',
+    caption: 'Walk-in anytime',
+    lines: ['Shop No. 21, 1st Floor', 'PPR Plaza, Jalandhar, Punjab 144001'],
+    href: DIRECTIONS_URL,
+    action: 'Get directions',
+    external: true,
+  },
+];
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -16,13 +131,16 @@ export default function ContactPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const status = useOfficeStatus();
+  const isOpen = status?.startsWith('open');
+  const today = status ? Number(status.split(':')[1]) : -1;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
     // Clear field error when user starts typing
     if (fieldErrors[name]) {
-      setFieldErrors(prev => ({ ...prev, [name]: '' }));
+      setFieldErrors((prev) => ({ ...prev, [name]: '' }));
     }
   };
 
@@ -50,7 +168,7 @@ export default function ContactPage() {
       showToast({
         title: 'Message Sent Successfully!',
         body: "Thank you for reaching out. We'll get back to you at the earliest.",
-        type: 'success'
+        type: 'success',
       });
     } catch (error) {
       if (error instanceof ZodError) {
@@ -60,10 +178,10 @@ export default function ContactPage() {
           if (err.path[0]) {
             // Map field names back to form field names
             const fieldMap: Record<string, string> = {
-              'fullName': 'name',
-              'phoneNumber': 'phone',
+              fullName: 'name',
+              phoneNumber: 'phone',
             };
-            const fieldName = fieldMap[err.path[0] as string] || err.path[0] as string;
+            const fieldName = fieldMap[err.path[0] as string] || (err.path[0] as string);
             errors[fieldName] = err.message;
           }
         });
@@ -74,203 +192,115 @@ export default function ContactPage() {
         showToast({
           title: 'Failed to Send Message',
           body: apiError.message || 'Something went wrong. Please try again later.',
-          type: 'error'
+          type: 'error',
         });
       }
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const inputClass = (field: string) =>
+    `w-full rounded-xl border bg-(--color-background) px-4 py-3 text-sm text-(--color-foreground) outline-none transition-all placeholder:text-gray-400 focus:bg-white focus:ring-4 ${
+      fieldErrors[field]
+        ? 'border-(--color-danger) focus:ring-(--color-danger)/15'
+        : 'border-(--color-tertiary-button) focus:border-(--color-links) focus:ring-(--color-links)/15'
+    }`;
+
+  const label = (htmlFor: string, text: string) => (
+    <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-semibold text-(--color-foreground)">
+      {text} <span className="text-(--color-danger)">*</span>
+    </label>
+  );
+
+  const error = (field: string) =>
+    fieldErrors[field] && <p className="mt-1 text-sm text-(--color-danger)">{fieldErrors[field]}</p>;
+
   return (
     <main className="min-h-screen bg-(--color-background)">
-      {/* Header Section - White Background */}
-      <section className="bg-(--color-background) pt-24 pb-12 md:pt-28 md:pb-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center mb-6">
-            <div className="w-16 h-1 bg-(--color-links) mr-4 rounded-xl"></div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-(--color-foreground)">
-              Contact Us
-            </h1>
-          </div>
-          <p className="text-lg text-(--color-inactive) max-w-3xl">
-            We're here to help you plan your perfect journey. Reach out to us through any of the channels below, and our team will be happy to assist you.
-          </p>
+      <PageHero
+        eyebrow="Contact Us"
+        title="Let's plan your next journey"
+        description="We're here to help you plan your perfect journey. Reach out to us through any of the channels below, and our team will be happy to assist you."
+        image="/ne_3.jpg"
+        imagePosition="center 60%"
+        chips={[
+          { icon: Clock, label: 'Replies within 24 hours' },
+          { icon: Zap, label: 'WhatsApp 24/7' },
+          { icon: MapPin, label: 'Jalandhar, Punjab' },
+        ]}
+      />
+
+      {/* Contact channels, overlapping the hero */}
+      <section className="relative z-10 mx-auto -mt-16 max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {CHANNELS.map((c) => (
+            <a
+              key={c.title}
+              href={c.href}
+              {...(c.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+              className="group flex flex-col rounded-2xl bg-(--color-peace) p-5 shadow-xl ring-1 ring-(--color-tertiary-button) transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+            >
+              {c.icon === 'whatsapp' ? (
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110">
+                  <WhatsAppIcon className="h-6 w-6" />
+                </span>
+              ) : (
+                <IconTile icon={c.icon} accent={c.accent} />
+              )}
+              <h3 className="mt-4 text-lg font-bold text-(--color-foreground)">{c.title}</h3>
+              <p className="text-xs text-(--color-inactive)">{c.caption}</p>
+              <div className="mb-4 mt-3 space-y-0.5">
+                {c.lines.map((line) => (
+                  <p key={line} className="break-words text-sm font-semibold text-(--color-foreground)">
+                    {line}
+                  </p>
+                ))}
+              </div>
+              <span className="mt-auto inline-flex items-center gap-1 text-sm font-semibold text-(--color-links)">
+                {c.action}
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </span>
+            </a>
+          ))}
         </div>
       </section>
 
-      {/* Contact Cards (Left) and Form (Right) Section - Tinted Background */}
-      <section className="bg-(--color-peace) py-12 md:py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Side - Contact Cards (2x2 Grid) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Phone */}
-            <a
-              href="tel:+919876816688"
-              className="bg-(--color-background) p-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 group"
-            >
-              <div className="w-12 h-12 bg-(--color-links) rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <svg className="w-6 h-6 text-(--color-peace)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-(--color-foreground) mb-2">Call Us</h3>
-              <p className="text-sm text-(--color-inactive) mb-2">Mobile</p>
-              <p className="text-base font-semibold text-(--color-links)">+91-9876816688</p>
-              <p className="text-sm text-(--color-inactive) mt-2">Office</p>
-              <p className="text-base font-semibold text-(--color-links)">0181-4673955</p>
-            </a>
+      {/* Form + hours */}
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-20 lg:px-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+          <div className="rounded-2xl bg-(--color-peace) p-6 shadow-lg ring-1 ring-(--color-tertiary-button) sm:p-8 lg:col-span-3">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-(--color-links)">Write to us</p>
+            <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-(--color-foreground) sm:text-3xl">
+              Send Us a Message
+            </h2>
+            <p className="mt-2 text-sm text-(--color-inactive)">
+              Fill out the form below and we&apos;ll get back to you within 24 hours
+            </p>
 
-            {/* WhatsApp */}
-            <a
-              href="https://wa.me/919876816688"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-(--color-background) p-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 group"
-            >
-              <div className="w-12 h-12 bg-(--color-success) rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <svg className="w-6 h-6 text-(--color-peace)" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-(--color-foreground) mb-2">WhatsApp</h3>
-              <p className="text-sm text-(--color-inactive) mb-2">Quick replies</p>
-              <p className="text-base font-semibold text-(--color-success)">Chat with us</p>
-              <p className="text-xs text-(--color-inactive) mt-2">Available 24/7</p>
-            </a>
-
-            {/* Email */}
-            <a
-              href="mailto:soulparadise21@gmail.com"
-              className="bg-(--color-background) p-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 group"
-            >
-              <div className="w-12 h-12 bg-(--color-warn) rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <svg className="w-6 h-6 text-(--color-peace)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-(--color-foreground) mb-2">Email Us</h3>
-              <p className="text-sm text-(--color-inactive) mb-2">Send us a message</p>
-              <p className="text-sm font-semibold text-(--color-warn) break-all">soulparadise21@gmail.com</p>
-              <p className="text-xs text-(--color-inactive) mt-2">We reply within 24 hours</p>
-            </a>
-
-            {/* Visit Us */}
-            <div className="bg-(--color-background) p-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 group cursor-pointer">
-              <div className="w-12 h-12 bg-(--color-primary-button) rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <svg className="w-6 h-6 text-(--color-peace)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-(--color-foreground) mb-2">Visit Our Office</h3>
-              <p className="text-sm text-(--color-inactive) mb-2">Walk-in anytime</p>
-              <p className="text-sm font-semibold text-(--color-foreground)">
-                Shop No. 21, 1st Floor<br />
-                PPR Plaza, Jalandhar<br />
-                Punjab 144001
-              </p>
-            </div>
-          </div>
-
-          {/* Right Side - Contact Form */}
-          <div className="bg-(--color-background) rounded-lg shadow-xl p-6 sm:p-8">
-            <div className="mb-6">
-              <h2 className="text-2xl sm:text-3xl font-bold text-(--color-foreground) mb-3">
-                Send Us a Message
-              </h2>
-              <p className="text-(--color-inactive)">
-                Fill out the form below and we'll get back to you within 24 hours
-              </p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Name and Email - Same Line */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Name */}
+            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="name" className="block text-sm font-semibold text-(--color-foreground) mb-2">
-                    Full Name <span className="text-(--color-danger)">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                    className={`w-full px-4 py-3 rounded-lg border ${
-                      fieldErrors.name ? 'border-(--color-danger)' : 'border-(--color-tertiary-button)'
-                    } focus:border-(--color-links) focus:ring-2 focus:ring-(--color-links) focus:ring-opacity-20 outline-none transition-all`}
-                    placeholder="John Doe"
-                  />
-                  {fieldErrors.name && (
-                    <p className="mt-1 text-sm text-(--color-danger)">{fieldErrors.name}</p>
-                  )}
+                  {label('name', 'Full Name')}
+                  <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} required className={inputClass('name')} placeholder="John Doe" />
+                  {error('name')}
                 </div>
-
-                {/* Email */}
                 <div>
-                  <label htmlFor="email" className="block text-sm font-semibold text-(--color-foreground) mb-2">
-                    Email Address <span className="text-(--color-danger)">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    className={`w-full px-4 py-3 rounded-lg border ${
-                      fieldErrors.email ? 'border-(--color-danger)' : 'border-(--color-tertiary-button)'
-                    } focus:border-(--color-links) focus:ring-2 focus:ring-(--color-links) focus:ring-opacity-20 outline-none transition-all`}
-                    placeholder="john@example.com"
-                  />
-                  {fieldErrors.email && (
-                    <p className="mt-1 text-sm text-(--color-danger)">{fieldErrors.email}</p>
-                  )}
+                  {label('email', 'Email Address')}
+                  <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} required className={inputClass('email')} placeholder="john@example.com" />
+                  {error('email')}
                 </div>
               </div>
 
-              {/* Phone and Subject - Same Line */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Phone */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="phone" className="block text-sm font-semibold text-(--color-foreground) mb-2">
-                    Phone Number <span className="text-(--color-danger)">*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    required
-                    className={`w-full px-4 py-3 rounded-lg border ${
-                      fieldErrors.phone ? 'border-(--color-danger)' : 'border-(--color-tertiary-button)'
-                    } focus:border-(--color-links) focus:ring-2 focus:ring-(--color-links) focus:ring-opacity-20 outline-none transition-all`}
-                    placeholder="+91-9876543210"
-                  />
-                  {fieldErrors.phone && (
-                    <p className="mt-1 text-sm text-(--color-danger)">{fieldErrors.phone}</p>
-                  )}
+                  {label('phone', 'Phone Number')}
+                  <input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} required className={inputClass('phone')} placeholder="+91-9876543210" />
+                  {error('phone')}
                 </div>
-
-                {/* Subject */}
                 <div>
-                  <label htmlFor="subject" className="block text-sm font-semibold text-(--color-foreground) mb-2">
-                    Subject <span className="text-(--color-danger)">*</span>
-                  </label>
-                  <select
-                    id="subject"
-                    name="subject"
-                    value={formData.subject}
-                    onChange={handleChange}
-                    required
-                    className={`w-full px-4 py-3 rounded-lg border ${
-                      fieldErrors.subject ? 'border-(--color-danger)' : 'border-(--color-tertiary-button)'
-                    } focus:border-(--color-links) focus:ring-2 focus:ring-(--color-links) focus:ring-opacity-20 outline-none transition-all`}
-                  >
+                  {label('subject', 'Subject')}
+                  <select id="subject" name="subject" value={formData.subject} onChange={handleChange} required className={inputClass('subject')}>
                     <option value="">Select a subject</option>
                     <option value="Flight Booking">Flight Booking</option>
                     <option value="Tour Package">Tour Package</option>
@@ -280,141 +310,150 @@ export default function ContactPage() {
                     <option value="General Inquiry">General Inquiry</option>
                     <option value="Other">Other</option>
                   </select>
-                  {fieldErrors.subject && (
-                    <p className="mt-1 text-sm text-(--color-danger)">{fieldErrors.subject}</p>
-                  )}
+                  {error('subject')}
                 </div>
               </div>
 
-              {/* Message */}
               <div>
-                <label htmlFor="message" className="block text-sm font-semibold text-(--color-foreground) mb-2">
-                  Your Message <span className="text-(--color-danger)">*</span>
-                </label>
-                <textarea
-                  id="message"
-                  name="message"
-                  value={formData.message}
-                  onChange={handleChange}
-                  required
-                  rows={5}
-                  className={`w-full px-4 py-3 rounded-lg border ${
-                    fieldErrors.message ? 'border-(--color-danger)' : 'border-(--color-tertiary-button)'
-                  } focus:border-(--color-links) focus:ring-2 focus:ring-(--color-links) focus:ring-opacity-20 outline-none transition-all resize-none`}
-                  placeholder="Tell us about your travel plans or any questions you have..."
-                ></textarea>
-                {fieldErrors.message && (
-                  <p className="mt-1 text-sm text-(--color-danger)">{fieldErrors.message}</p>
-                )}
+                {label('message', 'Your Message')}
+                <textarea id="message" name="message" value={formData.message} onChange={handleChange} required rows={5} className={`${inputClass('message')} resize-none`} placeholder="Tell us about your travel plans or any questions you have..." />
+                {error('message')}
               </div>
 
-              {/* Submit Button */}
-              <div>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full px-6 py-3 bg-(--color-primary-button) text-(--color-peace) rounded-lg font-semibold hover:bg-(--color-secondary-button) transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                      </svg>
-                      Send Message
-                    </>
-                  )}
-                </button>
-              </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="group flex w-full items-center justify-center gap-2 rounded-xl bg-(--color-primary-button) px-6 py-3.5 font-semibold text-(--color-peace) shadow-lg transition hover:bg-(--color-secondary-button) disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-5 w-5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                    Send Message
+                  </>
+                )}
+              </button>
             </form>
           </div>
+
+          <div className="flex flex-col gap-6 lg:col-span-2">
+            {/* Office hours with live status */}
+            <div className="rounded-2xl bg-(--color-peace) p-6 shadow-lg ring-1 ring-(--color-tertiary-button)">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="flex items-center gap-2 text-xl font-bold text-(--color-foreground)">
+                  <Clock className="h-5 w-5 text-(--color-links)" />
+                  Office Hours
+                </h2>
+                {status && (
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+                      isOpen ? 'bg-(--color-success)/15 text-(--color-success)' : 'bg-(--color-danger)/10 text-(--color-danger)'
+                    }`}
+                  >
+                    <span className="relative flex h-2 w-2">
+                      {isOpen && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-(--color-success) opacity-60" />}
+                      <span className={`relative inline-flex h-2 w-2 rounded-full ${isOpen ? 'bg-(--color-success)' : 'bg-(--color-danger)'}`} />
+                    </span>
+                    {isOpen ? 'Open now' : 'Closed now'}
+                  </span>
+                )}
+              </div>
+              <ul className="mt-4 space-y-1">
+                {HOURS_ROWS.map((row) => {
+                  const isToday = row.dayIdx.includes(today);
+                  return (
+                    <li
+                      key={row.days}
+                      className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-sm ${
+                        isToday ? 'bg-(--color-links)/10 font-semibold' : ''
+                      }`}
+                    >
+                      <span className="text-(--color-foreground)">
+                        {row.days}
+                        {isToday && <span className="ml-2 text-[11px] font-bold uppercase text-(--color-links)">Today</span>}
+                      </span>
+                      <span className={row.time === 'Closed' ? 'text-(--color-danger)' : 'text-(--color-inactive)'}>
+                        {row.time}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="mt-3 text-xs text-(--color-inactive)">All times are Indian Standard Time (IST).</p>
+            </div>
+
+            {/* Urgent help */}
+            <div className="relative flex-1 overflow-hidden rounded-2xl bg-gradient-to-br from-slate-700 to-(--color-primary-button) p-6 text-white shadow-lg">
+              <span className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-white/10" />
+              <Zap className="relative h-7 w-7 text-amber-300" />
+              <h3 className="relative mt-3 text-lg font-bold">Need Urgent Assistance?</h3>
+              <p className="relative mt-2 text-sm leading-relaxed text-white/80">
+                For urgent travel queries outside office hours, please contact us via WhatsApp or call our mobile number.
+              </p>
+              <div className="relative mt-5 flex flex-wrap gap-3">
+                <a
+                  href="https://wa.me/919876816688"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-(--color-primary-button) transition hover:-translate-y-0.5 hover:shadow-lg"
+                >
+                  <WhatsAppIcon className="h-4 w-4 text-emerald-600" />
+                  WhatsApp Now
+                </a>
+                <a
+                  href="tel:+919876816688"
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/40 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+                >
+                  <Phone className="h-4 w-4" />
+                  Call Now
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Office Hours & Map Section - White Background */}
-      <section className="bg-(--color-background) py-12 md:py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
-            {/* Office Hours */}
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-(--color-foreground) mb-6">
-                Office Hours
-              </h2>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center py-3 border-b border-(--color-tertiary-button)">
-                  <span className="font-semibold text-(--color-foreground)">Monday - Friday</span>
-                  <span className="text-(--color-inactive)">9:00 AM - 7:00 PM</span>
-                </div>
-                <div className="flex justify-between items-center py-3 border-b border-(--color-tertiary-button)">
-                  <span className="font-semibold text-(--color-foreground)">Saturday</span>
-                  <span className="text-(--color-inactive)">10:00 AM - 6:00 PM</span>
-                </div>
-                <div className="flex justify-between items-center py-3 border-b border-(--color-tertiary-button)">
-                  <span className="font-semibold text-(--color-foreground)">Sunday</span>
-                  <span className="text-(--color-inactive)">Closed</span>
-                </div>
-              </div>
-
-              <div className="mt-8 p-6 bg-(--color-peace) rounded-lg shadow-xs">
-                <h3 className="text-lg font-bold text-(--color-foreground) mb-3">Need Urgent Assistance?</h3>
-                <p className="text-(--color-inactive) mb-4">
-                  For urgent travel queries outside office hours, please contact us via WhatsApp or call our mobile number.
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  <a
-                    href="https://wa.me/919876816688"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-6 py-3 bg-(--color-primary-button) text-(--color-peace) rounded-lg font-semibold hover:opacity-90 transition-opacity"
-                  >
-                    WhatsApp Now
-                  </a>
-                  <a
-                    href="tel:+919876816688"
-                    className="px-6 py-3 border border-(--color-tertiary-button) text-(--color-primary-button) rounded-lg font-semibold hover:border-(--color-secondary-button)" 
-                  >
-                    Call Now
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* Google Maps */}
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-(--color-foreground) mb-6">
-                Find Us on Map
-              </h2>
-              <div className="rounded-lg overflow-hidden shadow-lg h-[400px] md:h-[500px]">
-                <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d27268.05989596027!2d75.599576!3d31.317355!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x391a5b68da0a20fb%3A0x54bdb5d17a992f5d!2sSOUL%20PARADISE%20JALANDHAR%20INDIA!5e0!3m2!1sen!2sin!4v1767454904897!5m2!1sen!2sin"
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  title="Soul Paradise Office Location"
-                ></iframe>
-              </div>
-              <div className="mt-4 p-4 bg-(--color-peace) rounded-lg">
-                <p className="text-sm text-(--color-inactive)">
-                  <span className="font-semibold text-(--color-foreground)">Directions:</span> Located in the heart of Jalandhar, easily accessible from major areas. Free parking available nearby.
-                </p>
-              </div>
-            </div>
+      {/* Map */}
+      <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 md:pb-20 lg:px-8">
+        <div className="relative overflow-hidden rounded-2xl shadow-xl ring-1 ring-(--color-tertiary-button)">
+          <div className="h-[380px] bg-(--color-tertiary-button) md:h-[460px]">
+            <iframe
+              src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d27268.05989596027!2d75.599576!3d31.317355!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x391a5b68da0a20fb%3A0x54bdb5d17a992f5d!2sSOUL%20PARADISE%20JALANDHAR%20INDIA!5e0!3m2!1sen!2sin!4v1767454904897!5m2!1sen!2sin"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              title="Soul Paradise Office Location"
+            />
+          </div>
+          <div className="border-t border-(--color-tertiary-button) bg-(--color-peace) p-5 md:absolute md:bottom-5 md:left-5 md:max-w-sm md:rounded-2xl md:border-0 md:shadow-2xl">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-(--color-links)">
+              <MapPin className="h-4 w-4" />
+              Find Us on Map
+            </p>
+            <p className="mt-2 font-bold text-(--color-foreground)">Shop No. 21, 1st Floor, PPR Plaza</p>
+            <p className="text-sm text-(--color-inactive)">Jalandhar, Punjab 144001</p>
+            <p className="mt-2 text-xs text-(--color-inactive)">
+              <span className="font-semibold text-(--color-foreground)">Directions:</span> Located in the heart of Jalandhar, easily accessible from major areas. Free parking available nearby.
+            </p>
+            <a
+              href={DIRECTIONS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-(--color-primary-button) px-4 py-2 text-sm font-semibold text-white transition hover:bg-(--color-secondary-button)"
+            >
+              <Navigation className="h-4 w-4" />
+              Get directions
+            </a>
           </div>
         </div>
       </section>
-
-
     </main>
   );
 }
