@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { MapPin, CalendarDays, ChevronDown, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CalendarPanel } from './CalendarPanel';
-import { usePersistentSearch, notBeforeToday } from '@/lib/hooks/useSearchPersistence';
+import { usePersistentSearch, notBeforeToday, useDatePrefill } from '@/lib/hooks/useSearchPersistence';
 
 interface Location {
   id: string;
@@ -79,6 +79,13 @@ export const HotelBooking = () => {
       if (Array.isArray(s.rooms) && s.rooms.length > 0) setRooms(s.rooms);
     },
   );
+
+  // A suggested holiday window (?from=&to=): check in on the first day off,
+  // check out on the last.
+  useDatePrefill((from, to) => {
+    setCheckIn(new Date(from + 'T00:00:00'));
+    setCheckOut(new Date(to + 'T00:00:00'));
+  });
 
   // Panels
   const [activePanel, setActivePanel] = useState<'destination' | 'dates' | 'guests' | null>(null);

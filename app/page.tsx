@@ -2,6 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { BookingTabs, MobileBookingTabs } from '@/components/BookingTabs';
+import {
+  LongWeekends,
+  PopularTrips,
+  WhyBookWithUs,
+  TravellerReviews,
+  PlanHolidayCta,
+} from '@/components/Home';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -48,17 +55,8 @@ const TAB_TO_CATEGORY: Record<string, OfferCategory> = {
   'Visa': 'VISA',
 };
 
-const exploreLinks = [
-  { label: 'Where2Go', desc: 'Discover destinations', badge: null },
-  { label: 'How2Go', desc: 'Find routes to anywhere', badge: 'new' },
-  { label: 'Credit Card Offers', desc: 'Never-expiring rewards', badge: null },
-  { label: 'MICE', desc: 'Offsites, Events & Meetings', badge: null },
-  { label: 'Gift Cards', desc: 'Share the joy of travel', badge: null },
-];
-
 export default function Home() {
   const [activeOfferTab, setActiveOfferTab] = useState('All Offers');
-  const [showExplore, setShowExplore] = useState(false);
   const [offers, setOffers] = useState<Offer[]>([]);
 
   useEffect(() => {
@@ -103,9 +101,9 @@ export default function Home() {
         </section>
       </div>
 
-
-
-      {/* ── Offers Section ── */}
+      {/* ── Offers Section ── (only when there are offers; an empty state
+          shouldn't be the first thing below the search) */}
+      {offers.length > 0 && (
       <section className="py-10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <h2 className="text-2xl font-bold text-(--color-foreground) mb-5">Offers</h2>
@@ -152,11 +150,18 @@ export default function Home() {
                 playsInline
                 className="w-48 h-48"
               />
-              <p className="text-gray-400 text-sm mt-2">No offers available right now.</p>
+              <p className="text-gray-400 text-sm mt-2">No offers in this category right now.</p>
             </div>
           )}
         </div>
       </section>
+      )}
+
+      <LongWeekends />
+      <PopularTrips />
+      <WhyBookWithUs />
+      <TravellerReviews />
+      <PlanHolidayCta />
     </main>
   );
 }

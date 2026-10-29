@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { MapPin, CalendarDays, Search, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CalendarPanel } from './CalendarPanel';
-import { usePersistentSearch, notBeforeToday } from '@/lib/hooks/useSearchPersistence';
+import { usePersistentSearch, notBeforeToday, useDatePrefill } from '@/lib/hooks/useSearchPersistence';
 import {
   getInsuranceOptions,
   MULTITRIP_REGIONS,
@@ -232,6 +232,12 @@ export const TravelInsurance = () => {
       if (hasTravellers) setTravellers(s.travellers);
     },
   );
+
+  // A suggested holiday window (?from=&to=) sets the cover dates.
+  useDatePrefill((from, to) => {
+    setStartDate(from);
+    setEndDate(to);
+  });
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {

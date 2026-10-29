@@ -11,7 +11,7 @@ import {
   type CabinClass,
 } from './TravellerSelector';
 import type { Airport } from '@/lib/flights-api';
-import { usePersistentSearch, notBeforeToday } from '@/lib/hooks/useSearchPersistence';
+import { usePersistentSearch, notBeforeToday, useDatePrefill } from '@/lib/hooks/useSearchPersistence';
 
 type TripType = 'oneway' | 'roundtrip' | 'multicity';
 
@@ -96,6 +96,13 @@ export const FlightBooking = () => {
       }
     },
   );
+
+  // A suggested holiday window (?from=&to=) is a there-and-back trip.
+  useDatePrefill((from, to) => {
+    setTripType('roundtrip');
+    setDepartDate(from);
+    setReturnDate(to);
+  });
 
   // Date panel state
   const [datePanelOpen, setDatePanelOpen] = useState(false);
