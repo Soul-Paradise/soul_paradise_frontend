@@ -216,7 +216,7 @@ export const SSRSelector = ({
   if (allOptions.length === 0) return null;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+    <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm overflow-hidden shadow-sm">
       {/* Header */}
       <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <div>

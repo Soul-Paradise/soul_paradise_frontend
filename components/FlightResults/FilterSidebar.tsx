@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { FilterCheckbox, FilterPanel, FilterSection, filterChip } from '@/components/Results/ui';
 import type { FlightResult } from '@/lib/flights-api';
 
 export interface FilterState {
@@ -183,259 +184,194 @@ export const FilterSidebar = ({
     : filterData.connectingAirports.slice(0, 5);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-200">
-        <h2 className="text-base font-bold text-gray-900">Filters</h2>
-      </div>
-
-      <div className="divide-y divide-gray-100">
-        {/* Stops */}
-        <div className="px-4 py-4">
-          <h3 className="text-sm font-bold text-gray-900 mb-3">Stops</h3>
-          <div className="flex gap-2">
-            {filterData.stops.map(({ stops, cheapest }) => {
-              const isActive = filterState.stops.has(stops);
-              const label = stops === 0 ? 'Non-Stop' : stops === 1 ? '1 Stop' : '2+ Stops';
-              return (
-                <button
-                  key={stops}
-                  type="button"
-                  onClick={() =>
-                    onFilterChange({
-                      ...filterState,
-                      stops: toggleSetValue(filterState.stops, stops),
-                    })
-                  }
-                  className={`flex-1 px-2 py-2 rounded-lg border text-center transition-colors ${
-                    isActive
-                      ? 'border-blue-500 bg-blue-50 text-(--color-secondary-button)'
-                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="text-xs font-semibold">{label}</div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">
-                    {formatCurrency(cheapest)}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+    <FilterPanel>
+      {/* Stops */}
+      <FilterSection title="Stops">
+        <div className="flex gap-2">
+          {filterData.stops.map(({ stops, cheapest }) => {
+            const isActive = filterState.stops.has(stops);
+            const label = stops === 0 ? 'Non-Stop' : stops === 1 ? '1 Stop' : '2+ Stops';
+            return (
+              <button
+                key={stops}
+                type="button"
+                onClick={() =>
+                  onFilterChange({
+                    ...filterState,
+                    stops: toggleSetValue(filterState.stops, stops),
+                  })
+                }
+                className={`flex-1 ${filterChip(isActive)}`}
+              >
+                <div>{label}</div>
+                <div className="mt-0.5 text-[10px] font-medium opacity-70">{formatCurrency(cheapest)}</div>
+              </button>
+            );
+          })}
         </div>
+      </FilterSection>
 
-        {/* Fare Type */}
-        <div className="px-4 py-4">
-          <h3 className="text-sm font-bold text-gray-900 mb-3">Fare Type</h3>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filterState.refundableOnly}
+      {/* Fare Type */}
+      <FilterSection title="Fare Type">
+        <FilterCheckbox
+          checked={filterState.refundableOnly}
+          onChange={() =>
+            onFilterChange({
+              ...filterState,
+              refundableOnly: !filterState.refundableOnly,
+            })
+          }
+          label="Refundable flights only"
+        />
+      </FilterSection>
+
+      {/* Nearby Airports */}
+      <FilterSection title="Nearby Airports" hint="Search nearby airports to find more flight options">
+        <FilterCheckbox
+          checked={nearbyAirports}
+          onChange={() => onNearbyAirportsChange(!nearbyAirports)}
+          label="Include nearby airports"
+        />
+      </FilterSection>
+
+      {/* Departure Times */}
+      <FilterSection
+        title="Departure Times"
+        hint={`From ${flights[0]?.fromName || flights[0]?.from || 'Origin'}`}
+      >
+        <div className="grid grid-cols-2 gap-2">
+          {TIME_RANGES.map((tr) => {
+            const isActive = filterState.departureTimeRanges.has(tr.key);
+            return (
+              <button
+                key={tr.key}
+                type="button"
+                onClick={() =>
+                  onFilterChange({
+                    ...filterState,
+                    departureTimeRanges: toggleSetValue(filterState.departureTimeRanges, tr.key),
+                  })
+                }
+                className={`flex items-center justify-center gap-1.5 ${filterChip(isActive)}`}
+              >
+                {tr.icon}
+                <span>{tr.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </FilterSection>
+
+      {/* Arrival Times */}
+      <FilterSection
+        title="Arrival Times"
+        hint={`At ${flights[0]?.toName || flights[0]?.to || 'Destination'}`}
+      >
+        <div className="grid grid-cols-2 gap-2">
+          {TIME_RANGES.map((tr) => {
+            const isActive = filterState.arrivalTimeRanges.has(tr.key);
+            return (
+              <button
+                key={tr.key}
+                type="button"
+                onClick={() =>
+                  onFilterChange({
+                    ...filterState,
+                    arrivalTimeRanges: toggleSetValue(filterState.arrivalTimeRanges, tr.key),
+                  })
+                }
+                className={`flex items-center justify-center gap-1.5 ${filterChip(isActive)}`}
+              >
+                {tr.icon}
+                <span>{tr.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </FilterSection>
+
+      {/* Airlines */}
+      {filterData.airlines.length > 0 && (
+        <FilterSection title="Airlines">
+          {visibleAirlines.map((airline) => (
+            <FilterCheckbox
+              key={airline.code}
+              checked={filterState.airlines.has(airline.code)}
               onChange={() =>
                 onFilterChange({
                   ...filterState,
-                  refundableOnly: !filterState.refundableOnly,
+                  airlines: toggleSetValue(filterState.airlines, airline.code),
                 })
               }
-              className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+              label={
+                <span className="block truncate">
+                  {airline.name} <span className="text-(--color-inactive)">({airline.count})</span>
+                </span>
+              }
+              meta={formatCurrency(airline.cheapest)}
             />
-            <span className="text-sm text-gray-700">Refundable flights only</span>
-          </label>
+          ))}
+          {filterData.airlines.length > 5 && (
+            <button
+              type="button"
+              onClick={() => setShowAllAirlines(!showAllAirlines)}
+              className="mt-2 text-xs font-bold text-(--color-links) hover:underline"
+            >
+              {showAllAirlines ? 'Show less' : `+ ${filterData.airlines.length - 5} Airlines`}
+            </button>
+          )}
+        </FilterSection>
+      )}
+
+      {/* Price Range */}
+      <FilterSection title="Price Range">
+        <input
+          type="range"
+          min={filterData.minPrice}
+          max={filterData.maxPrice}
+          value={filterState.priceRange[1]}
+          onChange={(e) =>
+            onFilterChange({
+              ...filterState,
+              priceRange: [filterState.priceRange[0], parseInt(e.target.value)],
+            })
+          }
+          className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-(--color-links)"
+        />
+        <div className="mt-2 flex items-center justify-between text-xs text-(--color-inactive)">
+          <span>{formatCurrency(filterData.minPrice)}</span>
+          <span className="font-semibold text-(--color-foreground)">{formatCurrency(filterState.priceRange[1])}</span>
         </div>
+      </FilterSection>
 
-        {/* Nearby Airports */}
-        <div className="px-4 py-4">
-          <h3 className="text-sm font-bold text-gray-900 mb-3">Nearby Airports</h3>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={nearbyAirports}
-              onChange={() => onNearbyAirportsChange(!nearbyAirports)}
-              className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">Include nearby airports</span>
-          </label>
-          <p className="text-[10px] text-gray-400 mt-1.5">
-            Search nearby airports to find more flight options
-          </p>
-        </div>
-
-        {/* Departure Times */}
-        <div className="px-4 py-4">
-          <h3 className="text-sm font-bold text-gray-900 mb-1">Departure Times</h3>
-          <p className="text-[10px] text-gray-400 mb-3">
-            From {flights[0]?.fromName || flights[0]?.from || 'Origin'}
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {TIME_RANGES.map((tr) => {
-              const isActive = filterState.departureTimeRanges.has(tr.key);
-              return (
-                <button
-                  key={tr.key}
-                  type="button"
-                  onClick={() =>
-                    onFilterChange({
-                      ...filterState,
-                      departureTimeRanges: toggleSetValue(filterState.departureTimeRanges, tr.key),
-                    })
-                  }
-                  className={`flex items-center gap-1.5 px-2 py-2 rounded-lg border text-xs transition-colors ${
-                    isActive
-                      ? 'border-blue-500 bg-blue-50 text-(--color-secondary-button)'
-                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                  }`}
-                >
-                  {tr.icon}
-                  <span className="font-medium">{tr.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Arrival Times */}
-        <div className="px-4 py-4">
-          <h3 className="text-sm font-bold text-gray-900 mb-1">Arrival Times</h3>
-          <p className="text-[10px] text-gray-400 mb-3">
-            At {flights[0]?.toName || flights[0]?.to || 'Destination'}
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {TIME_RANGES.map((tr) => {
-              const isActive = filterState.arrivalTimeRanges.has(tr.key);
-              return (
-                <button
-                  key={tr.key}
-                  type="button"
-                  onClick={() =>
-                    onFilterChange({
-                      ...filterState,
-                      arrivalTimeRanges: toggleSetValue(filterState.arrivalTimeRanges, tr.key),
-                    })
-                  }
-                  className={`flex items-center gap-1.5 px-2 py-2 rounded-lg border text-xs transition-colors ${
-                    isActive
-                      ? 'border-blue-500 bg-blue-50 text-(--color-secondary-button)'
-                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                  }`}
-                >
-                  {tr.icon}
-                  <span className="font-medium">{tr.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Airlines */}
-        {filterData.airlines.length > 0 && (
-          <div className="px-4 py-4">
-            <h3 className="text-sm font-bold text-gray-900 mb-3">Airlines</h3>
-            <div className="space-y-2">
-              {visibleAirlines.map((airline) => {
-                const isActive = filterState.airlines.has(airline.code);
-                return (
-                  <label key={airline.code} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isActive}
-                      onChange={() =>
-                        onFilterChange({
-                          ...filterState,
-                          airlines: toggleSetValue(filterState.airlines, airline.code),
-                        })
-                      }
-                      className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                    />
-                    <span className="flex-1 text-sm text-gray-700 truncate">
-                      {airline.name}{' '}
-                      <span className="text-gray-400">({airline.count})</span>
-                    </span>
-                    <span className="text-xs text-gray-500 font-medium flex-shrink-0">
-                      {formatCurrency(airline.cheapest)}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-            {filterData.airlines.length > 5 && (
-              <button
-                type="button"
-                onClick={() => setShowAllAirlines(!showAllAirlines)}
-                className="text-xs text-(--color-links) font-medium mt-2 hover:underline"
-              >
-                {showAllAirlines
-                  ? 'Show less'
-                  : `+ ${filterData.airlines.length - 5} Airlines`}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Price Range */}
-        <div className="px-4 py-4">
-          <h3 className="text-sm font-bold text-gray-900 mb-3">Price Range</h3>
-          <div className="space-y-3">
-            <input
-              type="range"
-              min={filterData.minPrice}
-              max={filterData.maxPrice}
-              value={filterState.priceRange[1]}
-              onChange={(e) =>
+      {/* Connecting Airports */}
+      {filterData.connectingAirports.length > 0 && (
+        <FilterSection title="Connecting Airports">
+          {visibleAirports.map((ap) => (
+            <FilterCheckbox
+              key={ap.code}
+              checked={filterState.connectingAirports.has(ap.code)}
+              onChange={() =>
                 onFilterChange({
                   ...filterState,
-                  priceRange: [filterState.priceRange[0], parseInt(e.target.value)],
+                  connectingAirports: toggleSetValue(filterState.connectingAirports, ap.code),
                 })
               }
-              className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+              label={<span className="block truncate">{ap.name}</span>}
             />
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>{formatCurrency(filterData.minPrice)}</span>
-              <span>{formatCurrency(filterState.priceRange[1])}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Connecting Airports */}
-        {filterData.connectingAirports.length > 0 && (
-          <div className="px-4 py-4">
-            <h3 className="text-sm font-bold text-gray-900 mb-3">Connecting Airports</h3>
-            <div className="space-y-2">
-              {visibleAirports.map((ap) => {
-                const isActive = filterState.connectingAirports.has(ap.code);
-                return (
-                  <label key={ap.code} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isActive}
-                      onChange={() =>
-                        onFilterChange({
-                          ...filterState,
-                          connectingAirports: toggleSetValue(
-                            filterState.connectingAirports,
-                            ap.code,
-                          ),
-                        })
-                      }
-                      className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                    />
-                    <span className="flex-1 text-sm text-gray-700 truncate">{ap.name}</span>
-                  </label>
-                );
-              })}
-            </div>
-            {filterData.connectingAirports.length > 5 && (
-              <button
-                type="button"
-                onClick={() => setShowAllAirports(!showAllAirports)}
-                className="text-xs text-(--color-links) font-medium mt-2 hover:underline"
-              >
-                {showAllAirports
-                  ? 'Show less'
-                  : `+ ${filterData.connectingAirports.length - 5} Airports`}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+          ))}
+          {filterData.connectingAirports.length > 5 && (
+            <button
+              type="button"
+              onClick={() => setShowAllAirports(!showAllAirports)}
+              className="mt-2 text-xs font-bold text-(--color-links) hover:underline"
+            >
+              {showAllAirports ? 'Show less' : `+ ${filterData.connectingAirports.length - 5} Airports`}
+            </button>
+          )}
+        </FilterSection>
+      )}
+    </FilterPanel>
   );
 };
 

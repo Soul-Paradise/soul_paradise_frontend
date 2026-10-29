@@ -108,7 +108,7 @@ const LegCard = ({ segments, index }: { segments: SegmentDetail[]; index: number
   const stopText = stops === 0 ? 'Non Stop' : `${stops} Stop${stops > 1 ? 's' : ''}`;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden w-full max-w-full min-w-0">
+    <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm overflow-hidden w-full max-w-full min-w-0">
       {/* Leg header */}
       <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-4 flex-wrap min-w-0">
         <div className="min-w-0">

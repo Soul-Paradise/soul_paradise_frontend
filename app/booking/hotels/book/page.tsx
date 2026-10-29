@@ -6,6 +6,8 @@ import type { jsPDF } from 'jspdf';
 import { authHeaders } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
 import { formatDeadline } from '@/components/HotelResults/FreeCancellationBadge';
+import { AlertTriangle } from 'lucide-react';
+import { BookButton, ResultsEmpty, ResultsLoader, StepHeader, StepState } from '@/components/Results/ui';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -558,26 +560,22 @@ function HotelBookPageInner() {
 
   if (stashError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="bg-white rounded-lg border border-red-200 p-6 max-w-md">
-          <h2 className="text-lg font-bold text-gray-900 mb-2">Session expired</h2>
-          <p className="text-sm text-gray-600 mb-4">{stashError}</p>
-          <button
-            onClick={() => router.push('/booking/hotels')}
-            className="w-full bg-(--color-links) hover:bg-(--color-secondary-button) text-white font-semibold py-2 rounded transition-colors"
-          >
-            Start over
-          </button>
-        </div>
-      </div>
+      <StepState>
+        <ResultsEmpty
+          icon={AlertTriangle}
+          title="Session expired"
+          message={stashError}
+          action={{ label: 'Start over', href: '/?tab=hotel#booking' }}
+        />
+      </StepState>
     );
   }
 
   if (!stash || !pricing || !bookingContext) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500 text-sm">Loading booking...</p>
-      </div>
+      <StepState>
+        <ResultsLoader title="Loading booking..." subtitle="Confirming the latest room price with the hotel." rows={2} />
+      </StepState>
     );
   }
 
@@ -590,25 +588,19 @@ function HotelBookPageInner() {
   const cancellationNotes = flattenPolicy((pricing.cancellationPolicies || []).map((p) => p.text));
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
-      {/* Top breadcrumb */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            className="text-sm text-gray-600 hover:text-gray-900"
-          >
-            ← Back
-          </button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-(--color-background) pb-12">
+      <StepHeader
+        title="Complete Your Booking"
+        subtitle={`${hotelDetail?.name || 'Hotel'} · ${nights} Night${nights !== 1 ? 's' : ''}`}
+        onBack={() => router.back()}
+      />
 
-      <form onSubmit={handleSubmit} className="max-w-7xl mx-auto px-6 mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <form onSubmit={handleSubmit} className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column */}
         <div className="lg:col-span-2 space-y-4">
 
           {/* Hotel card */}
-          <section className="bg-white rounded-lg border border-gray-200">
+          <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm">
             <div className="p-5 pb-4 flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="font-bold text-slate-800 text-lg flex items-center gap-2 flex-wrap">
@@ -697,7 +689,7 @@ function HotelBookPageInner() {
           </section>
 
           {/* Traveller Details */}
-          <section className="bg-white rounded-lg border border-gray-200 p-5">
+          <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5">
             <h2 className="font-bold text-slate-800 mb-1">Traveller Details</h2>
 
 
@@ -777,7 +769,7 @@ function HotelBookPageInner() {
           </section>
 
           {/* Contact information */}
-          <section className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm overflow-hidden">
             <div className="px-5 pt-5 pb-3 border-b border-gray-200">
               <h2 className="text-sm font-bold text-slate-800 tracking-wider uppercase">Contact Information</h2>
             </div>
@@ -839,7 +831,7 @@ function HotelBookPageInner() {
 
           {/* Special request (conditional) */}
           {showSpecial && (
-            <section className="bg-white rounded-lg border border-gray-200 p-5">
+            <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5">
               <h2 className="font-bold text-slate-800 mb-1">Special request</h2>
               <p className="text-xs text-gray-500 mb-3">Requests cannot be guaranteed and depend on availability.</p>
               <textarea
@@ -853,12 +845,12 @@ function HotelBookPageInner() {
           )}
 
           {/* Essential Information */}
-          <section className="bg-white rounded-lg border border-gray-200 p-5">
+          <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5">
             <h2 className="font-bold text-slate-800 mb-4">Essential Information</h2>
 
             {pricing.boardBasis && (
               <div className="mb-4">
-                <p className="text-sm font-semibold text-red-500 mb-1">INCLUSIONS</p>
+                <p className="text-sm font-bold text-(--color-foreground) mb-1">INCLUSIONS</p>
                 <p className="text-sm text-slate-700">Room {1}</p>
                 <p className="text-xs text-gray-600 mt-1">{pricing.boardBasis}</p>
               </div>
@@ -866,7 +858,7 @@ function HotelBookPageInner() {
 
             {pricing.refundable && pricing.freeCancellationUntil && (
               <div className="mb-4">
-                <p className="text-sm font-semibold text-red-500 mb-1">Cancellation</p>
+                <p className="text-sm font-bold text-(--color-foreground) mb-1">Cancellation</p>
                 <p className="text-sm text-green-700 font-medium">
                   Free cancellation until {formatDeadline(pricing.freeCancellationUntil, true)}
                 </p>
@@ -878,7 +870,7 @@ function HotelBookPageInner() {
 
             {cancellationNotes.length > 0 && (
               <div className="mb-4">
-                <p className="text-sm font-semibold text-red-500 mb-1">Room Policy</p>
+                <p className="text-sm font-bold text-(--color-foreground) mb-1">Room Policy</p>
                 <ul className="list-disc pl-5 text-xs text-gray-700 space-y-1 marker:text-gray-400">
                   {cancellationNotes.map((note, i) => (
                     <li key={i}>{note}</li>
@@ -923,7 +915,7 @@ function HotelBookPageInner() {
 
         {/* Right column: Fare Summary */}
         <aside className="space-y-4">
-          <div className="bg-white rounded-lg border border-gray-200 p-5 sticky top-4">
+          <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5 sticky top-4">
             <h3 className="font-bold text-slate-800 text-base mb-3 pb-3 border-b border-gray-200">Fare Summary</h3>
 
             <DisclosureRow
@@ -960,13 +952,11 @@ function HotelBookPageInner() {
               </p>
             )}
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full mt-4 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 rounded text-sm uppercase tracking-wider transition-colors"
-            >
-              {submitting ? 'Booking...' : 'Continue to Payment'}
-            </button>
+            <div className="mt-4">
+              <BookButton type="submit" block disabled={submitting}>
+                {submitting ? 'Booking...' : 'Continue to Payment'}
+              </BookButton>
+            </div>
             <p className="text-xs text-gray-400 text-center mt-2">
               {pricing.payAtHotel
                 ? 'Pay at hotel'
@@ -1516,7 +1506,7 @@ function BookingConfirmation({ voucher, onDone }: { voucher: BookingVoucher; onD
 
 export default function HotelBookPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+    <Suspense fallback={<StepState><ResultsLoader title="Loading..." rows={2} /></StepState>}>
       <HotelBookPageInner />
     </Suspense>
   );

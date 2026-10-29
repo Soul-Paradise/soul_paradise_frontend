@@ -90,7 +90,7 @@ export const PassengerForm = ({
       : ['Mr', 'Mrs', 'Ms'];
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+    <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm overflow-hidden">
       <div className="px-5 py-3 bg-gray-50 border-b border-gray-200">
         <h3 className="text-sm font-semibold text-gray-900">
           {paxTypeLabels[paxType] || 'Passenger'} {index + 1}

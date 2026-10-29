@@ -104,10 +104,10 @@ export const BookingSummary = ({
   const grandTotal = fareLinesTotal + ssrTotal - promoDiscount;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden sticky top-4">
+    <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm overflow-hidden sticky top-4">
       {/* Fare Details Header */}
       <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+        <h2 className="text-base font-bold text-(--color-foreground)">
           Fare Details
         </h2>
         <span className="text-xs text-(--color-links) font-medium">

@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { authHeaders } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
 import FreeCancellationBadge from '@/components/HotelResults/FreeCancellationBadge';
+import { AlertTriangle, BedDouble } from 'lucide-react';
+import { BookButton, ResultsEmpty, ResultsLoader, StepHeader, StepState } from '@/components/Results/ui';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -453,7 +455,7 @@ function HotelDescription({ descriptions }: { descriptions?: HotelDetailDescript
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-2 text-sm font-semibold text-(--color-accent) hover:text-(--color-accent-hover) inline-flex items-center gap-1"
+          className="mt-2 text-sm font-semibold text-(--color-links) hover:text-(--color-secondary-button) inline-flex items-center gap-1"
         >
           {expanded ? 'Read less' : 'Read more'}
           <svg
@@ -512,7 +514,7 @@ function HotelHero({
   })();
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+    <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm overflow-hidden">
       {/* Title row */}
       <div className="px-5 pt-5 pb-3 flex items-start justify-between flex-wrap gap-3">
         <div className="min-w-0">
@@ -530,7 +532,7 @@ function HotelHero({
             )}
           </div>
           <div className="flex items-center gap-1.5 mt-1 text-sm text-gray-500">
-            <svg className="w-4 h-4 text-(--color-accent)" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4 text-(--color-links)" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
             </svg>
             <span className="truncate">{[hotel.address, hotel.city].filter(Boolean).join(', ')}</span>
@@ -824,10 +826,10 @@ function RoomCard({
             <button
               onClick={() => onSelect(room)}
               disabled={loadingPrice && isSelected}
-              className={`mt-3 px-4 py-2 text-sm font-bold rounded transition-colors w-full ${
+              className={`mt-3 px-4 py-2.5 text-sm font-bold rounded-full transition-all w-full ${
                 isSelected
                   ? 'bg-(--color-links) hover:bg-(--color-secondary-button) text-white'
-                  : 'bg-(--color-accent) hover:bg-(--color-accent-hover) text-white'
+                  : 'bg-gradient-to-r from-(--color-accent-light) to-(--color-accent) hover:from-(--color-accent) hover:to-(--color-accent-hover) text-white shadow-md shadow-orange-500/25'
               } disabled:opacity-60`}
             >
               {loadingPrice && isSelected ? (
@@ -1059,12 +1061,11 @@ function PricingPanel({
       />
 
 
-      <button
-        onClick={onBook}
-        className="mt-4 w-full px-4 py-3 bg-(--color-accent) hover:bg-(--color-accent-hover) text-white font-bold rounded-lg text-sm transition-colors"
-      >
-        Proceed to Book
-      </button>
+      <div className="mt-4">
+        <BookButton block onClick={onBook}>
+          Proceed to Book
+        </BookButton>
+      </div>
       <p className="text-xs text-gray-400 text-center mt-2">No hidden charges</p>
     </div>
   );
@@ -1094,12 +1095,12 @@ function SectionTabs({
               type="button"
               onClick={() => onSelect(s.key)}
               className={`relative flex-shrink-0 px-5 py-3 text-xs sm:text-sm font-semibold tracking-wide uppercase transition-colors ${
-                isActive ? 'text-(--color-accent)' : 'text-gray-500 hover:text-gray-800'
+                isActive ? 'text-(--color-links)' : 'text-gray-500 hover:text-gray-800'
               }`}
             >
               {s.label}
               {isActive && (
-                <span className="absolute left-3 right-3 bottom-0 h-0.5 bg-(--color-accent) rounded-t" />
+                <span className="absolute left-3 right-3 bottom-0 h-0.5 bg-(--color-links) rounded-t" />
               )}
             </button>
           );
@@ -1140,7 +1141,7 @@ function HotelAmenitiesSection({ hotel }: { hotel: HotelDetailInfo }) {
 
   if (buckets.length === 0 && allFacilities.length === 0) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-6 text-sm text-gray-500">
+      <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-6 text-sm text-gray-500">
         No amenity information available for this hotel.
       </div>
     );
@@ -1168,7 +1169,7 @@ function HotelAmenitiesSection({ hotel }: { hotel: HotelDetailInfo }) {
   })();
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-5">
+    <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5">
       <h2 className="text-lg font-bold text-gray-900 mb-4">Hotel Amenities</h2>
 
       {buckets.length > 0 ? (
@@ -1206,7 +1207,7 @@ function HotelAmenitiesSection({ hotel }: { hotel: HotelDetailInfo }) {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-4 text-sm font-semibold text-(--color-accent) hover:text-(--color-accent-hover) inline-flex items-center gap-1"
+          className="mt-4 text-sm font-semibold text-(--color-links) hover:text-(--color-secondary-button) inline-flex items-center gap-1"
         >
           {expanded ? 'Show less' : 'Show more'}
           <svg
@@ -1237,7 +1238,7 @@ function NearbyAttractionsSection({ hotel }: { hotel: HotelDetailInfo }) {
 
   if (list.length === 0 && !airport) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-6 text-sm text-gray-500">
+      <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-6 text-sm text-gray-500">
         No nearby attractions information available.
       </div>
     );
@@ -1247,7 +1248,7 @@ function NearbyAttractionsSection({ hotel }: { hotel: HotelDetailInfo }) {
   const hasMore = list.length > NEARBY_INITIAL_LIMIT;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-5">
+    <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5">
       <h2 className="text-lg font-bold text-gray-900 mb-4">Nearby Attractions</h2>
 
       {list.length > 0 && (
@@ -1255,8 +1256,8 @@ function NearbyAttractionsSection({ hotel }: { hotel: HotelDetailInfo }) {
           {visibleList.map((a, i) => (
             <li key={`${a.name}-${i}`} className="flex items-center justify-between py-2.5">
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className="w-7 h-7 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-4 h-4 text-(--color-accent)" fill="currentColor" viewBox="0 0 20 20">
+                <span className="w-7 h-7 rounded-full bg-(--color-primary-tint) flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-(--color-links)" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                   </svg>
                 </span>
@@ -1274,7 +1275,7 @@ function NearbyAttractionsSection({ hotel }: { hotel: HotelDetailInfo }) {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-3 text-sm font-semibold text-(--color-accent) hover:text-(--color-accent-hover) inline-flex items-center gap-1"
+          className="mt-3 text-sm font-semibold text-(--color-links) hover:text-(--color-secondary-button) inline-flex items-center gap-1"
         >
           {expanded ? 'Show less' : `Show more (${list.length - NEARBY_INITIAL_LIMIT})`}
           <svg
@@ -1311,7 +1312,7 @@ function HotelMapSection({ hotel }: { hotel: HotelDetailInfo }) {
   const geo = hotel.geoCode;
   if (!geo || (!geo.lat && !geo.long)) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-6 text-sm text-gray-500">
+      <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-6 text-sm text-gray-500">
         Map location not available for this hotel.
       </div>
     );
@@ -1325,7 +1326,7 @@ function HotelMapSection({ hotel }: { hotel: HotelDetailInfo }) {
   const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${long}`;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-5">
+    <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h2 className="text-lg font-bold text-gray-900">Location</h2>
         <div className="flex items-center gap-3 text-xs">
@@ -1555,47 +1556,30 @@ function RoomsContent() {
   const displayHotel = pricingHotelDetail || hotelDetail;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-4">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Hotel Details
-          </button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-(--color-background)">
+      <StepHeader
+        title={displayHotel?.name || 'Hotel Details'}
+        subtitle={`${formatStepDate(checkIn)} - ${formatStepDate(checkOut)} · Choose your room`}
+        onBack={() => router.back()}
+      />
 
       {/* Body */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
         {loading && (
-          <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <svg className="animate-spin w-10 h-10 text-(--color-accent)" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            <p className="text-gray-500 text-sm">Fetching available rooms...</p>
-          </div>
+          <ResultsLoader
+            title="Fetching available rooms..."
+            subtitle="Checking live room rates and availability with the hotel."
+            rows={2}
+          />
         )}
 
         {error && !loading && (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <svg className="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-gray-600 font-medium">{error}</p>
-            <button
-              onClick={() => router.back()}
-              className="text-sm text-(--color-links) hover:underline"
-            >
-              Go back to hotel list
-            </button>
-          </div>
+          <ResultsEmpty
+            icon={AlertTriangle}
+            title="Rooms unavailable"
+            message={error}
+            action={{ label: 'Go back to hotel list', onClick: () => router.back() }}
+          />
         )}
 
         {!loading && !error && (
@@ -1629,7 +1613,7 @@ function RoomsContent() {
 
             {displayHotel && (
               <div className="mt-4">
-                <div className="bg-white border border-gray-200 rounded-lg p-5">
+                <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5">
                   <HotelDescription descriptions={displayHotel.descriptions} />
                 </div>
               </div>
@@ -1645,19 +1629,12 @@ function RoomsContent() {
               </div>
 
               {rooms.length === 0 ? (
-                <div className="bg-white rounded-lg border border-gray-200 p-10 text-center">
-                  <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                  </svg>
-                  <p className="text-gray-500 font-medium">No rooms available for your selected dates</p>
-                  <p className="text-sm text-gray-400 mt-1">Try different dates or search for another hotel</p>
-                  <button
-                    onClick={() => router.back()}
-                    className="mt-4 px-4 py-2 bg-(--color-accent) text-white text-sm font-bold rounded hover:bg-(--color-accent-hover) transition-colors"
-                  >
-                    Back to Hotels
-                  </button>
-                </div>
+                <ResultsEmpty
+                  icon={BedDouble}
+                  title="No rooms available"
+                  message="Try different dates or search for another hotel."
+                  action={{ label: 'Back to Hotels', onClick: () => router.back() }}
+                />
               ) : (
                 <>
                   <div className="space-y-4">
@@ -1677,7 +1654,7 @@ function RoomsContent() {
                     <button
                       type="button"
                       onClick={() => setRoomsExpanded((v) => !v)}
-                      className="mt-4 w-full py-2.5 bg-white border border-gray-200 hover:border-(--color-accent) hover:text-(--color-accent-hover) text-sm font-semibold text-(--color-accent) rounded-lg inline-flex items-center justify-center gap-1.5 transition-colors"
+                      className="mt-4 w-full py-2.5 bg-white border border-gray-200 hover:border-(--color-links) hover:text-(--color-secondary-button) text-sm font-semibold text-(--color-links) rounded-2xl inline-flex items-center justify-center gap-1.5 transition-colors"
                     >
                       {roomsExpanded
                         ? 'Show fewer rooms'
@@ -1703,8 +1680,8 @@ function RoomsContent() {
               </div>
 
               {pricingLoading && (
-                <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 flex flex-col items-center gap-3">
-                  <svg className="animate-spin w-8 h-8 text-(--color-accent)" fill="none" viewBox="0 0 24 24">
+                <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-6 flex flex-col items-center gap-3">
+                  <svg className="animate-spin w-8 h-8 text-(--color-links)" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
@@ -1732,10 +1709,10 @@ function RoomsContent() {
               )}
 
               {!pricing && !pricingLoading && !pricingError && (
-                <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-6">
                   <div className="flex flex-col items-center text-center">
                     <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-3">
-                      <svg className="w-7 h-7 text-(--color-accent)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-7 h-7 text-(--color-links)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                       </svg>
                     </div>
@@ -1796,17 +1773,20 @@ function RoomsContent() {
   );
 }
 
+/** "19 Nov" for the step header. */
+function formatStepDate(ymd: string) {
+  const d = new Date(ymd + 'T00:00:00');
+  return Number.isNaN(d.getTime()) ? ymd : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
 // ── Page ──
 
 export default function RoomsPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <svg className="animate-spin w-10 h-10 text-(--color-accent)" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
-      </div>
+      <StepState>
+        <ResultsLoader title="Loading..." rows={2} />
+      </StepState>
     }>
       <RoomsContent />
     </Suspense>

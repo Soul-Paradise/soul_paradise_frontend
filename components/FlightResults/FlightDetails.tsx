@@ -188,7 +188,7 @@ export const FlightDetails = ({ flight, tui }: FlightDetailsProps) => {
           >
             {tab.label}
             {activeTab === tab.key && (
-              <span className="absolute bottom-0 left-0 right-0 h-[3px] bg-red-500 rounded-t" />
+              <span className="absolute bottom-0 left-0 right-0 h-[3px] bg-(--color-links) rounded-t" />
             )}
           </button>
         ))}

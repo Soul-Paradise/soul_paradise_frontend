@@ -9,10 +9,10 @@ export const NoticeBanner = ({ notices, onDismiss }: NoticeBannerProps) => {
   if (!notices || notices.length === 0) return null;
 
   return (
-    <div className="bg-cyan-50 border border-cyan-200 rounded-lg px-4 py-3 flex items-start gap-3">
+    <div className="bg-(--color-primary-tint) border border-(--color-links)/20 rounded-2xl px-4 py-3 flex items-start gap-3">
       {/* Airport icon */}
       <div className="flex-shrink-0 mt-0.5">
-        <svg className="w-8 h-8 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-8 h-8 text-(--color-links)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -25,7 +25,7 @@ export const NoticeBanner = ({ notices, onDismiss }: NoticeBannerProps) => {
       {/* Notices */}
       <div className="flex-1 min-w-0">
         {notices.map((n, i) => (
-          <p key={i} className="text-sm text-teal-800">
+          <p key={i} className="text-sm text-(--color-ink-soft)">
             {n.notice}
           </p>
         ))}

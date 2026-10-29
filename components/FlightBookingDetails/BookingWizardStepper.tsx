@@ -18,7 +18,7 @@ export const BookingWizardStepper = ({
   onStepClick,
 }: BookingWizardStepperProps) => {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg px-4 sm:px-6 py-4 mb-2">
+    <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm px-4 sm:px-6 py-4 mb-2">
       <div className="flex items-center justify-between max-w-md mx-auto">
         {STEPS.map((step, i) => {
           const isCompleted = completedSteps.has(i);
