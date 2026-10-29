@@ -5,7 +5,6 @@ import { BookingTabs, MobileBookingTabs } from '@/components/BookingTabs';
 import {
   LongWeekends,
   PopularTrips,
-  WhyBookWithUs,
   TravellerReviews,
   PlanHolidayCta,
 } from '@/components/Home';
@@ -159,7 +158,6 @@ export default function Home() {
 
       <LongWeekends />
       <PopularTrips />
-      <WhyBookWithUs />
       <TravellerReviews />
       <PlanHolidayCta />
     </main>
