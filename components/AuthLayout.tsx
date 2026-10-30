@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import BackgroundVideo from '@/components/BackgroundVideo';
+import { BrandLogo } from '@/components/SiteImages';
 
 /**
  * Shared frame for the login and registration pages so they read as one flow:
@@ -32,6 +33,7 @@ export default function AuthLayout({
         <BackgroundVideo src={video} />
         <div className="pointer-events-none absolute inset-0 bg-black/35" aria-hidden="true" />
         <LogoLink
+          tone="dark"
           className="absolute left-8 top-6 z-10"
           imgClassName="h-28 xl:h-32 [filter:drop-shadow(0_0_3px_rgba(255,255,255,0.95))_drop-shadow(0_0_12px_rgba(255,255,255,0.8))]"
         />
@@ -72,9 +74,12 @@ export default function AuthLayout({
 function LogoLink({
   className,
   imgClassName = 'h-10 sm:h-12',
+  tone = 'light',
 }: {
   className: string;
   imgClassName?: string;
+  /** Background behind the logo (only matters for the text wordmark). */
+  tone?: 'light' | 'dark';
 }) {
   return (
     // Clickable (goes home) but not draggable, and the image takes no pointer
@@ -87,13 +92,7 @@ function LogoLink({
       onDragStart={(e) => e.preventDefault()}
       className={`block w-fit select-none transition-transform duration-200 hover:scale-105 active:scale-95 ${className}`}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element -- same plain logo as components/Logo */}
-      <img
-        src="/logo.png"
-        alt="Soul Paradise"
-        draggable={false}
-        className={`pointer-events-none w-auto ${imgClassName}`}
-      />
+      <BrandLogo draggable={false} tone={tone} className={`pointer-events-none w-auto ${imgClassName}`} />
     </Link>
   );
 }

@@ -1,10 +1,10 @@
-import { heroImage } from '@/lib/assets';
 import Link from 'next/link';
 import { ArrowRight, BookOpen, FileText, HelpCircle, Mail, MapPin, type LucideIcon } from 'lucide-react';
 import { PageHero } from './PageHero';
 import { LegalToc } from './LegalToc';
 import { GRADIENTS, ACCENT_CYCLE } from './palette';
 import type { LegalDocument, LegalLink, LegalSection } from '@/lib/legal-api';
+import type { ContactContent } from '@/lib/site-content-shared';
 
 export type { LegalSection };
 
@@ -17,6 +17,12 @@ const STATIC_POLICIES: LegalLink[] = [
 
 const sectionId = (n: number) => `section-${n}`;
 
+/** Help-card contact lines when the site-wide contact details are unavailable. */
+const DEFAULT_CONTACT: Pick<ContactContent, 'email' | 'addressLines'> = {
+  email: 'soulparadise21@gmail.com',
+  addressLines: ['Shop No. 21, 1st Floor, PPR Plaza', 'Jalandhar, Punjab 144001'],
+};
+
 /**
  * Shared layout for the legal pages: compact hero, sticky table of contents,
  * one card per numbered section, and a help card. Copy comes from the
@@ -26,11 +32,17 @@ export function LegalPage({
   doc,
   related: relatedDocs = STATIC_POLICIES,
   icon = FileText,
+  contact = DEFAULT_CONTACT,
+  heroImage,
 }: {
   doc: LegalDocument;
+  /** Email + address for the help card (GLOBAL.contact, admin panel → Site Content). */
+  contact?: Pick<ContactContent, 'email' | 'addressLines'>;
   /** Published policies for "Related policies"; the current page is excluded. */
   related?: LegalLink[];
   icon?: LucideIcon;
+  /** GLOBAL.images.pageHeroes.policies (admin panel → Site Content); none = navy hero. */
+  heroImage?: string | null;
 }) {
   const Icon = icon;
   const { path, title, description } = doc;
@@ -47,7 +59,7 @@ export function LegalPage({
       <PageHero
         title={title}
         description={description}
-        image={heroImage('beach-sunset.webp')}
+        image={heroImage}
         imagePosition="center 55%"
       />
 
@@ -138,16 +150,19 @@ export function LegalPage({
             </div>
             <p className="relative mt-3 max-w-2xl leading-relaxed text-white/80">{help.text}</p>
             <div className="relative mt-5 flex flex-col gap-4 sm:flex-row sm:gap-8">
-              <a href="mailto:soulparadise21@gmail.com" className="flex items-center gap-2 font-semibold hover:underline">
+              <a href={`mailto:${contact.email}`} className="flex items-center gap-2 font-semibold hover:underline">
                 <Mail className="h-5 w-5 text-sky-300" />
-                soulparadise21@gmail.com
+
               </a>
               <span className="flex items-start gap-2 text-white/85">
                 <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-sky-300" />
                 <span>
-                  Shop No. 21, 1st Floor, PPR Plaza
-                  <br />
-                  Jalandhar, Punjab – 144001
+                  {contact.addressLines.map((line, i) => (
+                    <span key={i}>
+                      {i > 0 && <br />}
+                      {line}
+                    </span>
+                  ))}
                 </span>
               </span>
             </div>

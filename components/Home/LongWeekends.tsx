@@ -20,7 +20,7 @@ import {
   type LongWeekend,
 } from '@/lib/holidays';
 import { SectionHeader } from './SectionHeader';
-import { whatsappLink } from './constants';
+import { waLink, type HeadingContent } from '@/lib/site-content-shared';
 
 /** Same palette as the Offers cards, one per card in turn. */
 const GRADIENTS = [
@@ -44,21 +44,17 @@ function ideasFor(days: number): string {
   return 'Goa · Kerala · Dubai';
 }
 
-export function LongWeekends() {
+export function LongWeekends({ heading, whatsappNumber }: { heading: HeadingContent; whatsappNumber: string }) {
   const weekends = upcomingLongWeekends();
   if (weekends.length === 0) return null;
 
   return (
     <section className="py-14 md:py-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <SectionHeader
-          eyebrow="Holiday Planner"
-          title="Plan your next long weekend"
-          subtitle="Upcoming holidays, the smartest leave to take, and everything you need to book for them."
-        />
+        <SectionHeader eyebrow={heading.eyebrow} title={heading.title} subtitle={heading.subtitle} />
         <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-2 scrollbar-hide sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
           {weekends.map((w, i) => (
-            <WeekendCard key={w.start} weekend={w} gradient={GRADIENTS[i % GRADIENTS.length]} />
+            <WeekendCard key={w.start} weekend={w} gradient={GRADIENTS[i % GRADIENTS.length]} whatsappNumber={whatsappNumber} />
           ))}
         </div>
       </div>
@@ -66,7 +62,15 @@ export function LongWeekends() {
   );
 }
 
-function WeekendCard({ weekend: w, gradient }: { weekend: LongWeekend; gradient: string }) {
+function WeekendCard({
+  weekend: w,
+  gradient,
+  whatsappNumber,
+}: {
+  weekend: LongWeekend;
+  gradient: string;
+  whatsappNumber: string;
+}) {
   const inDays = daysUntil(w.start);
   const leaves = w.leaveDates.length;
   const nights = w.days - 1;
@@ -167,7 +171,8 @@ function WeekendCard({ weekend: w, gradient }: { weekend: LongWeekend; gradient:
         {/* mt-auto pins the button to the bottom so cards in a row line up */}
         <div className="mt-auto pt-4">
           <a
-            href={whatsappLink(
+            href={waLink(
+              whatsappNumber,
               `Hi Soul Paradise, I'd like a holiday package quote for the ${w.holiday.name} long weekend (${shortDate(w.start)} to ${shortDate(w.end)}).`
             )}
             target="_blank"

@@ -21,22 +21,30 @@ export function PageHero({
 }: {
   title: string;
   description: string;
-  image: string;
+  /** From the media library; null/empty renders the navy no-photo hero. */
+  image?: string | null;
   imagePosition?: string;
   /** Breadcrumb label after "Home"; defaults to the title. */
   crumb?: string;
 }) {
   return (
-    <section className="relative h-[440px] overflow-hidden sm:h-[400px] lg:h-[420px]">
-      <div
-        className="animate-hero-zoom absolute inset-0"
-        style={{
-          backgroundImage: `url(${image})`,
-          backgroundSize: 'cover',
-          backgroundPosition: imagePosition,
-        }}
-        aria-hidden="true"
-      />
+    <section className="relative h-[440px] overflow-hidden bg-gradient-to-br from-(--color-ink-soft) via-(--color-ink) to-(--color-ink) sm:h-[400px] lg:h-[420px]">
+      {image ? (
+        <div
+          className="animate-hero-zoom absolute inset-0"
+          style={{
+            backgroundImage: `url(${image})`,
+            backgroundSize: 'cover',
+            backgroundPosition: imagePosition,
+          }}
+          aria-hidden="true"
+        />
+      ) : (
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+          <span className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-blue-500/20 blur-3xl" />
+          <span className="absolute -bottom-32 left-1/4 h-80 w-80 rounded-full bg-orange-500/10 blur-3xl" />
+        </div>
+      )}
       <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/55 to-black/25" aria-hidden="true" />
       <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/30 to-transparent" aria-hidden="true" />
 

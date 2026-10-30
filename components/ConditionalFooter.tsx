@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { Footer } from './Footer';
+import type { GlobalContent } from '@/lib/site-content-shared';
 
 /**
  * Auth and onboarding routes are full-height, self-contained screens - a marketing
@@ -18,7 +19,8 @@ const FOOTERLESS_ROUTES = [
   '/reset-password',
 ];
 
-export default function ConditionalFooter() {
+/** `global` is fetched by the root layout (site-wide footer copy + contact details). */
+export default function ConditionalFooter({ global }: { global: GlobalContent }) {
   const pathname = usePathname();
 
   const hideFooter = FOOTERLESS_ROUTES.some(
@@ -29,5 +31,5 @@ export default function ConditionalFooter() {
     return null;
   }
 
-  return <Footer />;
+  return <Footer footer={global.footer} contact={global.contact} />;
 }

@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { FileText } from 'lucide-react';
 import { LegalPage } from '@/components/Page';
 import { SYSTEM_PATHS, getLegalDocument, getLegalDocuments, legalMetadata } from '@/lib/legal-api';
+import { getSiteContent } from '@/lib/site-content';
 
 /**
  * Rendered per request: a page cached as 200 would outlive the policy being
@@ -21,7 +22,7 @@ export default async function PolicyPage({ params }: { params: Promise<{ slug: s
   // Built-in policies keep their own routes.
   if (SYSTEM_PATHS[slug]) redirect(SYSTEM_PATHS[slug]);
 
-  const [doc, related] = await Promise.all([getLegalDocument(slug), getLegalDocuments()]);
+  const [doc, related, site] = await Promise.all([getLegalDocument(slug), getLegalDocuments(), getSiteContent('global')]);
   if (!doc) notFound();
-  return <LegalPage doc={doc} related={related} icon={FileText} />;
+  return <LegalPage doc={doc} related={related} contact={site.global.contact} heroImage={site.global.images?.pageHeroes?.policies} icon={FileText} />;
 }

@@ -1,5 +1,4 @@
 'use client';
-import { heroImage } from '@/lib/assets';
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -31,6 +30,7 @@ import { api, type CustomPayment, type PaymentStatus } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
 import { showToast } from '@/lib/toast';
 import { PageHero, IconTile, type Accent } from '@/components/Page';
+import { useSiteImages } from '@/components/SiteImages';
 
 type TabKey = 'flights' | 'hotels' | 'insurance' | 'payments';
 
@@ -124,13 +124,14 @@ const TAB_BY_KEY = Object.fromEntries(TABS.map((t) => [t.key, t])) as Record<
 >;
 
 function OrdersShell({ children }: { children: React.ReactNode }) {
+  const siteImages = useSiteImages();
   return (
     <main className="min-h-screen bg-(--color-background)">
       <PageHero
         crumb="My Orders"
         title="Your trips & payments"
         description="View your flight, hotel and insurance bookings, custom payments, and manage cancellations."
-        image={heroImage('wing-above-clouds.webp')}
+        image={siteImages.pageHeroes?.orders}
         imagePosition="center 60%"
       />
       <div className="relative z-10 mx-auto -mt-16 max-w-7xl px-4 pb-16 sm:px-6 md:pb-20 lg:px-8">

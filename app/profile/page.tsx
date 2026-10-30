@@ -1,5 +1,4 @@
 'use client';
-import { heroImage } from '@/lib/assets';
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -35,6 +34,7 @@ import {
 import FormInput from '@/components/FormInput';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import { Avatar } from '@/components/Navbar/UserMenu';
+import { useSiteImages } from '@/components/SiteImages';
 import { PageHero, IconTile, type Accent } from '@/components/Page';
 
 function formatDate(value: string | null | undefined) {
@@ -300,13 +300,14 @@ function ProfileShell({
   firstName?: string;
   children: React.ReactNode;
 }) {
+  const siteImages = useSiteImages();
   return (
     <main className="min-h-screen bg-(--color-background)">
       <PageHero
         crumb="My Profile"
         title={firstName ? `Welcome back, ${firstName}` : 'My Profile'}
         description="Manage your account details, password and sign-in security, all in one place."
-        image={heroImage('wing-above-clouds.webp')}
+        image={siteImages.pageHeroes?.profile}
         imagePosition="center 60%"
       />
       <div className="relative z-10 mx-auto -mt-16 max-w-7xl px-4 pb-16 sm:px-6 md:pb-20 lg:px-8">

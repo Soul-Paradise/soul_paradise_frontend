@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { NavbarProps } from './types';
 import { UserMenu } from './UserMenu';
+import { BrandLogo } from '@/components/SiteImages';
 
 /**
  * Navbar Component
@@ -101,11 +102,7 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
                 className="flex items-center transition-transform duration-200 hover:scale-105"
                 aria-label="Soul Paradise Home"
               >
-                <img
-                  src="/logo.png"
-                  alt="Soul Paradise"
-                  className="h-15 w-auto"
-                />
+                <BrandLogo className="h-15 w-auto" />
               </Link>
             </div>
           </div>

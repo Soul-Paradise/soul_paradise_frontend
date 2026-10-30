@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Quote, Star } from 'lucide-react';
 import { api, type Testimonial } from '@/lib/api';
 import { SectionHeader } from './SectionHeader';
+import type { HeadingWithLink } from '@/lib/site-content-shared';
 
 /** Auto-scroll speed in px per second. */
 const AUTO_SPEED = 40;
@@ -16,7 +17,7 @@ const NUDGE_EASE = 8;
  * is disabled for users who prefer reduced motion. Renders nothing until
  * there is at least one review.
  */
-export function TravellerReviews() {
+export function TravellerReviews({ heading }: { heading: HeadingWithLink }) {
   const [reviews, setReviews] = useState<Testimonial[]>([]);
   // Number of times the review set is repeated so the strip always overflows
   // the viewport by at least one full set (needed for a seamless wrap).
@@ -100,11 +101,7 @@ export function TravellerReviews() {
   return (
     <section className="py-14 md:py-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <SectionHeader
-          eyebrow="Testimonials"
-          title="What our travellers say"
-          link={{ href: '/hall-of-fame', label: 'Read more stories' }}
-        />
+        <SectionHeader eyebrow={heading.eyebrow} title={heading.title} subtitle={heading.subtitle} link={heading.link} />
         <div
           className="relative"
           onPointerEnter={(e) => (pausedRef.current = e.pointerType === 'mouse')}

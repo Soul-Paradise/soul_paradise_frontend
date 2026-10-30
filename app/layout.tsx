@@ -4,6 +4,8 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ConditionalNavbar from "@/components/ConditionalNavbar";
 import ConditionalFooter from "@/components/ConditionalFooter";
+import { SiteImagesProvider } from "@/components/SiteImages";
+import { getSiteContent, hasImage } from "@/lib/site-content";
 import { Toaster } from "react-hot-toast";
 
 const geistSans = Geist({
@@ -30,7 +32,7 @@ const poppins = Poppins({
   style: ["normal", "italic"],
 });
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: "Soul Paradise Travels - Best Travel Agency in Jalandhar, Punjab | International & Domestic Flight Bookings",
   description: "Soul Paradise Travels offers affordable flight bookings, holiday packages, hotel reservations, visa services & travel insurance. 24/7 customer support. Located in Jalandhar, Punjab. Book your dream vacation today!",
   keywords: [
@@ -69,20 +71,11 @@ export const metadata: Metadata = {
     siteName: "Soul Paradise Travels",
     title: "Soul Paradise Travels - Fuel Your Soul with Travel | Best Travel Agency in Jalandhar",
     description: "No matter where in the world you want to go, we can help get you there. Expert travel services including flights, tours, hotels, visa & insurance. 24/7 support available.",
-    images: [
-      {
-        url: "/og-image.jpg",
-        width: 1200,
-        height: 630,
-        alt: "Soul Paradise Travels - Your Trusted Travel Partner",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Soul Paradise Travels - Best Travel Agency in Jalandhar, Punjab",
     description: "Affordable flight bookings, holiday packages, hotel reservations & visa services. 24/7 customer support. Book your dream vacation today!",
-    images: ["/og-image.jpg"],
   },
   alternates: {
     canonical: "https://soulparadisetravels.com/",
@@ -103,11 +96,25 @@ export const metadata: Metadata = {
 };
 
 
-export default function RootLayout({
+/** Share image = the logo from the media library, when one is set. */
+export async function generateMetadata(): Promise<Metadata> {
+  const { global } = await getSiteContent("global");
+  const logo = global.images?.logo;
+  if (!hasImage(logo)) return baseMetadata;
+  return {
+    ...baseMetadata,
+    openGraph: { ...baseMetadata.openGraph, images: [{ url: logo, alt: "Soul Paradise Travels" }] },
+    twitter: { ...baseMetadata.twitter, images: [logo] },
+  };
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Site-wide footer copy + contact details (admin panel → Site Content).
+  const { global } = await getSiteContent("global");
   return (
     <html lang="en">
       <head>
@@ -115,9 +122,11 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} ${poppins.variable} antialiased`}>
         <AuthProvider>
-          <ConditionalNavbar />
-          {children}
-          <ConditionalFooter />
+          <SiteImagesProvider images={global.images}>
+            <ConditionalNavbar />
+            {children}
+            <ConditionalFooter global={global} />
+          </SiteImagesProvider>
         </AuthProvider>
         <Toaster
           position="bottom-right"
