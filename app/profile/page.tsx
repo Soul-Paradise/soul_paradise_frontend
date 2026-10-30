@@ -7,7 +7,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   ArrowRight,
-  BadgeCheck,
   Briefcase,
   CalendarDays,
   Clock,
@@ -34,6 +33,7 @@ import {
   type ChangePasswordFormData,
 } from '@/lib/validations/auth';
 import FormInput from '@/components/FormInput';
+import VerifiedBadge from '@/components/VerifiedBadge';
 import { Avatar } from '@/components/Navbar/UserMenu';
 import { PageHero, IconTile, type Accent } from '@/components/Page';
 
@@ -184,11 +184,7 @@ export default function ProfilePage() {
                 <span className="truncate">{profile.name}</span>
                 {profile.emailVerified && (
                   <span title="Verified email" className="inline-flex shrink-0">
-                    <BadgeCheck
-                      className="h-5 w-5 fill-(--color-links) text-(--color-peace)"
-                      aria-label="Verified email"
-                      role="img"
-                    />
+                    <VerifiedBadge size={22} label="Verified email" />
                   </span>
                 )}
               </h2>

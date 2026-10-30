@@ -3,8 +3,9 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { AlertCircle, BadgeCheck, ExternalLink, Lock } from 'lucide-react';
+import { AlertCircle, ExternalLink, Lock } from 'lucide-react';
 import { useAuth, useRequireAuth } from '@/contexts/AuthContext';
+import VerifiedBadge from '@/components/VerifiedBadge';
 import {
   PriceChangedError,
   formatCoverage,
@@ -429,7 +430,7 @@ function BookingForm({ search, plan, tui }: { search: InsuranceSearch; plan: Ins
             aside={
               kyc === 'verified' ? (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-(--color-success)">
-                  <BadgeCheck className="w-4 h-4" /> Verified
+                  <VerifiedBadge size={16} /> Verified
                 </span>
               ) : null
             }
