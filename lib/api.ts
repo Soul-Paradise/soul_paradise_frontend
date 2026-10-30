@@ -118,6 +118,11 @@ export interface ContactFormRequest {
   message: string;
 }
 
+export interface NewsletterSubscribeResponse {
+  success: boolean;
+  message: string;
+}
+
 export interface ContactFormResponse {
   success: boolean;
   message: string;
@@ -544,6 +549,19 @@ class ApiClient {
     return this.request<ContactFormResponse>('/contacts', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  }
+
+  // Newsletter Endpoints
+
+  /**
+   * Sign up for the newsletter
+   * POST /newsletter/subscribe
+   */
+  async subscribeNewsletter(email: string, source = 'footer'): Promise<NewsletterSubscribeResponse> {
+    return this.request<NewsletterSubscribeResponse>('/newsletter/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ email, source }),
     });
   }
 
