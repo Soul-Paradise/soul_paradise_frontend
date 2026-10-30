@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { Mail, MapPin, Phone } from 'lucide-react';
 import { fillTemplate, hasImage, type ContactContent, type FooterContent } from '@/lib/site-content-shared';
 import { BrandLogo } from '@/components/SiteImages';
+import { NewsletterSignup } from './NewsletterSignup';
 
 /** Column heading with a short brand-gradient underline. */
 function ColumnTitle({ children }: { children: React.ReactNode }) {
@@ -61,6 +62,8 @@ export const Footer = ({ footer, contact }: { footer?: FooterContent; contact?: 
       <div className="h-1 bg-gradient-to-r from-(--color-links) via-sky-400 to-(--color-accent-light)" aria-hidden="true" />
 
       <div className="mx-auto max-w-7xl px-4 pb-6 pt-14 sm:px-6 lg:px-8">
+        <NewsletterSignup />
+
         <div className="grid grid-cols-1 gap-10 pb-10 md:grid-cols-2 lg:grid-cols-4 lg:gap-12">
           {/* Company Info */}
           <div>
