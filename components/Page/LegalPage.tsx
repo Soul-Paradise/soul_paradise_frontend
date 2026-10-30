@@ -4,45 +4,43 @@ import { ArrowRight, BookOpen, FileText, HelpCircle, Mail, MapPin, type LucideIc
 import { PageHero } from './PageHero';
 import { LegalToc } from './LegalToc';
 import { GRADIENTS, ACCENT_CYCLE } from './palette';
+import type { LegalDocument, LegalLink, LegalSection } from '@/lib/legal-api';
 
-export interface LegalSection {
-  number: number;
-  title: string;
-  content: string[];
-  subsections?: { title: string; content: string }[];
-}
+export type { LegalSection };
 
-const POLICIES = [
-  { href: '/terms', label: 'Terms & Conditions' },
-  { href: '/privacy-policy', label: 'Privacy Policy' },
-  { href: '/refund-cancellation-policy', label: 'Refund & Cancellation Policy' },
+/** Used when the published list can't be loaded. */
+const STATIC_POLICIES: LegalLink[] = [
+  { slug: 'terms', path: '/terms', title: 'Terms & Conditions' },
+  { slug: 'privacy-policy', path: '/privacy-policy', title: 'Privacy Policy' },
+  { slug: 'refund-cancellation-policy', path: '/refund-cancellation-policy', title: 'Refund & Cancellation Policy' },
 ];
 
 const sectionId = (n: number) => `section-${n}`;
 
 /**
  * Shared layout for the legal pages: compact hero, sticky table of contents,
- * one card per numbered section, and a help card. Copy comes from each page.
+ * one card per numbered section, and a help card. Copy comes from the
+ * database (edited in the admin panel's Policies section).
  */
 export function LegalPage({
-  path,
-  title,
-  description,
-  sections,
-  help,
+  doc,
+  related: relatedDocs = STATIC_POLICIES,
   icon = FileText,
 }: {
-  /** This page's route, so it can be excluded from "Related policies". */
-  path: string;
-  title: string;
-  description: string;
-  sections: LegalSection[];
-  help: { title: string; text: string };
+  doc: LegalDocument;
+  /** Published policies for "Related policies"; the current page is excluded. */
+  related?: LegalLink[];
   icon?: LucideIcon;
 }) {
   const Icon = icon;
+  const { path, title, description } = doc;
+  const help = { title: doc.helpTitle, text: doc.helpText };
+  // Numbering is positional, so reordering or removing a section never leaves gaps.
+  const sections = doc.sections.map((s, i) => ({ ...s, number: i + 1 }));
   const toc = sections.map((s) => ({ id: sectionId(s.number), number: s.number, title: s.title }));
-  const related = POLICIES.filter((p) => p.href !== path);
+  const related = (relatedDocs.length ? relatedDocs : STATIC_POLICIES)
+    .filter((p) => p.path !== path)
+    .map((p) => ({ href: p.path, label: p.title }));
 
   return (
     <main className="min-h-screen bg-(--color-background)">
@@ -113,13 +111,13 @@ export function LegalPage({
                 <h2 className="pt-1.5 text-xl font-bold text-(--color-foreground) sm:text-2xl">{section.title}</h2>
               </header>
               <div className="mt-4 space-y-3 sm:pl-14">
-                {section.content.map((paragraph, idx) => (
+                {section.paragraphs.map((paragraph, idx) => (
                   <p key={idx} className="leading-relaxed text-(--color-inactive)">
                     {paragraph}
                   </p>
                 ))}
-                {section.subsections?.map((sub) => (
-                  <div key={sub.title} className="rounded-xl border-l-4 border-(--color-links) bg-(--color-links)/5 p-4">
+                {section.subsections?.map((sub, idx) => (
+                  <div key={idx} className="rounded-xl border-l-4 border-(--color-links) bg-(--color-links)/5 p-4">
                     <h3 className="font-semibold text-(--color-foreground)">{sub.title}</h3>
                     <p className="mt-1 leading-relaxed text-(--color-inactive)">{sub.content}</p>
                   </div>
