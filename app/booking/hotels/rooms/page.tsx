@@ -157,7 +157,6 @@ interface HotelBookingContext {
   providerName: string;
   recommendationId: string;
   priceId: string;
-  netAmount: number;
   destinationCountryCode: string | null;
   searchTracingKey: string;
   checkIn: string; // MM/DD/YYYY

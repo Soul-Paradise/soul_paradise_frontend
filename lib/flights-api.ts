@@ -41,8 +41,8 @@ export interface FlightResult {
   connections: FlightConnection[];
   cabin: string;
   refundable: boolean;
+  /** The final price. The site never receives supplier figures. */
   grossFare: number;
-  netFare: number;
   currency: string;
   baggage: string | null;
   amenities: string;
@@ -140,7 +140,6 @@ export interface MultiCitySearchResponse {
 export interface MultiCityPriceLeg {
   tui: string;
   flightIndex: string;
-  netFare: number;
 }
 
 // ========== Pricing & Booking Types ==========
@@ -290,12 +289,10 @@ export interface BookingRequirements {
 
 export interface FlightPricingResponse {
   tui: string;
-  netAmount: number;
   segments: SegmentDetail[];
   fareBreakdown: FareBreakdownItem[];
   totalFare: {
-    net: number;
-    gross: number;
+    gross: number; // the final price
     currency: string;
   };
   fareRules: FareRule[];
@@ -318,9 +315,8 @@ export interface FlightPricingResponse {
   };
   ssrChargeMap: Record<string, number>;
   freeSSRs: FreeSSR[];
-  // Multi-city only: one { tui, netAmount } per priced leg (DM: N, IM: 1).
-  // Echoed back on booking so the backend can ticket each leg.
-  multiCitySessions?: Array<{ tui: string; netAmount: number }>;
+  // Multi-city only: number of separately-ticketed legs (DM: N, IM: 1).
+  multiCityLegCount?: number;
 }
 
 export interface ContactInfo {
@@ -366,9 +362,11 @@ export interface SSRSelection {
 
 export interface BookingRequest {
   tui: string;
-  netAmount: number;
-  // Customer-facing grand total we charge through the payment gateway.
+  // Grand total shown to the customer. The server charges its own quote and
+  // refuses the booking (409) if this disagrees with it.
   payableAmount: number;
+  // Coupon applied in the summary; the server re-validates it.
+  promoCode?: string;
   contactInfo: ContactInfo;
   travellers: TravellerInfo[];
   selectedSSR: SSRSelection[];
@@ -376,9 +374,6 @@ export interface BookingRequest {
   freeSSRs: FreeSSR[];
   // Echo of bookingRequirements.fareMaskingRequired - sets EnableFareMasking.
   enableFareMasking?: boolean;
-  // Multi-city (DM) only: echoed straight back from the pricing response. When
-  // length > 1 the backend tickets each leg as its own itinerary.
-  multiCitySessions?: Array<{ tui: string; netAmount: number }>;
   // Route summary persisted for the orders list. Required - the backend
   // rejects a booking without a valid origin, destination and departure date.
   tripSummary: {
@@ -485,7 +480,6 @@ export interface BookingDetailsResponse {
   paymentStatus?: string;
   sectorType?: 'DOMESTIC' | 'INTERNATIONAL' | '';
   invoice?: string;
-  cumulativeNetAmount?: number;
   cancellationId?: string;
   refundAmount?: number;
   cancellationCharge?: number;
@@ -538,25 +532,17 @@ export async function searchFlights(
   return res.json();
 }
 
+// Fares are named by search TUI + index only; the server prices them itself.
 export async function priceAndGetDetails(
   tui: string,
   flightIndex: string,
-  onwardNetFare: number,
   tripType: 'oneway' | 'roundtrip',
   returnFlightIndex?: string,
-  returnNetFare?: number,
 ): Promise<FlightPricingResponse> {
   const res = await authFetch(`${API_BASE}/flights/price`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      tui,
-      flightIndex,
-      onwardNetFare,
-      tripType,
-      returnFlightIndex,
-      returnNetFare,
-    }),
+    body: JSON.stringify({ tui, flightIndex, tripType, returnFlightIndex }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Pricing failed' }));
@@ -580,12 +566,11 @@ export interface FareRulesLookupResponse {
 export async function getFareRules(
   tui: string,
   flightIndex: string,
-  netFare: number,
 ): Promise<FareRulesLookupResponse> {
   const res = await authFetch(`${API_BASE}/flights/fare-rules`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tui, flightIndex, netFare }),
+    body: JSON.stringify({ tui, flightIndex }),
   });
   if (!res.ok) {
     const err = await res
@@ -639,12 +624,11 @@ export interface BaggageLookupResponse {
 export async function getBaggage(
   tui: string,
   flightIndex: string,
-  netFare: number,
 ): Promise<BaggageLookupResponse> {
   const res = await authFetch(`${API_BASE}/flights/baggage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tui, flightIndex, netFare }),
+    body: JSON.stringify({ tui, flightIndex }),
   });
   if (!res.ok) {
     const err = await res

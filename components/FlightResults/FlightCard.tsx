@@ -86,7 +86,6 @@ export const FlightCard = ({
     const params = new URLSearchParams({
       tui,
       index: flight.index,
-      netFare: String(flight.netFare),
       tripType,
     });
     router.push(`/booking/flights/details?${params.toString()}`);

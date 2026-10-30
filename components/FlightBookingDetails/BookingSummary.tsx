@@ -11,7 +11,7 @@ import { PromoCodeSection } from './PromoCodeSection';
 
 interface BookingSummaryProps {
   fareBreakdown: FareBreakdownItem[];
-  totalFare: { net: number; gross: number; currency: string };
+  totalFare: { gross: number; currency: string };
   passengerCounts: { adults: number; children: number; infants: number };
   selectedSSR: SSRSelection[];
   allSSROptions: SSROption[];

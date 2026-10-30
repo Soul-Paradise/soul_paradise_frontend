@@ -450,7 +450,7 @@ function FareSummaryTab({ flight, tui }: { flight: FlightResult; tui: string }) 
     setLoading(true);
     setError(null);
     try {
-      const res = await getFareRules(tui, flight.index, flight.netFare);
+      const res = await getFareRules(tui, flight.index);
       setRules(res.fareRules);
     } catch (e) {
       setError(
@@ -459,7 +459,7 @@ function FareSummaryTab({ flight, tui }: { flight: FlightResult; tui: string }) 
     } finally {
       setLoading(false);
     }
-  }, [tui, flight.index, flight.netFare]);
+  }, [tui, flight.index]);
 
   useEffect(() => {
     void load();
@@ -587,7 +587,7 @@ function BaggageTab({ flight, tui }: { flight: FlightResult; tui: string }) {
     setLoading(true);
     setError(null);
     try {
-      setData(await getBaggage(tui, flight.index, flight.netFare));
+      setData(await getBaggage(tui, flight.index));
     } catch (e) {
       setError(
         e instanceof Error ? e.message : 'Could not load baggage details.',
@@ -595,7 +595,7 @@ function BaggageTab({ flight, tui }: { flight: FlightResult; tui: string }) {
     } finally {
       setLoading(false);
     }
-  }, [tui, flight.index, flight.netFare]);
+  }, [tui, flight.index]);
 
   useEffect(() => {
     void load();

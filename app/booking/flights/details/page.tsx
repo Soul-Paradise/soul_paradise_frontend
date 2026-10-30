@@ -61,10 +61,7 @@ function FlightDetailsContent() {
 
   const tui = searchParams.get('tui') || '';
   const flightIndex = searchParams.get('index') || '';
-  const onwardNetFare = parseFloat(searchParams.get('netFare') || '0') || 0;
   const returnFlightIndex = searchParams.get('returnIndex') || undefined;
-  const returnNetFareRaw = searchParams.get('returnNetFare');
-  const returnNetFare = returnNetFareRaw ? parseFloat(returnNetFareRaw) || 0 : undefined;
   const tripType = (searchParams.get('tripType') === 'roundtrip' ? 'roundtrip' : 'oneway') as
     | 'oneway'
     | 'roundtrip';
@@ -117,7 +114,7 @@ function FlightDetailsContent() {
     setLoading(true);
     setError('');
 
-    priceAndGetDetails(tui, flightIndex, onwardNetFare, tripType, returnFlightIndex, returnNetFare)
+    priceAndGetDetails(tui, flightIndex, tripType, returnFlightIndex)
       .then((data) => {
         setPricing(data);
 
@@ -140,7 +137,7 @@ function FlightDetailsContent() {
       .finally(() => {
         setLoading(false);
       });
-  }, [tui, flightIndex, onwardNetFare, returnFlightIndex, returnNetFare, tripType]);
+  }, [tui, flightIndex, returnFlightIndex, tripType]);
 
   const updateTraveller = (index: number, updated: TravellerInfo) => {
     setTravellers((prev) => prev.map((t, i) => (i === index ? updated : t)));
@@ -303,8 +300,8 @@ function FlightDetailsContent() {
 
       const result = await createBooking({
         tui: pricing.tui,
-        netAmount: pricing.netAmount,
         payableAmount,
+        promoCode: appliedPromo?.valid ? appliedPromo.code : undefined,
         contactInfo: finalContactInfo,
         travellers,
         selectedSSR: allSelections,
@@ -333,7 +330,7 @@ function FlightDetailsContent() {
   // Shared sidebar props
   const sidebarProps = {
     fareBreakdown: pricing?.fareBreakdown || [],
-    totalFare: pricing?.totalFare || { net: 0, gross: 0, currency: 'INR' },
+    totalFare: pricing?.totalFare || { gross: 0, currency: 'INR' },
     passengerCounts: pricing?.passengerCounts || {
       adults: 0,
       children: 0,

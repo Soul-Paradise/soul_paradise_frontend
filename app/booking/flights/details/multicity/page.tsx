@@ -61,7 +61,6 @@ function parseLegs(raw: string): MultiCityPriceLeg[] {
       .map((l) => ({
         tui: String(l.tui || ''),
         flightIndex: l.flightIndex,
-        netFare: Number(l.netFare) || 0,
       }));
   } catch {
     return [];
@@ -260,17 +259,15 @@ function MultiCityDetailsContent() {
 
       const result = await createBooking({
         tui: pricing.tui,
-        netAmount: pricing.netAmount,
         payableAmount,
+        promoCode: appliedPromo?.valid ? appliedPromo.code : undefined,
         contactInfo: finalContactInfo,
         travellers,
         selectedSSR: allSelections,
         ssrChargeMap: pricing.ssrChargeMap,
         freeSSRs: pricing.freeSSRs,
         enableFareMasking: pricing.bookingRequirements?.fareMaskingRequired ?? false,
-        // DM: one { tui, netAmount } per leg - the backend splits the flat SSR
-        // selections per leg by FUID namespace and tickets each leg separately.
-        multiCitySessions: pricing.multiCitySessions,
+        // DM legs are ticketed separately; the server holds each leg's session.
         tripSummary: {
           fromCode: pricing.segments[0]?.from || '',
           toCode: pricing.segments[pricing.segments.length - 1]?.to || '',
@@ -288,7 +285,7 @@ function MultiCityDetailsContent() {
 
   const sidebarProps = {
     fareBreakdown: pricing?.fareBreakdown || [],
-    totalFare: pricing?.totalFare || { net: 0, gross: 0, currency: 'INR' },
+    totalFare: pricing?.totalFare || { gross: 0, currency: 'INR' },
     passengerCounts: pricing?.passengerCounts || { adults: 0, children: 0, infants: 0 },
     selectedSSR: allSelections,
     allSSROptions,

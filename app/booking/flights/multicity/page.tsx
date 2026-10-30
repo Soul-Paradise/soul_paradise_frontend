@@ -273,7 +273,6 @@ function MultiCityResults() {
     const legs = selected.map((f, i) => ({
       tui: results.legs[i].tui,
       flightIndex: f!.index,
-      netFare: f!.netFare,
     }));
     const params = new URLSearchParams({
       tripType: results.tripType,

@@ -236,9 +236,7 @@ function FlightSearchResults() {
     const params = new URLSearchParams({
       tui: results.tui,
       index: selectedOnward.index,
-      netFare: String(selectedOnward.netFare),
       returnIndex: selectedReturn.index,
-      returnNetFare: String(selectedReturn.netFare),
       tripType,
     });
     router.push(`/booking/flights/details?${params.toString()}`);
