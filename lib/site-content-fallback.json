@@ -168,34 +168,7 @@
       "href": "/hall-of-fame"
     },
     "ctaLabel": "Get a quote",
-    "enquiryTemplate": "Hi Soul Paradise, I'd like a quote for a {name} holiday package.",
-    "trips": [
-      {
-        "name": "Dubai",
-        "tagline": "City lights & desert safaris",
-        "image": null
-      },
-      {
-        "name": "Kerala",
-        "tagline": "Backwaters & houseboats",
-        "image": null
-      },
-      {
-        "name": "Rajasthan",
-        "tagline": "Forts, palaces & dunes",
-        "image": null
-      },
-      {
-        "name": "North East",
-        "tagline": "Hills, monasteries & sunrises",
-        "image": null
-      },
-      {
-        "name": "Puri & Digha",
-        "tagline": "Temples & sea beaches",
-        "image": null
-      }
-    ]
+    "enquiryTemplate": "Hi Soul Paradise, I'd like a quote for a {name} holiday package."
   },
   "HOME.reviews": {
     "eyebrow": "Testimonials",

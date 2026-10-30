@@ -183,7 +183,12 @@ export function HomeView({ content }: { content: SiteContent<'home'> }) {
         ) : null;
       case 'popular_trips':
         return sections.popular_trips ? (
-          <PopularTrips key={key} content={sections.popular_trips} whatsappNumber={whatsappNumber} />
+          <PopularTrips
+            key={key}
+            content={sections.popular_trips}
+            destinations={content.destinations ?? []}
+            whatsappNumber={whatsappNumber}
+          />
         ) : null;
       case 'reviews':
         return sections.reviews ? <TravellerReviews key={key} heading={sections.reviews} /> : null;

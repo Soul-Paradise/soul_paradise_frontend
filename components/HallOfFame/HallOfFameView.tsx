@@ -7,6 +7,7 @@ import { api, type Testimonial } from '@/lib/api';
 import { PageHero, SectionHeading, GRADIENTS } from '@/components/Page';
 import { PlanHolidayCta } from '@/components/Home';
 import { CmsIcon } from '@/components/SiteContent';
+import { ReviewerAvatar } from '@/components/ReviewerAvatar';
 import { HeroSpacer } from '@/components/SiteContent/HeroSpacer';
 import {
   orderedKeys,
@@ -309,19 +310,15 @@ function Testimonials({ heading, accents }: { heading: NonNullable<HallOfFameSec
                   </div>
                   <blockquote className="flex-1 leading-relaxed text-(--color-inactive)">“{testimonial.review}”</blockquote>
                   <figcaption className="mt-6 flex items-center gap-3 border-t border-(--color-tertiary-button) pt-4">
-                    <span
-                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${accent} font-bold text-white`}
-                    >
-                      {testimonial.name
-                        .split(/\s+/)
-                        .map((n) => n[0])
-                        .join('')
-                        .slice(0, 2)
-                        .toUpperCase()}
-                    </span>
-                    <span>
+                    <ReviewerAvatar name={testimonial.name} photoUrl={testimonial.photoUrl} accent={accent} className="h-11 w-11" />
+                    <span className="min-w-0">
                       <span className="block text-base font-bold text-(--color-foreground)">{testimonial.name}</span>
                       <span className="block text-sm text-(--color-inactive)">{testimonial.service}</span>
+                      {testimonial.destination && (
+                        <span className="mt-1 inline-flex max-w-full items-center gap-1 truncate rounded-full bg-(--color-primary-tint) px-2 py-0.5 text-xs font-semibold text-(--color-links)">
+                          <MapPin className="h-3 w-3 shrink-0" /> Trip to {testimonial.destination}
+                        </span>
+                      )}
                     </span>
                   </figcaption>
                 </figure>

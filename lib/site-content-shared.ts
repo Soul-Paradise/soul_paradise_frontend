@@ -111,7 +111,6 @@ export interface HomeSections {
   popular_trips?: HeadingWithLink & {
     ctaLabel: string;
     enquiryTemplate: string;
-    trips: { name: string; tagline: string; image: ImageUrl }[];
   };
   reviews?: HeadingWithLink;
   plan_holiday_cta?: Record<string, never>;
@@ -212,6 +211,17 @@ export interface SiteContent<P extends SitePage = SitePage> {
   order: string[];
   global: GlobalContent;
   gallery?: GalleryImage[];
+  /** Home only: the (up to five) featured destinations, admin > Destinations. */
+  destinations?: Destination[];
+}
+
+export interface Destination {
+  id: string;
+  name: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  image: ImageUrl;
 }
 
 // ------------------------------------------------------------------ helpers

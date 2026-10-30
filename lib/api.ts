@@ -134,6 +134,12 @@ export interface Testimonial {
   rating: number;
   service: string;
   isApproved: boolean;
+  /** Reviewer photo from the admin media library. */
+  photoUrl?: string | null;
+  /** Destination of the trip, e.g. "Kerala". */
+  destination?: string | null;
+  isPinned?: boolean;
+  source?: string;
   createdAt: string;
   updatedAt: string;
 }

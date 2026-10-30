@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Quote, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Quote, Star } from 'lucide-react';
+import { ReviewerAvatar } from '@/components/ReviewerAvatar';
 import { api, type Testimonial } from '@/lib/api';
 import { SectionHeader } from './SectionHeader';
 import type { HeadingWithLink } from '@/lib/site-content-shared';
@@ -186,14 +187,7 @@ function ReviewCard({ review, accent }: { review: Testimonial; accent: string })
         “{review.review}”
       </blockquote>
       <figcaption className="mt-5 flex items-center gap-3 border-t border-(--color-tertiary-button) pt-4">
-        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${accent} text-sm font-bold text-white`}>
-          {review.name
-            .split(/\s+/)
-            .map((part) => part[0])
-            .join('')
-            .slice(0, 2)
-            .toUpperCase()}
-        </span>
+        <ReviewerAvatar name={review.name} photoUrl={review.photoUrl} accent={accent} />
         <span className="min-w-0">
           <span className="block truncate text-sm font-bold text-(--color-foreground)">
             {review.name}
@@ -201,6 +195,11 @@ function ReviewCard({ review, accent }: { review: Testimonial; accent: string })
           <span className="block truncate text-xs text-(--color-inactive)">
             {review.service}
           </span>
+          {review.destination && (
+            <span className="mt-1 inline-flex max-w-full items-center gap-1 truncate rounded-full bg-(--color-primary-tint) px-2 py-0.5 text-[11px] font-semibold text-(--color-links)">
+              <MapPin className="h-3 w-3 shrink-0" /> Trip to {review.destination}
+            </span>
+          )}
         </span>
       </figcaption>
     </figure>

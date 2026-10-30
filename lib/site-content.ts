@@ -45,6 +45,8 @@ function fallbackContent<P extends SitePage>(page: P): SiteContent<P> {
     order: own.order,
     global: sectionsFromSeed('GLOBAL').sections as GlobalContent,
     gallery,
+    // No bundled trips: destinations live only in the admin panel.
+    destinations: page === 'home' ? [] : undefined,
   };
 }
 
