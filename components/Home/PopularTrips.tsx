@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import { ResilientImage } from '@/components/SiteContent/ResilientImage';
 import { ArrowUpRight, MapPin } from 'lucide-react';
 import { SectionHeader } from './SectionHeader';
 import { GRADIENTS, ACCENT_CYCLE } from '@/components/Page/palette';
@@ -38,7 +38,7 @@ export function PopularTrips({
               className="group relative aspect-[3/4] w-56 shrink-0 snap-start overflow-hidden rounded-2xl shadow-sm ring-1 ring-black/5 transition-all hover:-translate-y-1 hover:shadow-xl sm:w-60 lg:w-auto"
             >
               {d.image ? (
-                <Image
+                <ResilientImage
                   src={d.image}
                   alt={`Soul Paradise travellers in ${d.title}`}
                   fill

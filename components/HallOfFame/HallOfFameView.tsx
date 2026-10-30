@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { ResilientImage } from '@/components/SiteContent/ResilientImage';
 import { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Expand, Loader2, MapPin, Quote, Star, X } from 'lucide-react';
 import { api, type Testimonial } from '@/lib/api';
@@ -165,7 +165,7 @@ function Gallery({ heading, images }: { heading: NonNullable<HallOfFameSections[
                     isFeature(index) ? 'col-span-2 row-span-2' : ''
                   }`}
                 >
-                  <Image
+                  <ResilientImage
                     src={image.url}
                     alt={image.title}
                     fill
@@ -235,7 +235,7 @@ function Gallery({ heading, images }: { heading: NonNullable<HallOfFameSections[
           </button>
 
           <figure className="relative flex max-h-[90vh] max-w-6xl flex-col items-center" onClick={(e) => e.stopPropagation()}>
-            <Image
+            <ResilientImage
               src={current.url}
               alt={current.title}
               width={current.width ?? 1200}
