@@ -1,4 +1,5 @@
 'use client';
+import { videoUrl } from '@/lib/assets';
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -48,7 +49,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthLayout
-      video="/login_video.mp4"
+      video={videoUrl('login_video.mp4')}
       title="Forgot Password?"
       subtitle="No worries, we'll send you reset instructions."
       footer={<AuthFooterLink question="Remembered your password?" href="/login" action="Back to Login" />}

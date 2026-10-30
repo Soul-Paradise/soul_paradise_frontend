@@ -1,4 +1,5 @@
 'use client';
+import { heroImage } from '@/lib/assets';
 
 import { useState, useEffect } from 'react';
 import { BookingTabs, MobileBookingTabs } from '@/components/BookingTabs';
@@ -16,7 +17,7 @@ function HeroBackdrop() {
     <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
       <div
         className="animate-hero-zoom absolute inset-0"
-        style={{ backgroundImage: 'url(/hero_bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+        style={{ backgroundImage: `url(${heroImage('maldives-island-coast.webp')})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       />
       <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20" />
       <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/30 to-transparent" />

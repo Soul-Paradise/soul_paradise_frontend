@@ -1,4 +1,5 @@
 'use client';
+import { videoUrl } from '@/lib/assets';
 
 import { useEffect } from 'react';
 import Link from 'next/link';
@@ -52,7 +53,7 @@ export default function SignupPage() {
 
   return (
     <AuthLayout
-      video="/register_video.mp4"
+      video={videoUrl('register_video.mp4')}
       title="Create Account"
       subtitle="Join Soul Paradise Travels today!"
       footer={

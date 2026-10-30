@@ -1,4 +1,5 @@
 'use client';
+import { heroImage, tripImage } from '@/lib/assets';
 
 import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
@@ -21,28 +22,28 @@ import { PageHero, SectionHeading } from '@/components/Page';
 import { PlanHolidayCta } from '@/components/Home';
 
 const galleryImages = [
-  { id: 1, src: '/dubai_1.jpg', alt: 'Dubai Travel Experience', category: 'Dubai' },
-  { id: 2, src: '/dubai_2.jpg', alt: 'Dubai Adventure', category: 'Dubai' },
-  { id: 3, src: '/dubai_3.jpg', alt: 'Dubai Memories', category: 'Dubai' },
-  { id: 4, src: '/dubai_4.jpg', alt: 'Dubai Journey', category: 'Dubai' },
-  { id: 5, src: '/kerala_1.jpg', alt: 'Kerala Backwaters', category: 'Kerala' },
-  { id: 6, src: '/kerala_2.jpg', alt: 'Kerala Beauty', category: 'Kerala' },
-  { id: 7, src: '/kerala_3.jpg', alt: 'Kerala Adventure', category: 'Kerala' },
-  { id: 8, src: '/kerala_4.jpg', alt: 'Kerala Experience', category: 'Kerala' },
-  { id: 9, src: '/kerala_5.jpg', alt: 'Kerala Memories', category: 'Kerala' },
-  { id: 10, src: '/kerala_6.jpg', alt: 'Kerala Journey', category: 'Kerala' },
-  { id: 11, src: '/rajasthan_1.jpg', alt: 'Rajasthan Heritage', category: 'Rajasthan' },
-  { id: 12, src: '/rajasthan_2.jpg', alt: 'Rajasthan Culture', category: 'Rajasthan' },
-  { id: 13, src: '/rajasthan_3.jpg', alt: 'Rajasthan Adventure', category: 'Rajasthan' },
-  { id: 14, src: '/rajasthan_4.jpg', alt: 'Rajasthan Memories', category: 'Rajasthan' },
-  { id: 15, src: '/rajasthan_5.jpg', alt: 'Rajasthan Journey', category: 'Rajasthan' },
-  { id: 16, src: '/ne_1.jpg', alt: 'Northeast Beauty', category: 'Northeast' },
-  { id: 17, src: '/ne_2.jpg', alt: 'Northeast Adventure', category: 'Northeast' },
-  { id: 18, src: '/ne_3.jpg', alt: 'Northeast Experience', category: 'Northeast' },
-  { id: 19, src: '/ne_4.jpg', alt: 'Northeast Memories', category: 'Northeast' },
-  { id: 20, src: '/ne_5.jpg', alt: 'Northeast Journey', category: 'Northeast' },
-  { id: 21, src: '/digha_1.jpg', alt: 'Digha Beach', category: 'Digha' },
-  { id: 22, src: '/digha_2.jpg', alt: 'Digha Memories', category: 'Digha' },
+  { id: 1, src: tripImage('dubai_1.jpg'), alt: 'Dubai Travel Experience', category: 'Dubai' },
+  { id: 2, src: tripImage('dubai_2.jpg'), alt: 'Dubai Adventure', category: 'Dubai' },
+  { id: 3, src: tripImage('dubai_3.jpg'), alt: 'Dubai Memories', category: 'Dubai' },
+  { id: 4, src: tripImage('dubai_4.jpg'), alt: 'Dubai Journey', category: 'Dubai' },
+  { id: 5, src: tripImage('kerala_1.jpg'), alt: 'Kerala Backwaters', category: 'Kerala' },
+  { id: 6, src: tripImage('kerala_2.jpg'), alt: 'Kerala Beauty', category: 'Kerala' },
+  { id: 7, src: tripImage('kerala_3.jpg'), alt: 'Kerala Adventure', category: 'Kerala' },
+  { id: 8, src: tripImage('kerala_4.jpg'), alt: 'Kerala Experience', category: 'Kerala' },
+  { id: 9, src: tripImage('kerala_5.jpg'), alt: 'Kerala Memories', category: 'Kerala' },
+  { id: 10, src: tripImage('kerala_6.jpg'), alt: 'Kerala Journey', category: 'Kerala' },
+  { id: 11, src: tripImage('rajasthan_1.jpg'), alt: 'Rajasthan Heritage', category: 'Rajasthan' },
+  { id: 12, src: tripImage('rajasthan_2.jpg'), alt: 'Rajasthan Culture', category: 'Rajasthan' },
+  { id: 13, src: tripImage('rajasthan_3.jpg'), alt: 'Rajasthan Adventure', category: 'Rajasthan' },
+  { id: 14, src: tripImage('rajasthan_4.jpg'), alt: 'Rajasthan Memories', category: 'Rajasthan' },
+  { id: 15, src: tripImage('rajasthan_5.jpg'), alt: 'Rajasthan Journey', category: 'Rajasthan' },
+  { id: 16, src: tripImage('ne_1.jpg'), alt: 'Northeast Beauty', category: 'Northeast' },
+  { id: 17, src: tripImage('ne_2.jpg'), alt: 'Northeast Adventure', category: 'Northeast' },
+  { id: 18, src: tripImage('ne_3.jpg'), alt: 'Northeast Experience', category: 'Northeast' },
+  { id: 19, src: tripImage('ne_4.jpg'), alt: 'Northeast Memories', category: 'Northeast' },
+  { id: 20, src: tripImage('ne_5.jpg'), alt: 'Northeast Journey', category: 'Northeast' },
+  { id: 21, src: tripImage('digha_1.jpg'), alt: 'Digha Beach', category: 'Digha' },
+  { id: 22, src: tripImage('digha_2.jpg'), alt: 'Digha Memories', category: 'Digha' },
 ];
 
 const STATS = [
@@ -103,8 +104,8 @@ export default function HallOfFamePage() {
         crumb="Hall of Fame"
         title="Real trips. Real travellers. Real smiles."
         description="Celebrating our valued customers and their unforgettable travel experiences. Browse through memories captured during amazing journeys with Soul Paradise."
-        image="/dubai_1.jpg"
-        imagePosition="center 35%"
+        image={heroImage('jaipur-jal-mahal.webp')}
+        imagePosition="center 55%"
       />
 
       {/* Stats band, overlapping the hero */}

@@ -1,4 +1,5 @@
 'use client';
+import { videoUrl } from '@/lib/assets';
 
 import { useEffect, Suspense } from 'react';
 import Link from 'next/link';
@@ -49,7 +50,7 @@ function LoginForm() {
 
   return (
     <AuthLayout
-      video="/login_video.mp4"
+      video={videoUrl('login_video.mp4')}
       title="Welcome Back!"
       subtitle="Let's get you signed in securely."
       footer={<AuthFooterLink question="Still don't have an account?" href="/register" action="Register Now" />}

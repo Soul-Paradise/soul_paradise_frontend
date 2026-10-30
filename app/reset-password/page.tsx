@@ -1,4 +1,5 @@
 'use client';
+import { videoUrl } from '@/lib/assets';
 
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
@@ -65,7 +66,7 @@ function ResetPasswordForm() {
 
   return (
     <AuthLayout
-      video="/login_video.mp4"
+      video={videoUrl('login_video.mp4')}
       title="Set New Password"
       subtitle="Your new password must be different from previously used passwords."
       footer={<AuthFooterLink question="Remembered your password?" href="/login" action="Back to Login" />}

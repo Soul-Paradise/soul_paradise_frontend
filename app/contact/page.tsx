@@ -1,4 +1,5 @@
 'use client';
+import { heroImage } from '@/lib/assets';
 
 import { useState, useSyncExternalStore } from 'react';
 import { ZodError } from 'zod';
@@ -222,8 +223,8 @@ export default function ContactPage() {
         crumb="Contact Us"
         title="Let's plan your next journey"
         description="We're here to help you plan your perfect journey. Reach out to us through any of the channels below, and our team will be happy to assist you."
-        image="/ne_3.jpg"
-        imagePosition="center 60%"
+        image={heroImage('kanchenjunga.webp')}
+        imagePosition="center 65%"
       />
 
       {/* Contact channels, overlapping the hero */}

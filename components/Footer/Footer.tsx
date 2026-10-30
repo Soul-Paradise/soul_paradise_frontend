@@ -1,4 +1,5 @@
 'use client';
+import { tripImage } from '@/lib/assets';
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -165,7 +166,7 @@ export const Footer = () => {
           <div className="flex items-center gap-3 rounded-full bg-white/5 py-1.5 pl-4 pr-2 ring-1 ring-white/10">
             <span className="text-sm text-white/70">IATA Certified</span>
             <span className="flex h-8 items-center rounded-full bg-white px-2">
-              <Image src="/iata_logo.png" alt="IATA" width={60} height={60} className="h-6 w-auto" />
+              <Image src={tripImage('iata_logo.png')} alt="IATA" width={60} height={60} className="h-6 w-auto" />
             </span>
           </div>
         </div>

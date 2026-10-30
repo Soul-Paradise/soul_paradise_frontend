@@ -1,3 +1,4 @@
+import { heroImage, tripImage } from '@/lib/assets';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -97,8 +98,8 @@ export default function AboutPage() {
         crumb="About Us"
         title="Your pocket-friendly tour planner"
         description="Soul Paradise makes travel accessible, affordable and memorable for everyone, from a first family holiday to a last-minute business trip."
-        image="/kerala_2.jpg"
-        imagePosition="center 30%"
+        image={heroImage('kerala-tea-gardens.webp')}
+        imagePosition="center 60%"
       />
 
       {/* Our Story + IATA, overlapping the hero */}
@@ -149,7 +150,7 @@ export default function AboutPage() {
             </div>
             <div className="relative -mt-10 flex justify-center">
               <span className="flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-lg ring-4 ring-(--color-peace)">
-                <Image src="/iata_logo.png" alt="IATA Accredited" width={56} height={56} className="object-contain" />
+                <Image src={tripImage('iata_logo.png')} alt="IATA Accredited" width={56} height={56} className="object-contain" />
               </span>
             </div>
             <dl className="grid grid-cols-2 gap-3 px-6 pt-5">
@@ -172,7 +173,7 @@ export default function AboutPage() {
                 </span>
               </span>
               <span className="grid grid-cols-3 gap-2">
-                {['/dubai_1.jpg', '/rajasthan_3.jpg', '/digha_2.jpg'].map((src) => (
+                {[tripImage('dubai_1.jpg'), tripImage('rajasthan_3.jpg'), tripImage('digha_2.jpg')].map((src) => (
                   <span key={src} className="relative aspect-square overflow-hidden rounded-lg">
                     <Image
                       src={src}

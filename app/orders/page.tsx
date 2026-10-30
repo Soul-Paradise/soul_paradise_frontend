@@ -1,4 +1,5 @@
 'use client';
+import { heroImage } from '@/lib/assets';
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -129,8 +130,8 @@ function OrdersShell({ children }: { children: React.ReactNode }) {
         crumb="My Orders"
         title="Your trips & payments"
         description="View your flight, hotel and insurance bookings, custom payments, and manage cancellations."
-        image="/hero_bg.jpg"
-        imagePosition="center 70%"
+        image={heroImage('wing-above-clouds.webp')}
+        imagePosition="center 60%"
       />
       <div className="relative z-10 mx-auto -mt-16 max-w-7xl px-4 pb-16 sm:px-6 md:pb-20 lg:px-8">
         {children}

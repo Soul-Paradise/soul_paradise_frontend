@@ -1,3 +1,4 @@
+import { tripImage } from '@/lib/assets';
 import Image from 'next/image';
 import { ArrowUpRight } from 'lucide-react';
 import { SectionHeader } from './SectionHeader';
@@ -5,11 +6,11 @@ import { whatsappLink } from './constants';
 
 /** Real trips organised for our travellers (same photos as the Hall of Fame). */
 const TRIPS = [
-  { name: 'Dubai', tagline: 'City lights & desert safaris', src: '/dubai_1.jpg' },
-  { name: 'Kerala', tagline: 'Backwaters & houseboats', src: '/kerala_2.jpg' },
-  { name: 'Rajasthan', tagline: 'Forts, palaces & dunes', src: '/rajasthan_3.jpg' },
-  { name: 'North East', tagline: 'Hills, monasteries & sunrises', src: '/ne_2.jpg' },
-  { name: 'Puri & Digha', tagline: 'Temples & sea beaches', src: '/digha_2.jpg' },
+  { name: 'Dubai', tagline: 'City lights & desert safaris', src: tripImage('dubai_1.jpg') },
+  { name: 'Kerala', tagline: 'Backwaters & houseboats', src: tripImage('kerala_2.jpg') },
+  { name: 'Rajasthan', tagline: 'Forts, palaces & dunes', src: tripImage('rajasthan_3.jpg') },
+  { name: 'North East', tagline: 'Hills, monasteries & sunrises', src: tripImage('ne_2.jpg') },
+  { name: 'Puri & Digha', tagline: 'Temples & sea beaches', src: tripImage('digha_2.jpg') },
 ];
 
 export function PopularTrips() {

@@ -1,3 +1,4 @@
+import { heroImage } from '@/lib/assets';
 import { MessageCircle, Phone } from 'lucide-react';
 import { SALES_PHONE, whatsappLink } from './constants';
 
@@ -9,9 +10,9 @@ export function PlanHolidayCta() {
         <div
           className="relative overflow-hidden rounded-2xl"
           style={{
-            backgroundImage: 'url(/hero_bg.jpg)',
+            backgroundImage: `url(${heroImage('agra-misty-morning.webp')})`,
             backgroundSize: 'cover',
-            backgroundPosition: 'center 70%',
+            backgroundPosition: 'center 40%',
           }}
         >
           <div className="absolute inset-0 bg-(--color-ink)/85" />

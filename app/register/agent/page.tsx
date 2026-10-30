@@ -1,4 +1,5 @@
 'use client';
+import { videoUrl } from '@/lib/assets';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -161,7 +162,7 @@ export default function AgentRegisterPage() {
 
   return (
     <AuthLayout
-      video="/agent_registration_video.mp4"
+      video={videoUrl('agent_registration_video.mp4')}
       title="Become a Booking Partner"
       subtitle="Register your agency and book on behalf of your clients."
       footer={
@@ -519,7 +520,7 @@ function ApplicationSubmitted({
 }) {
   return (
     <AuthLayout
-      video="/agent_registration_video.mp4"
+      video={videoUrl('agent_registration_video.mp4')}
       title="Application submitted"
       subtitle="Thank you for registering your agency with Soul Paradise."
     >

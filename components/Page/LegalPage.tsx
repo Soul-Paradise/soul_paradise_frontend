@@ -1,3 +1,4 @@
+import { heroImage } from '@/lib/assets';
 import Link from 'next/link';
 import { ArrowRight, BookOpen, FileText, HelpCircle, Mail, MapPin, type LucideIcon } from 'lucide-react';
 import { PageHero } from './PageHero';
@@ -48,8 +49,8 @@ export function LegalPage({
       <PageHero
         title={title}
         description={description}
-        image="/hero_bg.jpg"
-        imagePosition="center 70%"
+        image={heroImage('beach-sunset.webp')}
+        imagePosition="center 55%"
       />
 
       <div className="relative z-10 mx-auto -mt-16 grid max-w-7xl grid-cols-1 gap-6 px-4 pb-16 sm:px-6 md:pb-20 lg:grid-cols-[280px_1fr] lg:gap-8 lg:px-8">

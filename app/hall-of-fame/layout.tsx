@@ -1,3 +1,4 @@
+import { tripImage } from '@/lib/assets';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: '/kerala_1.jpg',
+        url: tripImage('kerala_1.jpg'),
         width: 1200,
         height: 630,
         alt: 'Soul Paradise Travel Gallery',

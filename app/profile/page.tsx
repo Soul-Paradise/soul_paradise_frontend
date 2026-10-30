@@ -1,4 +1,5 @@
 'use client';
+import { heroImage } from '@/lib/assets';
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -309,8 +310,8 @@ function ProfileShell({
         crumb="My Profile"
         title={firstName ? `Welcome back, ${firstName}` : 'My Profile'}
         description="Manage your account details, password and sign-in security, all in one place."
-        image="/hero_bg.jpg"
-        imagePosition="center 70%"
+        image={heroImage('wing-above-clouds.webp')}
+        imagePosition="center 60%"
       />
       <div className="relative z-10 mx-auto -mt-16 max-w-7xl px-4 pb-16 sm:px-6 md:pb-20 lg:px-8">
         {children}

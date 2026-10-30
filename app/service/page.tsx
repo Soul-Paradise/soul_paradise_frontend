@@ -1,3 +1,4 @@
+import { heroImage } from '@/lib/assets';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
@@ -103,7 +104,7 @@ export default function ServicePage() {
         crumb="Our Services"
         title="Everything your trip needs, in one place"
         description="Discover our comprehensive range of travel services designed to make your journey seamless, affordable, and memorable. From flight bookings to visa assistance, we've got you covered."
-        image="/hero_bg.jpg"
+        image={heroImage('dubai-skyline.webp')}
       />
 
       {/* Services grid, overlapping the hero */}
