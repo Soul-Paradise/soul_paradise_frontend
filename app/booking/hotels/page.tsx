@@ -1,6 +1,17 @@
 'use client';
 
 import { useEffect, useState, Suspense, useMemo } from 'react';
+import {
+  BookButton,
+  FilterCheckbox,
+  FilterPanel,
+  FilterSection as KitFilterSection,
+  RESULT_CARD,
+  ResultsEmpty,
+  ResultsLoader,
+  SortTabs,
+  SummaryBar,
+} from '@/components/Results/ui';
 import { useSearchParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { authHeaders } from '@/lib/api';
@@ -11,6 +22,14 @@ import {
   ParkingCircle, ShieldCheck, Snowflake, Plane, Bus, CreditCard, Check,
   MapPin, X,
   type LucideIcon,
+  CalendarDays,
+  BedDouble,
+  Share2,
+  AlertTriangle,
+  Building2,
+  SlidersHorizontal,
+  Star,
+  Wallet,
 } from 'lucide-react';
 
 const HotelMap = dynamic(() => import('@/components/HotelMap/HotelMap'), {
@@ -134,16 +153,6 @@ function formatDate(d: string): string {
   });
 }
 
-function formatDateLong(d: string): string {
-  if (!d) return '';
-  return new Date(d).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    weekday: 'long',
-  });
-}
-
 // ── Star Rating ──
 function Stars({ count }: { count: number }) {
   return (
@@ -157,39 +166,24 @@ function Stars({ count }: { count: number }) {
   );
 }
 
-// ── Sidebar Checkbox ──
+// ── Sidebar Checkbox / Filter Section: the shared Results kit ──
 function Checkbox({ checked, onChange, label, count }: { checked: boolean; onChange: () => void; label: string; count?: number }) {
   return (
-    <label onClick={onChange} className="flex items-center gap-2 cursor-pointer group py-1">
-      <span className={`w-4 h-4 flex-shrink-0 border rounded flex items-center justify-center transition-colors ${checked ? 'bg-blue-600 border-blue-600' : 'border-gray-400 group-hover:border-blue-400'}`}>
-        {checked && (
-          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
-        )}
-      </span>
-      <span className="text-sm text-gray-700 flex-1 truncate">{label}</span>
-      {typeof count === 'number' && <span className="text-xs text-gray-500 ml-auto">({count})</span>}
-    </label>
+    <FilterCheckbox
+      checked={checked}
+      onChange={onChange}
+      label={<span className="block truncate">{label}</span>}
+      meta={typeof count === 'number' ? `(${count})` : undefined}
+    />
   );
 }
 
-// ── Collapsible Filter Section ──
+// Long lists start closed (collapsible), everything else is always open.
 function FilterSection({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-b border-gray-200 py-3">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between text-left"
-      >
-        <span className="font-bold text-sm text-gray-800 uppercase tracking-wide">{title}</span>
-        <svg className={`w-4 h-4 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {open && <div className="mt-2">{children}</div>}
-    </div>
+    <KitFilterSection title={title} collapsible={!defaultOpen} defaultOpen={defaultOpen}>
+      {children}
+    </KitFilterSection>
   );
 }
 
@@ -246,7 +240,7 @@ function HotelCard({
   }
 
   return (
-    <div className="bg-white rounded border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex overflow-hidden h-[240px]">
+    <div className={`${RESULT_CARD} flex overflow-hidden h-[240px]`}>
       {/* Image */}
       <div className="w-48 flex-shrink-0 relative bg-gray-100 h-full">
         {hotel.heroImage ? (
@@ -290,7 +284,7 @@ function HotelCard({
 
           {/* Distance */}
           {hotel.distance > 0 && (
-            <p className="text-xs text-blue-600 mt-0.5">{hotel.distance.toFixed(1)} km from city centre</p>
+            <p className="text-xs text-(--color-links) mt-0.5">{hotel.distance.toFixed(1)} km from city centre</p>
           )}
 
           {/* Facilities */}
@@ -322,7 +316,7 @@ function HotelCard({
               <span className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded">Free Cancellation</span>
             )}
             {hotel.payAtHotel && (
-              <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded">Pay at Hotel</span>
+              <span className="text-xs bg-blue-50 text-(--color-secondary-button) border border-blue-200 px-2 py-0.5 rounded">Pay at Hotel</span>
             )}
           </div>
 
@@ -366,13 +360,11 @@ function HotelCard({
                     </svg>
                   </div>
                 )}
-                <button
-                  onClick={goToRooms}
-                  disabled={hotel.isSoldOut}
-                  className="mt-2 w-full px-4 py-2 bg-[#e8262a] hover:bg-[#c9191d] disabled:bg-gray-400 text-white text-sm font-bold rounded transition-colors"
-                >
-                  {hotel.isSoldOut ? 'Sold Out' : 'Select Room'}
-                </button>
+                <div className="mt-2">
+                  <BookButton onClick={goToRooms} disabled={hotel.isSoldOut}>
+                    {hotel.isSoldOut ? 'Sold Out' : 'Select Room'}
+                  </BookButton>
+                </div>
                 <button className="mt-1.5 w-full flex items-center justify-center gap-1 text-xs text-gray-500 hover:text-red-500 transition-colors py-1">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -383,13 +375,9 @@ function HotelCard({
             ) : (
               <div className="flex flex-col items-end gap-2">
                 <span className="text-sm text-gray-400 italic">Price unavailable</span>
-                <button
-                  onClick={goToRooms}
-                  disabled={hotel.isSoldOut}
-                  className="px-4 py-2 bg-[#e8262a] hover:bg-[#c9191d] disabled:bg-gray-400 text-white text-sm font-bold rounded transition-colors"
-                >
+                <BookButton onClick={goToRooms} disabled={hotel.isSoldOut}>
                   {hotel.isSoldOut ? 'Sold Out' : 'Check Rooms'}
-                </button>
+                </BookButton>
               </div>
             )}
           </div>
@@ -422,7 +410,7 @@ function CompactHotelCard({
     <div
       onClick={onSelect}
       className={`bg-white rounded border transition-all cursor-pointer flex overflow-hidden flex-shrink-0 ${
-        selected ? 'border-[#1a2b6b] ring-2 ring-[#1a2b6b]/30 shadow-md' : 'border-gray-200 hover:shadow-sm'
+        selected ? 'border-(--color-ink) ring-2 ring-(--color-ink)/30 shadow-md' : 'border-gray-200 hover:shadow-sm'
       }`}
     >
       {/* Thumbnail */}
@@ -482,7 +470,7 @@ function CompactHotelCard({
           <button
             onClick={(e) => { e.stopPropagation(); onBook(); }}
             disabled={hotel.isSoldOut}
-            className="px-2.5 py-1.5 bg-[#e8262a] hover:bg-[#c9191d] disabled:bg-gray-400 text-white text-[11px] font-bold rounded transition-colors flex-shrink-0"
+            className="px-2.5 py-1.5 bg-(--color-accent) hover:bg-(--color-accent-hover) disabled:bg-gray-400 text-white text-[11px] font-bold rounded transition-colors flex-shrink-0"
           >
             {hotel.isSoldOut ? 'Sold' : 'Select Room'}
           </button>
@@ -623,7 +611,7 @@ function Sidebar({
       {/* See Map View */}
       <button
         onClick={onShowMap}
-        className="w-full h-12 flex items-center justify-center gap-2 shadow-sm rounded transition-all hover:brightness-[0.97] group relative overflow-hidden"
+        className="w-full h-12 flex items-center justify-center gap-2 rounded-2xl border border-(--color-tertiary-button) shadow-sm transition-all hover:brightness-[0.97] group relative overflow-hidden"
       >
         {/* Stylized map illustration */}
         <svg
@@ -675,32 +663,32 @@ function Sidebar({
           {/* Navigation route (dashed red) */}
           <path
             d="M20 40 Q55 32 90 22 Q130 16 180 12"
-            stroke="#e8262a"
+            stroke="#EF5A24"
             strokeWidth="1.5"
             strokeDasharray="3 2"
             fill="none"
             opacity="0.7"
           />
-          <circle cx="180" cy="12" r="2" fill="#e8262a" opacity="0.75" />
+          <circle cx="180" cy="12" r="2" fill="#EF5A24" opacity="0.75" />
         </svg>
         {/* Soft white scrim so label stays readable */}
         <span className="absolute inset-0 bg-white/30 group-hover:bg-white/20 transition-colors" />
         <MapPin
-          className="w-4 h-4 text-[#e8262a] relative z-10"
+          className="w-4 h-4 text-(--color-accent) relative z-10"
           style={{ filter: 'drop-shadow(0 1px 1px rgba(255,255,255,0.9))' }}
         />
         <span
-          className="font-bold text-sm text-[#1a2b6b] tracking-wide relative z-10"
+          className="font-bold text-sm text-(--color-ink) tracking-wide relative z-10"
           style={{ textShadow: '0 1px 2px rgba(255,255,255,0.95)' }}
         >
           SEE MAP VIEW
         </span>
       </button>
 
-      <div className="bg-white rounded border border-gray-200 p-3">
+      <FilterPanel>
         {/* Hotel Name Search */}
         <FilterSection title="Hotel Name">
-          <div className="flex items-center border border-gray-300 rounded px-2 py-1.5 gap-1.5 focus-within:border-blue-500">
+          <div className="flex items-center border border-(--color-tertiary-button) rounded-xl px-3 py-2 gap-1.5 focus-within:border-(--color-links) focus-within:ring-2 focus-within:ring-(--color-links)/15">
             <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
@@ -735,17 +723,13 @@ function Sidebar({
         {/* Star Rating */}
         <FilterSection title="Star Rating">
           {[5, 4, 3, 2, 1].map(s => (
-            <label key={s} onClick={() => toggleStar(s)} className="flex items-center gap-2 cursor-pointer py-1 group">
-              <span className={`w-4 h-4 flex-shrink-0 border rounded flex items-center justify-center transition-colors ${starFilter.includes(s) ? 'bg-blue-600 border-blue-600' : 'border-gray-400 group-hover:border-blue-400'}`}>
-                {starFilter.includes(s) && (
-                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </span>
-              <Stars count={s} />
-              <span className="text-xs text-gray-500 ml-auto">({starCounts[s] || 0})</span>
-            </label>
+            <FilterCheckbox
+              key={s}
+              checked={starFilter.includes(s)}
+              onChange={() => toggleStar(s)}
+              label={<Stars count={s} />}
+              meta={`(${starCounts[s] || 0})`}
+            />
           ))}
         </FilterSection>
 
@@ -781,7 +765,7 @@ function Sidebar({
             {amenityOptions.length > 8 && (
               <button
                 onClick={() => setShowAllAmenities(!showAllAmenities)}
-                className="text-xs text-blue-600 hover:underline mt-1 font-medium"
+                className="text-xs text-(--color-links) hover:underline mt-1 font-medium"
               >
                 {showAllAmenities ? 'Show less' : `Show ${amenityOptions.length - 8} more`}
               </button>
@@ -818,10 +802,16 @@ function Sidebar({
             ))}
           </FilterSection>
         )}
-      </div>
+      </FilterPanel>
     </aside>
   );
 }
+
+const HOTEL_SORTS = [
+  { key: 'featured', label: 'Featured', icon: Sparkles },
+  { key: 'rating', label: 'Top Rated', icon: Star },
+  { key: 'price', label: 'Lowest Price', icon: Wallet },
+] as const satisfies readonly { key: SortType; label: string; icon: LucideIcon }[];
 
 // ── Main Results ──
 function HotelResults() {
@@ -1019,97 +1009,68 @@ function HotelResults() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-(--color-background)">
       {/* ── Top Bar ── */}
-      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
-        <div className="max-w-[1400px] mx-auto px-4 py-3 flex items-center gap-6 flex-wrap">
-          {/* City */}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-red-100 rounded flex items-center justify-center flex-shrink-0">
-              <svg className="w-4 h-4 text-[#e8262a]" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <span className="font-bold text-gray-900 text-lg">{locationName || 'Hotels'}</span>
-          </div>
-
-          <div className="h-8 w-px bg-gray-200 hidden sm:block" />
-
-          {/* Check-in */}
-          <div className="text-sm">
-            <div className="text-xs text-gray-500">Check-In</div>
-            <div className="font-semibold text-gray-800">{formatDateLong(checkIn)}</div>
-          </div>
-
-          {/* Nights badge */}
-          <div className="flex flex-col items-center px-3 py-1 border border-gray-300 rounded-full text-xs font-bold text-gray-600">
-            {nights} Night{nights !== 1 ? 's' : ''}
-          </div>
-
-          {/* Check-out */}
-          <div className="text-sm">
-            <div className="text-xs text-gray-500">Check-Out</div>
-            <div className="font-semibold text-gray-800">{formatDateLong(checkOut)}</div>
-          </div>
-
-          <div className="h-8 w-px bg-gray-200 hidden sm:block" />
-
-          {/* Rooms & Guests */}
-          <div className="text-sm">
-            <div className="text-xs text-gray-500">Rooms &amp; Guests</div>
-            <div className="font-semibold text-gray-800">{rooms.length} Room{rooms.length !== 1 ? 's' : ''} · {totalGuests} Guest{totalGuests !== 1 ? 's' : ''}</div>
-          </div>
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Actions */}
-          <button className="p-2 border border-gray-300 rounded hover:bg-gray-50 text-gray-600">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-            </svg>
-          </button>
+      <SummaryBar
+        modifyHref="/?tab=hotel#booking"
+        fields={[
+          { label: 'Destination', icon: MapPin, value: locationName || 'Hotels' },
+          { label: 'Check-In', icon: CalendarDays, value: formatDate(checkIn), sub: `${nights} Night${nights !== 1 ? 's' : ''}` },
+          { label: 'Check-Out', icon: CalendarDays, value: formatDate(checkOut) },
+          {
+            label: 'Rooms & Guests',
+            icon: BedDouble,
+            value: `${rooms.length} Room${rooms.length !== 1 ? 's' : ''}`,
+            sub: `${totalGuests} Guest${totalGuests !== 1 ? 's' : ''}`,
+          },
+        ]}
+        extra={
           <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 px-4 py-2 border-2 border-[#1a2b6b] text-[#1a2b6b] font-bold text-sm rounded hover:bg-[#1a2b6b] hover:text-white transition-colors"
+            type="button"
+            aria-label="Share search"
+            className="rounded-full border border-(--color-tertiary-button) p-2 text-(--color-inactive) transition-colors hover:border-(--color-links) hover:text-(--color-links)"
           >
-            Modify Search
+            <Share2 className="h-4 w-4" />
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── Body ── */}
-      <div className="max-w-[1400px] mx-auto px-4 py-5">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
         {/* Loading */}
         {loading && (
-          <div className="flex flex-col items-center justify-center py-32 gap-4">
-            <svg className="w-12 h-12 text-[#e8262a] animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-            </svg>
-            <p className="text-gray-500 font-medium">Searching hotels in {locationName}…</p>
-            <p className="text-xs text-gray-400">Comparing prices from multiple providers</p>
-          </div>
+          <ResultsLoader
+            title={`Searching hotels in ${locationName}...`}
+            subtitle="Comparing prices from multiple providers for the best rates."
+          />
         )}
 
         {/* Error */}
         {!loading && error && (
-          <div className="flex flex-col items-center justify-center py-32 gap-4">
-            <svg className="w-16 h-16 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-            </svg>
-            <p className="text-gray-700 font-semibold text-lg">{error}</p>
-            <button onClick={() => router.back()} className="px-6 py-2 bg-[#e8262a] text-white rounded font-bold">Go Back</button>
-          </div>
+          <ResultsEmpty
+            icon={AlertTriangle}
+            title="Search Failed"
+            message={error}
+            action={{ label: 'Modify search', href: '/?tab=hotel#booking' }}
+          />
         )}
 
         {/* Results */}
-        {!loading && !error && results && (
+        {!loading && !error && results && results.hotels.length === 0 && (
+          <ResultsEmpty
+            icon={Building2}
+            title="No hotels found"
+            message="Try different dates or another destination for more results."
+            action={{ label: 'Modify search', href: '/?tab=hotel#booking' }}
+          />
+        )}
+
+        {!loading && !error && results && results.hotels.length > 0 && (
           <div className="flex gap-5">
             {/* Sidebar (hidden in map view) - independently scrollable (sticky) */}
             {!showMap && (
               <div className="w-[280px] flex-shrink-0">
-                <div className="sticky top-[72px] max-h-[calc(100vh-88px)] overflow-y-auto pr-1">
+                <div className="sticky top-36 max-h-[calc(100vh-160px)] overflow-y-auto pr-1 scrollbar-hide">
                   <Sidebar
                     hotels={results.hotels}
                     filters={results.filters || []}
@@ -1131,76 +1092,56 @@ function HotelResults() {
             {/* Main */}
             <div className="flex-1 min-w-0">
               {/* Result count + sort */}
-              <div className="flex items-center justify-between mb-3 bg-white rounded border border-gray-200 px-4 h-12">
-                <p className="text-sm text-gray-600">
-                  Showing <span className="font-bold text-gray-900">{displayed.length}</span> of{' '}
-                  <span className="font-bold text-gray-900">{results.total}</span> hotels found
-                </p>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-gray-500 font-semibold mr-1">SORT BY</span>
-                  {(['featured', 'rating', 'price'] as SortType[]).map(s => (
-                    <button
-                      key={s}
-                      onClick={() => setSort(s)}
-                      className={`px-3 py-1.5 text-xs font-bold rounded transition-colors uppercase tracking-wide ${sort === s ? 'text-[#e8262a] border-b-2 border-[#e8262a]' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
-                      {s === 'featured' ? (
-                        <span className="flex items-center gap-1">
-                          {s.toUpperCase()}
-                          {sort === 'featured' && (
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
-                            </svg>
-                          )}
-                        </span>
-                      ) : s.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
+              <div className="mb-4">
+                <SortTabs
+                  options={HOTEL_SORTS}
+                  active={sort}
+                  onChange={setSort}
+                  shown={displayed.length}
+                  total={results.total}
+                  noun="Hotels"
+                />
               </div>
 
               {/* Active filter pills */}
               {hasActiveFilters && (
                 <div className="flex flex-wrap gap-2 mb-3">
                   {nameSearch && (
-                    <span className="flex items-center gap-1 bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                    <span className="flex items-center gap-1 bg-(--color-primary-tint) text-(--color-links) text-xs font-semibold px-2.5 py-1 rounded-full">
                       "{nameSearch}"
-                      <button onClick={() => setNameSearch('')} className="hover:text-blue-900">×</button>
+                      <button onClick={() => setNameSearch('')} className="hover:text-(--color-secondary-button)">×</button>
                     </span>
                   )}
                   {freeCancellation && (
-                    <span className="flex items-center gap-1 bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                    <span className="flex items-center gap-1 bg-(--color-primary-tint) text-(--color-links) text-xs font-semibold px-2.5 py-1 rounded-full">
                       Free Cancellation
-                      <button onClick={() => setFreeCancellation(false)} className="hover:text-blue-900">×</button>
+                      <button onClick={() => setFreeCancellation(false)} className="hover:text-(--color-secondary-button)">×</button>
                     </span>
                   )}
                   {breakfast && (
-                    <span className="flex items-center gap-1 bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                    <span className="flex items-center gap-1 bg-(--color-primary-tint) text-(--color-links) text-xs font-semibold px-2.5 py-1 rounded-full">
                       Breakfast Available
-                      <button onClick={() => setBreakfast(false)} className="hover:text-blue-900">×</button>
+                      <button onClick={() => setBreakfast(false)} className="hover:text-(--color-secondary-button)">×</button>
                     </span>
                   )}
                   {starFilter.map(s => (
-                    <span key={s} className="flex items-center gap-1 bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                    <span key={s} className="flex items-center gap-1 bg-(--color-primary-tint) text-(--color-links) text-xs font-semibold px-2.5 py-1 rounded-full">
                       {s}★
-                      <button onClick={() => setStarFilter(starFilter.filter(x => x !== s))} className="hover:text-blue-900">×</button>
+                      <button onClick={() => setStarFilter(starFilter.filter(x => x !== s))} className="hover:text-(--color-secondary-button)">×</button>
                     </span>
                   ))}
-                  <button onClick={clearFilters} className="text-xs text-red-500 hover:underline font-semibold px-1">Clear all</button>
+                  <button onClick={clearFilters} className="text-xs text-(--color-links) hover:underline font-bold px-1">Clear all</button>
                 </div>
               )}
 
               {/* Hotel cards */}
               {displayed.length === 0 ? (
-                <div className="bg-white rounded border border-gray-200 flex flex-col items-center py-20 gap-3 text-gray-400">
-                  <svg className="w-16 h-16 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  <p className="font-medium text-gray-500">No hotels match your filters.</p>
-                  {hasActiveFilters && (
-                    <button onClick={clearFilters} className="text-sm text-[#e8262a] font-bold hover:underline">Clear filters</button>
-                  )}
-                </div>
+                <ResultsEmpty
+                  icon={SlidersHorizontal}
+                  title="No hotels match your filters"
+                  message="Try adjusting or clearing your filters to see more hotels."
+                  action={hasActiveFilters ? { label: 'Clear all filters', onClick: clearFilters } : undefined}
+                />
               ) : showMap ? (
                 // ── Map view: compact list + map ──
                 <div className="flex gap-3" style={{ height: 'calc(100vh - 180px)' }}>
@@ -1208,7 +1149,7 @@ function HotelResults() {
                   <div className="w-[380px] flex-shrink-0 flex flex-col gap-2 overflow-y-auto pr-1">
                     <button
                       onClick={() => setShowMap(false)}
-                      className="text-sm font-semibold text-[#1a2b6b] hover:underline text-left px-1 flex-shrink-0"
+                      className="text-sm font-semibold text-(--color-ink) hover:underline text-left px-1 flex-shrink-0"
                     >
                       ← Back to List view
                     </button>
@@ -1224,10 +1165,10 @@ function HotelResults() {
                     ))}
                   </div>
                   {/* Map */}
-                  <div className="flex-1 rounded border border-gray-200 overflow-hidden relative bg-gray-50">
+                  <div className="flex-1 rounded-2xl border border-(--color-tertiary-button) overflow-hidden relative bg-gray-50">
                     <button
                       onClick={() => setShowMap(false)}
-                      className="absolute top-3 right-3 z-[1000] w-8 h-8 bg-[#e8262a] hover:bg-[#c9191d] text-white rounded-full flex items-center justify-center shadow-lg"
+                      className="absolute top-3 right-3 z-[1000] w-8 h-8 bg-(--color-accent) hover:bg-(--color-accent-hover) text-white rounded-full flex items-center justify-center shadow-lg"
                       aria-label="Close map"
                     >
                       <X className="w-4 h-4" />
@@ -1282,11 +1223,10 @@ function HotelResults() {
 export default function HotelResultsPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <svg className="w-10 h-10 text-[#e8262a] animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-        </svg>
+      <div className="min-h-screen bg-(--color-background)">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <ResultsLoader title="Loading search..." subtitle="Getting your search ready." rows={2} />
+        </div>
       </div>
     }>
       <HotelResults />

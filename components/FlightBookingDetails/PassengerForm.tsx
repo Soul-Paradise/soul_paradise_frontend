@@ -24,12 +24,12 @@ const paxTypeLabels: Record<string, string> = {
 };
 
 /**
- * Our own cross-airline reference table (served from /public). It covers every
+ * Our own cross-airline reference table (served from the guidelines-doc GCS bucket). It covers every
  * carrier and their sector-specific variants, so it stands in wherever Benzy
  * returns no FnuLnuSettings rule for the operating airline.
  */
 const NAME_FORMAT_GUIDE_URL =
-  '/Airline-Name-Format-Guide-Soul-Paradise-Travels.pdf';
+  'https://storage.googleapis.com/guidelines-doc/Airline-Name-Format-Guide-Soul-Paradise-Travels.pdf';
 
 /**
  * Benzy embeds bare URLs in the FNU/LNU prose (e.g. "[https://…name-format.html]"),
@@ -90,7 +90,7 @@ export const PassengerForm = ({
       : ['Mr', 'Mrs', 'Ms'];
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+    <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm overflow-hidden">
       <div className="px-5 py-3 bg-gray-50 border-b border-gray-200">
         <h3 className="text-sm font-semibold text-gray-900">
           {paxTypeLabels[paxType] || 'Passenger'} {index + 1}

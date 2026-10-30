@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 /**
  * Remembers a user's last search on the device via localStorage, so the search
@@ -90,4 +91,30 @@ export function usePersistentSearch<T>(
   }, [hydrated, key, JSON.stringify(snapshot)]);
 
   return hydrated;
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Applies a trip window passed in the URL (`?from=YYYY-MM-DD&to=YYYY-MM-DD`),
+ * e.g. from the homepage long-weekend suggestions.
+ *
+ * Call it AFTER usePersistentSearch in the component: effects run in
+ * declaration order, so the URL dates win over the restored snapshot. It
+ * re-applies whenever the params change, which matters because the home page
+ * (and this form) stays mounted when a second suggestion is clicked. Past or
+ * malformed windows are ignored.
+ */
+export function useDatePrefill(apply: (from: string, to: string) => void): void {
+  const params = useSearchParams();
+  const from = params.get('from');
+  const to = params.get('to');
+
+  useEffect(() => {
+    if (!from || !to || !DATE_RE.test(from) || !DATE_RE.test(to)) return;
+    if (to < from || notBeforeToday(from, '') !== from) return;
+    apply(from, to);
+    // Only a new window should re-apply; `apply` closes over stable setters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [from, to]);
 }

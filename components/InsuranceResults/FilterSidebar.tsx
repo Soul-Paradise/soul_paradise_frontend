@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { FilterCheckbox, FilterPanel, FilterSection, filterChip } from '@/components/Results/ui';
 import type { InsuranceQuote, QuotesResponse } from '@/lib/insurance-api';
 
 // Visual twin of components/FlightResults/FilterSidebar.tsx - keep the two in step.
@@ -104,133 +105,103 @@ export const InsuranceFilterSidebar = ({ data, filterState, onFilterChange }: Pr
   const visibleInsurers = showAllInsurers ? filterData.insurers : filterData.insurers.slice(0, 5);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-200">
-        <h2 className="text-base font-bold text-gray-900">Filters</h2>
-      </div>
-
-      <div className="divide-y divide-gray-100">
-        {/* Plan type (e.g. Senior Citizen) - only when the results are split */}
-        {filterData.categories.length > 1 && (
-          <div className="px-4 py-4">
-            <h3 className="text-sm font-bold text-gray-900 mb-3">Plan Type</h3>
-            <div className="flex gap-2">
-              {filterData.categories.map(({ name, cheapest }) => {
-                const isActive = filterState.categories.has(name);
-                return (
-                  <button
-                    key={name || 'standard'}
-                    type="button"
-                    onClick={() => onFilterChange({ ...filterState, categories: toggle(filterState.categories, name) })}
-                    className={`flex-1 px-2 py-2 rounded-lg border text-center transition-colors ${
-                      isActive ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="text-xs font-semibold">{name || 'Standard'}</div>
-                    <div className="text-[10px] text-gray-400 mt-0.5">{formatCurrency(cheapest)}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Claim limits */}
-        {filterData.showSubLimitFilter && (
-          <div className="px-4 py-4">
-            <h3 className="text-sm font-bold text-gray-900 mb-3">Claim Limits</h3>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filterState.noSubLimitsOnly}
-                onChange={() => onFilterChange({ ...filterState, noSubLimitsOnly: !filterState.noSubLimitsOnly })}
-                className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">Plans without sub-limits only</span>
-            </label>
-            <p className="text-[10px] text-gray-400 mt-1.5">Sub-limits cap how much you can claim per benefit</p>
-          </div>
-        )}
-
-        {/* Medical cover */}
-        {filterData.bands.length > 0 && (
-          <div className="px-4 py-4">
-            <h3 className="text-sm font-bold text-gray-900 mb-1">Medical Cover</h3>
-            <p className="text-[10px] text-gray-400 mb-3">Sum insured for medical emergencies abroad</p>
-            <div className="grid grid-cols-2 gap-2">
-              {filterData.bands.map((b) => {
-                const isActive = filterState.coverBands.has(b.key);
-                return (
-                  <button
-                    key={b.key}
-                    type="button"
-                    onClick={() => onFilterChange({ ...filterState, coverBands: toggle(filterState.coverBands, b.key) })}
-                    className={`px-2 py-2 rounded-lg border text-center transition-colors ${
-                      isActive ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="text-xs font-medium whitespace-nowrap">{b.label}</div>
-                    <div className="text-[10px] text-gray-400 mt-0.5">{formatCurrency(b.cheapest)}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Insurers */}
-        {filterData.insurers.length > 0 && (
-          <div className="px-4 py-4">
-            <h3 className="text-sm font-bold text-gray-900 mb-3">Insurers</h3>
-            <div className="space-y-2">
-              {visibleInsurers.map((ins) => (
-                <label key={ins.name} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filterState.insurers.has(ins.name)}
-                    onChange={() => onFilterChange({ ...filterState, insurers: toggle(filterState.insurers, ins.name) })}
-                    className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                  />
-                  <span className="flex-1 text-sm text-gray-700 truncate">
-                    {ins.name} <span className="text-gray-400">({ins.count})</span>
-                  </span>
-                  <span className="text-xs text-gray-500 font-medium flex-shrink-0">{formatCurrency(ins.cheapest)}</span>
-                </label>
-              ))}
-            </div>
-            {filterData.insurers.length > 5 && (
+    <FilterPanel>
+      {/* Plan type (e.g. Senior Citizen) - only when the results are split */}
+      {filterData.categories.length > 1 && (
+        <FilterSection title="Plan Type">
+          <div className="flex gap-2">
+            {filterData.categories.map(({ name, cheapest }) => (
               <button
+                key={name || 'standard'}
                 type="button"
-                onClick={() => setShowAllInsurers(!showAllInsurers)}
-                className="text-xs text-blue-600 font-medium mt-2 hover:underline"
+                onClick={() => onFilterChange({ ...filterState, categories: toggle(filterState.categories, name) })}
+                className={`flex-1 ${filterChip(filterState.categories.has(name))}`}
               >
-                {showAllInsurers ? 'Show less' : `+ ${filterData.insurers.length - 5} Insurers`}
+                <div>{name || 'Standard'}</div>
+                <div className="mt-0.5 text-[10px] font-medium opacity-70">{formatCurrency(cheapest)}</div>
               </button>
-            )}
+            ))}
           </div>
-        )}
+        </FilterSection>
+      )}
 
-        {/* Price range */}
-        {filterData.maxPrice > filterData.minPrice && (
-          <div className="px-4 py-4">
-            <h3 className="text-sm font-bold text-gray-900 mb-3">Price Range</h3>
-            <div className="space-y-3">
-              <input
-                type="range"
-                min={filterData.minPrice}
-                max={filterData.maxPrice}
-                value={Math.min(filterState.maxPrice, filterData.maxPrice)}
-                onChange={(e) => onFilterChange({ ...filterState, maxPrice: parseInt(e.target.value) })}
-                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-              />
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>{formatCurrency(filterData.minPrice)}</span>
-                <span>{formatCurrency(Math.min(filterState.maxPrice, filterData.maxPrice))}</span>
-              </div>
-            </div>
+      {/* Claim limits */}
+      {filterData.showSubLimitFilter && (
+        <FilterSection title="Claim Limits" hint="Sub-limits cap how much you can claim per benefit">
+          <FilterCheckbox
+            checked={filterState.noSubLimitsOnly}
+            onChange={() => onFilterChange({ ...filterState, noSubLimitsOnly: !filterState.noSubLimitsOnly })}
+            label="Plans without sub-limits only"
+          />
+        </FilterSection>
+      )}
+
+      {/* Medical cover */}
+      {filterData.bands.length > 0 && (
+        <FilterSection title="Medical Cover" hint="Sum insured for medical emergencies abroad">
+          <div className="grid grid-cols-2 gap-2">
+            {filterData.bands.map((b) => (
+              <button
+                key={b.key}
+                type="button"
+                onClick={() => onFilterChange({ ...filterState, coverBands: toggle(filterState.coverBands, b.key) })}
+                className={filterChip(filterState.coverBands.has(b.key))}
+              >
+                <div className="whitespace-nowrap">{b.label}</div>
+                <div className="mt-0.5 text-[10px] font-medium opacity-70">{formatCurrency(b.cheapest)}</div>
+              </button>
+            ))}
           </div>
-        )}
-      </div>
-    </div>
+        </FilterSection>
+      )}
+
+      {/* Insurers */}
+      {filterData.insurers.length > 0 && (
+        <FilterSection title="Insurers">
+          {visibleInsurers.map((ins) => (
+            <FilterCheckbox
+              key={ins.name}
+              checked={filterState.insurers.has(ins.name)}
+              onChange={() => onFilterChange({ ...filterState, insurers: toggle(filterState.insurers, ins.name) })}
+              label={
+                <span className="block truncate">
+                  {ins.name} <span className="text-(--color-inactive)">({ins.count})</span>
+                </span>
+              }
+              meta={formatCurrency(ins.cheapest)}
+            />
+          ))}
+          {filterData.insurers.length > 5 && (
+            <button
+              type="button"
+              onClick={() => setShowAllInsurers(!showAllInsurers)}
+              className="mt-2 text-xs font-bold text-(--color-links) hover:underline"
+            >
+              {showAllInsurers ? 'Show less' : `+ ${filterData.insurers.length - 5} Insurers`}
+            </button>
+          )}
+        </FilterSection>
+      )}
+
+      {/* Price range */}
+      {filterData.maxPrice > filterData.minPrice && (
+        <FilterSection title="Price Range">
+          <input
+            type="range"
+            min={filterData.minPrice}
+            max={filterData.maxPrice}
+            value={Math.min(filterState.maxPrice, filterData.maxPrice)}
+            onChange={(e) => onFilterChange({ ...filterState, maxPrice: parseInt(e.target.value) })}
+            className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-(--color-links)"
+          />
+          <div className="mt-2 flex items-center justify-between text-xs text-(--color-inactive)">
+            <span>{formatCurrency(filterData.minPrice)}</span>
+            <span className="font-semibold text-(--color-foreground)">
+              {formatCurrency(Math.min(filterState.maxPrice, filterData.maxPrice))}
+            </span>
+          </div>
+        </FilterSection>
+      )}
+    </FilterPanel>
   );
 };

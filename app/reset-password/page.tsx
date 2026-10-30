@@ -1,6 +1,7 @@
 'use client';
+import { videoUrl } from '@/lib/assets';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -8,8 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { resetPasswordSchema, type ResetPasswordFormData } from '@/lib/validations/auth';
 import { api } from '@/lib/api';
 import { showToast } from '@/lib/toast';
-import Logo from '@/components/Logo';
-import BackgroundVideo from '@/components/BackgroundVideo';
+import AuthLayout, { AuthFooterLink } from '@/components/AuthLayout';
 import FormInput from '@/components/FormInput';
 
 function ResetPasswordForm() {
@@ -27,16 +27,6 @@ function ResetPasswordForm() {
     resolver: zodResolver(resetPasswordSchema),
     mode: 'onBlur',
   });
-
-  useEffect(() => {
-    if (!token) {
-      showToast({
-        title: 'Invalid Reset Link',
-        body: 'The password reset link is invalid or has expired.',
-        type: 'error'
-      });
-    }
-  }, [token]);
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     if (!token) {
@@ -75,80 +65,61 @@ function ResetPasswordForm() {
   };
 
   return (
-    <div className="h-screen max-h-screen flex bg-(--color-peace)">
-      {/* Left side - Reset Password Form */}
-      <div className="flex-2 flex items-center justify-center px-4 py-6 lg:px-8 relative bg-(--color-background) overflow-y-auto">
-        {/* Logo */}
-        <Logo />
+    <AuthLayout
+      video={videoUrl('login_video.mp4')}
+      title="Set New Password"
+      subtitle="Your new password must be different from previously used passwords."
+      footer={<AuthFooterLink question="Remembered your password?" href="/login" action="Back to Login" />}
+    >
+      {token ? (
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
+          <FormInput
+            id="password"
+            label="New Password"
+            type="password"
+            placeholder="Enter Your New Password"
+            autoComplete="new-password"
+            register={register('password')}
+            error={errors.password?.message}
+            disabled={isSubmitting}
+            helperText="Min 8 chars, uppercase, lowercase, number/special character"
+          />
 
-        <div className="w-full max-w-[420px]">
-          {/* Header */}
-          <div className="mb-6">
-            <p className="text-3xl font-bold text-(--color-foreground) tracking-tight">
-              Set New Password
-            </p>
-            <p className="text-(--color-foreground) mt-2 text-sm">
-              Your new password must be different from previously used passwords.
-            </p>
-          </div>
+          <FormInput
+            id="confirmPassword"
+            label="Confirm New Password"
+            type="password"
+            placeholder="Confirm Your New Password"
+            autoComplete="new-password"
+            register={register('confirmPassword')}
+            error={errors.confirmPassword?.message}
+            disabled={isSubmitting}
+          />
 
-          {/* Form Container */}
-          <div className="space-y-3.5">
-            {token && (
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
-                {/* Password Field */}
-                <FormInput
-                  id="password"
-                  label="New Password"
-                  type="password"
-                  placeholder="Enter Your New Password"
-                  autoComplete="new-password"
-                  register={register('password')}
-                  error={errors.password?.message}
-                  disabled={isSubmitting}
-                />
-
-                {/* Confirm Password Field */}
-                <FormInput
-                  id="confirmPassword"
-                  label="Confirm New Password"
-                  type="password"
-                  placeholder="Confirm Your New Password"
-                  autoComplete="new-password"
-                  register={register('confirmPassword')}
-                  error={errors.confirmPassword?.message}
-                  disabled={isSubmitting}
-                />
-
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold transition-all duration-200 mt-4 disabled:cursor-not-allowed bg-(--color-primary-button) text-(--color-peace) hover:bg-(--color-secondary-button) disabled:bg-(--color-inactive)"
-                >
-                  {isSubmitting ? 'Resetting Password...' : 'Reset Password'}
-                </button>
-              </form>
-            )}
-
-            {/* Back to Login Link */}
-            <div className="text-center pt-2">
-              <Link href="/login" className="text-sm text-(--color-links) hover:opacity-80 font-semibold transition-colors duration-200 flex items-center justify-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Back to Login
-              </Link>
-            </div>
-          </div>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold transition-all duration-200 mt-4 disabled:cursor-not-allowed bg-(--color-primary-button) text-(--color-peace) hover:bg-(--color-secondary-button) disabled:bg-(--color-inactive)"
+          >
+            {isSubmitting ? 'Resetting Password...' : 'Reset Password'}
+          </button>
+        </form>
+      ) : (
+        // Without a token there is nothing to submit: explain and offer a fresh link.
+        <div className="rounded-xl border border-(--color-danger)/30 bg-(--color-danger)/5 p-4">
+          <p className="text-sm font-semibold text-(--color-danger)">This reset link is invalid or has expired.</p>
+          <p className="mt-1 text-sm text-(--color-inactive)">
+            Reset links work once and expire after an hour. Request a new one to continue.
+          </p>
+          <Link
+            href="/forgot-password"
+            className="mt-4 flex w-full justify-center rounded-lg bg-(--color-primary-button) px-4 py-2.5 text-sm font-semibold text-(--color-peace) shadow-sm transition-all duration-200 hover:bg-(--color-secondary-button)"
+          >
+            Request a new link
+          </Link>
         </div>
-      </div>
-
-      {/* Right side - Video Background */}
-      <div className="hidden lg:flex lg:flex-3 relative overflow-hidden">
-        <BackgroundVideo src="/login_video.mp4" />
-      </div>
-    </div>
+      )}
+    </AuthLayout>
   );
 }
 

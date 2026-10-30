@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    // Hero, trip and logo images are served from the GCS buckets (lib/assets.ts).
+    remotePatterns: [{ protocol: "https", hostname: "storage.googleapis.com" }],
+  },
 };
 
 export default nextConfig;

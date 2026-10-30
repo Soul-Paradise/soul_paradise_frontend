@@ -2,10 +2,17 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { jsPDF } from 'jspdf';
 import { authHeaders } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
 import { formatDeadline } from '@/components/HotelResults/FreeCancellationBadge';
+import { AlertTriangle } from 'lucide-react';
+import {
+  BookButton,
+  ResultsEmpty,
+  ResultsLoader,
+  StepHeader,
+  StepState,
+} from '@/components/Results/ui';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -20,7 +27,6 @@ interface StashedBookingContext {
   providerName: string;
   recommendationId: string;
   priceId: string;
-  netAmount: number;
   destinationCountryCode: string | null;
   searchTracingKey: string;
   checkIn: string; // MM/DD/YYYY (Benzy)
@@ -129,77 +135,6 @@ interface ContactForm {
   lastName: string;
   mobile: string;
   email: string;
-}
-
-interface VoucherGuest {
-  title: string;
-  firstName: string;
-  lastName: string;
-  paxType: string;
-  age: string;
-}
-
-interface VoucherRoom {
-  id: string;
-  name: string;
-  description: string;
-  capacity: string;
-  adults: string;
-  children: string;
-  refundable: string;
-  supplierConfirmationNumber: string;
-  guests: VoucherGuest[];
-  baseRate: number;
-  totalRate: number;
-  tax: number;
-  cancellationPolicy: Array<{ text: string; fromDate: string; toDate: string; amount: string }>;
-}
-
-interface BookingVoucher {
-  bookingId: string;
-  transactionId: string;
-  confirmationId: string;
-  supplierConfirmationId: string;
-  status: string;
-  currentStatus: string;
-  paymentStatus: string;
-  bookedAt: string;
-  totalAmount: number;
-  grossAmount: number;
-  netAmount: number;
-  supplierGrossAmount: number;
-  supplierNetAmount: number;
-  currency: string;
-  checkInDate: string;
-  checkOutDate: string;
-  checkInTime: string;
-  checkOutTime: string;
-  nights: number;
-  hotel: {
-    code: string;
-    name: string;
-    starRating: string;
-    heroImage: string;
-    phone: string;
-    address: {
-      line1: string;
-      line2: string;
-      city: string;
-      state: string;
-      country: string;
-      zip: string;
-    };
-  };
-  contactInfo: {
-    title: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    mobile: string;
-  };
-  rooms: VoucherRoom[];
-  cancellationPolicies: Array<{ text: string; fromDate: string; toDate: string; amount: string }>;
-  freeCancellationUntil?: string | null;
 }
 
 // ── Helpers ──
@@ -392,7 +327,6 @@ function HotelBookPageInner() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [bookingResult, setBookingResult] = useState<BookingVoucher | null>(null);
 
   useEffect(() => {
     if (stash) setGuestsByRoom(buildRooms(stash.occupancy));
@@ -470,7 +404,7 @@ function HotelBookPageInner() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!bookingContext || !stash) return;
+    if (!bookingContext || !stash || !pricing) return;
 
     const err = validate();
     if (err) {
@@ -494,7 +428,9 @@ function HotelBookPageInner() {
       searchId: bookingContext.searchId,
       recommendationId: bookingContext.recommendationId,
       hotelCode: bookingContext.hotelCode,
-      netAmount: bookingContext.netAmount,
+      // The total shown here; the server charges its own quote and refuses the
+      // booking if the two disagree.
+      expectedAmount: pricing.totalRate,
       destinationCountryCode: bookingContext.destinationCountryCode,
       searchTracingKey: bookingContext.searchTracingKey,
       locationName: bookingContext.locationName,
@@ -544,12 +480,13 @@ function HotelBookPageInner() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || 'Booking failed. Please try again.');
-      setBookingResult(data);
+      if (!res.ok) throw new Error(data?.message || 'Could not start payment. Please try again.');
+      // Pay first: the hotel is booked once the bank confirms the payment, and
+      // the voucher is shown on /booking/hotels/payment-result.
       try { sessionStorage.removeItem('hotelBookingContext'); } catch { /* ignore */ }
+      window.location.href = data.redirectUrl;
     } catch (e: unknown) {
-      setSubmitError(e instanceof Error ? e.message : 'Booking failed');
-    } finally {
+      setSubmitError(e instanceof Error ? e.message : 'Could not start payment');
       setSubmitting(false);
     }
   }
@@ -558,57 +495,44 @@ function HotelBookPageInner() {
 
   if (stashError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="bg-white rounded-lg border border-red-200 p-6 max-w-md">
-          <h2 className="text-lg font-bold text-gray-900 mb-2">Session expired</h2>
-          <p className="text-sm text-gray-600 mb-4">{stashError}</p>
-          <button
-            onClick={() => router.push('/booking/hotels')}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded transition-colors"
-          >
-            Start over
-          </button>
-        </div>
-      </div>
+      <StepState>
+        <ResultsEmpty
+          icon={AlertTriangle}
+          title="Session expired"
+          message={stashError}
+          action={{ label: 'Start over', href: '/?tab=hotel#booking' }}
+        />
+      </StepState>
     );
   }
 
   if (!stash || !pricing || !bookingContext) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500 text-sm">Loading booking...</p>
-      </div>
+      <StepState>
+        <ResultsLoader title="Loading booking..." subtitle="Confirming the latest room price with the hotel." rows={2} />
+      </StepState>
     );
   }
 
-  if (bookingResult) {
-    return <BookingConfirmation voucher={bookingResult} onDone={() => router.push('/')} />;
-  }
 
   const checkInInstructions = flattenPolicy(hotelDetail?.checkinInfo?.instructions || []);
   const checkInSpecial = flattenPolicy(hotelDetail?.checkinInfo?.specialInstructions || []);
   const cancellationNotes = flattenPolicy((pricing.cancellationPolicies || []).map((p) => p.text));
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
-      {/* Top breadcrumb */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            className="text-sm text-gray-600 hover:text-gray-900"
-          >
-            ← Back
-          </button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-(--color-background) pb-12">
+      <StepHeader
+        title="Complete Your Booking"
+        subtitle={`${hotelDetail?.name || 'Hotel'} · ${nights} Night${nights !== 1 ? 's' : ''}`}
+        onBack={() => router.back()}
+      />
 
-      <form onSubmit={handleSubmit} className="max-w-7xl mx-auto px-6 mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <form onSubmit={handleSubmit} className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column */}
         <div className="lg:col-span-2 space-y-4">
 
           {/* Hotel card */}
-          <section className="bg-white rounded-lg border border-gray-200">
+          <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm">
             <div className="p-5 pb-4 flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="font-bold text-slate-800 text-lg flex items-center gap-2 flex-wrap">
@@ -662,7 +586,7 @@ function HotelBookPageInner() {
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 uppercase tracking-wider"
+                className="text-xs font-semibold text-(--color-links) hover:text-(--color-secondary-button) uppercase tracking-wider"
               >
                 Change Room
               </button>
@@ -697,8 +621,8 @@ function HotelBookPageInner() {
           </section>
 
           {/* Traveller Details */}
-          <section className="bg-white rounded-lg border border-gray-200 p-5">
-            <h2 className="font-bold text-slate-800 mb-1">Traveller Details</h2>
+          <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5">
+            <h2 className="text-base font-bold text-(--color-foreground) mb-1">Traveller Details</h2>
 
 
             <div className="space-y-4">
@@ -777,9 +701,9 @@ function HotelBookPageInner() {
           </section>
 
           {/* Contact information */}
-          <section className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm overflow-hidden">
             <div className="px-5 pt-5 pb-3 border-b border-gray-200">
-              <h2 className="text-sm font-bold text-slate-800 tracking-wider uppercase">Contact Information</h2>
+              <h2 className="text-base font-bold text-(--color-foreground)">Contact Information</h2>
             </div>
 
             <div className="p-5 space-y-5">
@@ -839,7 +763,7 @@ function HotelBookPageInner() {
 
           {/* Special request (conditional) */}
           {showSpecial && (
-            <section className="bg-white rounded-lg border border-gray-200 p-5">
+            <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5">
               <h2 className="font-bold text-slate-800 mb-1">Special request</h2>
               <p className="text-xs text-gray-500 mb-3">Requests cannot be guaranteed and depend on availability.</p>
               <textarea
@@ -853,12 +777,12 @@ function HotelBookPageInner() {
           )}
 
           {/* Essential Information */}
-          <section className="bg-white rounded-lg border border-gray-200 p-5">
-            <h2 className="font-bold text-slate-800 mb-4">Essential Information</h2>
+          <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5">
+            <h2 className="text-base font-bold text-(--color-foreground) mb-4">Essential Information</h2>
 
             {pricing.boardBasis && (
               <div className="mb-4">
-                <p className="text-sm font-semibold text-red-500 mb-1">INCLUSIONS</p>
+                <p className="text-sm font-bold text-(--color-foreground) mb-1">Inclusions</p>
                 <p className="text-sm text-slate-700">Room {1}</p>
                 <p className="text-xs text-gray-600 mt-1">{pricing.boardBasis}</p>
               </div>
@@ -866,7 +790,7 @@ function HotelBookPageInner() {
 
             {pricing.refundable && pricing.freeCancellationUntil && (
               <div className="mb-4">
-                <p className="text-sm font-semibold text-red-500 mb-1">Cancellation</p>
+                <p className="text-sm font-bold text-(--color-foreground) mb-1">Cancellation</p>
                 <p className="text-sm text-green-700 font-medium">
                   Free cancellation until {formatDeadline(pricing.freeCancellationUntil, true)}
                 </p>
@@ -878,7 +802,7 @@ function HotelBookPageInner() {
 
             {cancellationNotes.length > 0 && (
               <div className="mb-4">
-                <p className="text-sm font-semibold text-red-500 mb-1">Room Policy</p>
+                <p className="text-sm font-bold text-(--color-foreground) mb-1">Room Policy</p>
                 <ul className="list-disc pl-5 text-xs text-gray-700 space-y-1 marker:text-gray-400">
                   {cancellationNotes.map((note, i) => (
                     <li key={i}>{note}</li>
@@ -889,7 +813,7 @@ function HotelBookPageInner() {
 
             {checkInInstructions.length > 0 && (
               <div className="mb-4">
-                <p className="text-sm font-semibold text-slate-800 mb-1">HOTEL POLICY</p>
+                <p className="text-sm font-bold text-(--color-foreground) mb-1">Hotel Policy</p>
                 <ul className="list-disc pl-5 text-xs text-gray-700 space-y-1 marker:text-gray-400">
                   {checkInInstructions.map((note, i) => (
                     <li key={i}>{note}</li>
@@ -900,7 +824,7 @@ function HotelBookPageInner() {
 
             {checkInSpecial.length > 0 && (
               <div>
-                <p className="text-sm font-semibold text-slate-800 mb-1">CHECKIN SPECIAL INSTRUCTIONS</p>
+                <p className="text-sm font-bold text-(--color-foreground) mb-1">Check-in Instructions</p>
                 <ul className="list-disc pl-5 text-xs text-gray-700 space-y-1 marker:text-gray-400">
                   {checkInSpecial.map((note, i) => (
                     <li key={i}>{note}</li>
@@ -923,7 +847,7 @@ function HotelBookPageInner() {
 
         {/* Right column: Fare Summary */}
         <aside className="space-y-4">
-          <div className="bg-white rounded-lg border border-gray-200 p-5 sticky top-4">
+          <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5 sticky top-4">
             <h3 className="font-bold text-slate-800 text-base mb-3 pb-3 border-b border-gray-200">Fare Summary</h3>
 
             <DisclosureRow
@@ -960,13 +884,11 @@ function HotelBookPageInner() {
               </p>
             )}
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full mt-4 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 rounded text-sm uppercase tracking-wider transition-colors"
-            >
-              {submitting ? 'Booking...' : 'Continue to Payment'}
-            </button>
+            <div className="mt-4">
+              <BookButton type="submit" block disabled={submitting}>
+                {submitting ? 'Redirecting to payment...' : 'Continue to Payment'}
+              </BookButton>
+            </div>
             <p className="text-xs text-gray-400 text-center mt-2">
               {pricing.payAtHotel
                 ? 'Pay at hotel'
@@ -983,540 +905,9 @@ function HotelBookPageInner() {
   );
 }
 
-// ── Booking Confirmation (Voucher) ──
-
-function statusTone(status: string): { bg: string; text: string; label: string } {
-  const s = (status || '').toUpperCase();
-  if (s === 'B0' || s === 'BO0' || s === 'CONFIRMED' || s.includes('SUCCESS')) {
-    return { bg: 'bg-green-100', text: 'text-green-700', label: 'Confirmed' };
-  }
-  if (s === 'B1' || s === 'BO1' || s.includes('FAIL')) {
-    return { bg: 'bg-red-100', text: 'text-red-700', label: 'Failed' };
-  }
-  if (s.includes('PEND') || s.includes('PROGRESS')) {
-    return { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Pending' };
-  }
-  return { bg: 'bg-slate-100', text: 'text-slate-700', label: status || 'Booked' };
-}
-
-function formatLongDate(iso: string): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString('en-IN', {
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
-function buildPdf(v: BookingVoucher, JsPDF: typeof jsPDF): jsPDF {
-  const doc = new JsPDF({ unit: 'pt', format: 'a4' });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 40;
-  const contentWidth = pageWidth - margin * 2;
-  let y = margin;
-
-  const ensureSpace = (needed: number) => {
-    if (y + needed > pageHeight - margin) {
-      doc.addPage();
-      y = margin;
-    }
-  };
-
-  // ── Header band ──
-  doc.setFillColor(37, 99, 235); // blue-600
-  doc.rect(0, 0, pageWidth, 90, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.text('Soul Paradise', margin, 40);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.text('Hotel Booking Voucher', margin, 58);
-  doc.setFontSize(9);
-  const bookedAt = formatLongDate(v.bookedAt) || new Date().toLocaleDateString('en-IN');
-  doc.text(`Issued: ${bookedAt}`, pageWidth - margin, 40, { align: 'right' });
-  const tone = statusTone(v.status);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text(tone.label.toUpperCase(), pageWidth - margin, 58, { align: 'right' });
-  y = 120;
-
-  // ── Booking IDs block ──
-  doc.setTextColor(30, 41, 59);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('Booking Details', margin, y);
-  y += 18;
-  doc.setDrawColor(226, 232, 240);
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 14;
-
-  const infoRows: Array<[string, string]> = [
-    ['Booking ID', v.bookingId],
-    ['Confirmation ID', v.confirmationId || '-'],
-    ['Supplier Ref', v.supplierConfirmationId || '-'],
-    ['Transaction', v.transactionId],
-    ['Status', tone.label],
-    ['Payment Status', v.paymentStatus || '-'],
-  ];
-  doc.setFontSize(10);
-  for (const [k, val] of infoRows) {
-    ensureSpace(18);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 116, 139);
-    doc.text(k, margin, y);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 41, 59);
-    doc.text(val, margin + 140, y);
-    y += 16;
-  }
-
-  // ── Hotel block ──
-  y += 10;
-  ensureSpace(80);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('Hotel', margin, y);
-  y += 18;
-  doc.setDrawColor(226, 232, 240);
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 14;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(15, 23, 42);
-  doc.text(v.hotel.name || '-', margin, y);
-  y += 16;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(71, 85, 105);
-  const addressParts = [
-    [v.hotel.address.line1, v.hotel.address.line2].filter(Boolean).join(', '),
-    [v.hotel.address.city, v.hotel.address.state, v.hotel.address.zip].filter(Boolean).join(', '),
-    v.hotel.address.country,
-  ].filter(Boolean);
-  for (const line of addressParts) {
-    const wrapped = doc.splitTextToSize(line, contentWidth);
-    ensureSpace(wrapped.length * 12);
-    doc.text(wrapped, margin, y);
-    y += wrapped.length * 12;
-  }
-  if (v.hotel.phone) {
-    ensureSpace(14);
-    doc.text(`Phone: ${v.hotel.phone}`, margin, y);
-    y += 14;
-  }
-
-  // ── Stay block ──
-  y += 10;
-  ensureSpace(90);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(30, 41, 59);
-  doc.text('Your Stay', margin, y);
-  y += 18;
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 14;
-
-  const stayBoxWidth = (contentWidth - 20) / 2;
-  doc.setDrawColor(226, 232, 240);
-  doc.setFillColor(248, 250, 252);
-  doc.roundedRect(margin, y, stayBoxWidth, 56, 4, 4, 'FD');
-  doc.roundedRect(margin + stayBoxWidth + 20, y, stayBoxWidth, 56, 4, 4, 'FD');
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(100, 116, 139);
-  doc.text('CHECK-IN', margin + 12, y + 16);
-  doc.text('CHECK-OUT', margin + stayBoxWidth + 32, y + 16);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(15, 23, 42);
-  doc.text(formatLongDate(v.checkInDate), margin + 12, y + 34);
-  doc.text(formatLongDate(v.checkOutDate), margin + stayBoxWidth + 32, y + 34);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(71, 85, 105);
-  doc.text(v.checkInTime ? `After ${v.checkInTime}` : '', margin + 12, y + 48);
-  doc.text(v.checkOutTime ? `Before ${v.checkOutTime}` : '', margin + stayBoxWidth + 32, y + 48);
-  y += 64;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(30, 41, 59);
-  doc.text(`${v.nights} night${v.nights === 1 ? '' : 's'}`, margin, y + 4);
-  y += 18;
-
-  // ── Rooms ──
-  for (let i = 0; i < v.rooms.length; i++) {
-    const room = v.rooms[i];
-    y += 6;
-    ensureSpace(60);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(30, 41, 59);
-    doc.text(`Room ${i + 1}: ${room.name || 'Room'}`, margin, y);
-    y += 14;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(71, 85, 105);
-    const meta = [
-      room.capacity && `Capacity: ${room.capacity}`,
-      room.adults && `Adults: ${room.adults}`,
-      room.children && `Children: ${room.children}`,
-      room.refundable && `${room.refundable}`.toLowerCase().includes('true') ? 'Refundable' : '',
-    ].filter(Boolean).join('  •  ');
-    if (meta) {
-      doc.text(meta, margin, y);
-      y += 12;
-    }
-
-    for (const g of room.guests) {
-      ensureSpace(14);
-      doc.setTextColor(30, 41, 59);
-      const ageText = g.paxType === 'C' && g.age ? ` (age ${g.age})` : '';
-      doc.text(
-        `• ${g.title} ${g.firstName} ${g.lastName}${ageText}`,
-        margin + 10,
-        y,
-      );
-      y += 13;
-    }
-  }
-
-  // ── Fare summary ──
-  y += 8;
-  ensureSpace(80);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(30, 41, 59);
-  doc.text('Fare Summary', margin, y);
-  y += 18;
-  doc.setDrawColor(226, 232, 240);
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 14;
-
-  doc.setFontSize(10);
-  const fareRows: Array<[string, string]> = [
-    ['Gross Fare', fmt(v.grossAmount, v.currency)],
-    ['Net Fare', fmt(v.netAmount, v.currency)],
-  ];
-  for (const [k, val] of fareRows) {
-    ensureSpace(16);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 116, 139);
-    doc.text(k, margin, y);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 41, 59);
-    doc.text(val, pageWidth - margin, y, { align: 'right' });
-    y += 16;
-  }
-  y += 4;
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 14;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Total Paid', margin, y);
-  doc.text(fmt(v.totalAmount, v.currency), pageWidth - margin, y, { align: 'right' });
-  y += 20;
-
-  // ── Cancellation policies ──
-  if (v.cancellationPolicies.length > 0) {
-    y += 6;
-    ensureSpace(40);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text('Cancellation Policy', margin, y);
-    y += 18;
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 12;
-    if (v.freeCancellationUntil) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(21, 128, 61);
-      doc.text(
-        `Free cancellation until ${formatDeadline(v.freeCancellationUntil, true)}`,
-        margin,
-        y,
-      );
-      y += 16;
-    }
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(71, 85, 105);
-    for (const policy of v.cancellationPolicies) {
-      const lines = htmlToLines(policy.text);
-      for (const line of lines) {
-        const wrapped = doc.splitTextToSize(`• ${line}`, contentWidth);
-        ensureSpace(wrapped.length * 12);
-        doc.text(wrapped, margin, y);
-        y += wrapped.length * 12 + 2;
-      }
-    }
-  }
-
-  // ── Footer ──
-  const footerY = pageHeight - 30;
-  doc.setDrawColor(226, 232, 240);
-  doc.line(margin, footerY - 10, pageWidth - margin, footerY - 10);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(148, 163, 184);
-  doc.text(
-    'This voucher is proof of booking. Please present it at the hotel along with a valid ID.',
-    pageWidth / 2,
-    footerY,
-    { align: 'center' },
-  );
-
-  return doc;
-}
-
-function BookingConfirmation({ voucher, onDone }: { voucher: BookingVoucher; onDone: () => void }) {
-  const tone = statusTone(voucher.status);
-  const [downloading, setDownloading] = useState(false);
-  const [downloadError, setDownloadError] = useState<string | null>(null);
-
-  async function handleDownload() {
-    setDownloading(true);
-    setDownloadError(null);
-    try {
-      const mod = await import('jspdf');
-      const JsPDF = (mod as { jsPDF?: typeof jsPDF; default?: typeof jsPDF }).jsPDF
-        ?? (mod as { default?: typeof jsPDF }).default;
-      if (!JsPDF) throw new Error('Could not load PDF library');
-      const doc = buildPdf(voucher, JsPDF);
-      doc.save(`${voucher.bookingId}.pdf`);
-    } catch (err) {
-      console.error('PDF download failed:', err);
-      setDownloadError(
-        err instanceof Error ? err.message : 'Could not generate PDF. Please try again.',
-      );
-    } finally {
-      setDownloading(false);
-    }
-  }
-
-  const primaryGuest = voucher.rooms[0]?.guests[0];
-  const addressLine = [voucher.hotel.address.line1, voucher.hotel.address.city, voucher.hotel.address.state]
-    .filter(Boolean)
-    .join(', ');
-  const totalGuests = voucher.rooms.reduce((s, r) => s + r.guests.length, 0);
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-gray-50 py-8 px-4">
-      <div className="max-w-3xl mx-auto">
-        {/* Success banner */}
-        <div className="text-center mb-6">
-          <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${tone.bg} mb-3`}>
-            <svg className={`w-8 h-8 ${tone.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900">Booking {tone.label}</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            {voucher.contactInfo.email && (
-              <>A confirmation has been sent to <span className="font-medium">{voucher.contactInfo.email}</span></>
-            )}
-          </p>
-        </div>
-
-        {/* Voucher card */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-          {/* Header strip */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-5 flex items-start justify-between">
-            <div>
-              <p className="text-[10px] tracking-widest opacity-80">BOOKING ID</p>
-              <p className="font-mono text-lg font-bold">{voucher.bookingId}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] tracking-widest opacity-80">CONFIRMATION</p>
-              <p className="font-mono text-lg font-bold">{voucher.confirmationId || '-'}</p>
-            </div>
-          </div>
-
-          {/* Hotel + Stay */}
-          <div className="p-6 border-b border-gray-100">
-            <div className="flex items-start gap-4">
-              {voucher.hotel.heroImage ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={voucher.hotel.heroImage}
-                  alt={voucher.hotel.name}
-                  className="w-24 h-24 rounded-lg object-cover shrink-0"
-                />
-              ) : (
-                <div className="w-24 h-24 rounded-lg bg-gray-100 shrink-0" />
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-lg font-bold text-slate-900">{voucher.hotel.name || 'Hotel'}</h2>
-                  {Number(voucher.hotel.starRating) > 0 && <Stars count={Number(voucher.hotel.starRating)} />}
-                </div>
-                {addressLine && <p className="text-xs text-gray-600 mt-1">{addressLine}</p>}
-                {voucher.hotel.phone && (
-                  <p className="text-xs text-gray-500 mt-0.5">Phone: {voucher.hotel.phone}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-gray-500 tracking-widest">CHECK-IN</p>
-                <p className="text-sm font-bold text-slate-800 mt-1">{formatLongDate(voucher.checkInDate)}</p>
-                {voucher.checkInTime && <p className="text-xs text-gray-600 mt-0.5">After {voucher.checkInTime}</p>}
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-gray-500 tracking-widest">CHECK-OUT</p>
-                <p className="text-sm font-bold text-slate-800 mt-1">{formatLongDate(voucher.checkOutDate)}</p>
-                {voucher.checkOutTime && <p className="text-xs text-gray-600 mt-0.5">Before {voucher.checkOutTime}</p>}
-              </div>
-            </div>
-            <p className="text-xs text-gray-600 mt-3">
-              <span className="font-semibold text-slate-700">
-                {voucher.nights} night{voucher.nights === 1 ? '' : 's'}
-              </span>{' '}
-              • {voucher.rooms.length} room{voucher.rooms.length === 1 ? '' : 's'} • {totalGuests} guest
-              {totalGuests === 1 ? '' : 's'}
-            </p>
-          </div>
-
-          {/* Rooms + Guests */}
-          <div className="p-6 border-b border-gray-100">
-            <h3 className="text-sm font-bold text-slate-800 tracking-wide mb-3">Rooms & Guests</h3>
-            <div className="space-y-3">
-              {voucher.rooms.map((room, idx) => (
-                <div key={idx} className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800">
-                        Room {idx + 1}: {room.name || 'Room'}
-                      </p>
-                      {room.capacity && (
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {room.adults} Adult{room.adults === '1' ? '' : 's'}
-                          {Number(room.children) > 0 ? ` • ${room.children} Child` : ''}
-                        </p>
-                      )}
-                    </div>
-                    {room.supplierConfirmationNumber && (
-                      <span className="text-[10px] bg-blue-50 text-blue-700 font-mono px-2 py-1 rounded whitespace-nowrap">
-                        {room.supplierConfirmationNumber}
-                      </span>
-                    )}
-                  </div>
-                  <ul className="mt-2 space-y-1">
-                    {room.guests.map((g, gIdx) => (
-                      <li key={gIdx} className="text-xs text-gray-700">
-                        <span className="text-gray-400">•</span>{' '}
-                        <span className="font-medium text-slate-800">
-                          {g.title} {g.firstName} {g.lastName}
-                        </span>
-                        {g.paxType === 'C' && g.age && (
-                          <span className="text-gray-500"> (age {g.age})</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Contact */}
-          <div className="p-6 border-b border-gray-100">
-            <h3 className="text-sm font-bold text-slate-800 tracking-wide mb-3">Contact</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-xs text-gray-500">Guest</p>
-                <p className="font-medium text-slate-800">
-                  {primaryGuest
-                    ? `${primaryGuest.title} ${primaryGuest.firstName} ${primaryGuest.lastName}`
-                    : `${voucher.contactInfo.firstName} ${voucher.contactInfo.lastName}`}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Mobile</p>
-                <p className="font-medium text-slate-800">{voucher.contactInfo.mobile || '-'}</p>
-              </div>
-              <div className="sm:col-span-2">
-                <p className="text-xs text-gray-500">Email</p>
-                <p className="font-medium text-slate-800 break-all">{voucher.contactInfo.email || '-'}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Fare */}
-          <div className="p-6">
-            <h3 className="text-sm font-bold text-slate-800 tracking-wide mb-3">Payment</h3>
-            <dl className="text-sm space-y-1.5">
-              <div className="flex justify-between text-gray-600">
-                <dt>Gross Fare</dt>
-                <dd>{fmt(voucher.grossAmount, voucher.currency)}</dd>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <dt>Net Fare</dt>
-                <dd>{fmt(voucher.netAmount, voucher.currency)}</dd>
-              </div>
-              <div className="flex justify-between pt-2 mt-2 border-t border-gray-200 font-bold text-slate-900">
-                <dt>Total Paid</dt>
-                <dd>{fmt(voucher.totalAmount, voucher.currency)}</dd>
-              </div>
-              {voucher.paymentStatus && (
-                <div className="flex justify-between text-xs text-gray-500 pt-1">
-                  <dt>Payment Status</dt>
-                  <dd>{voucher.paymentStatus}</dd>
-                </div>
-              )}
-              <div className="flex justify-between text-xs text-gray-500">
-                <dt>Transaction</dt>
-                <dd className="font-mono">{voucher.transactionId}</dd>
-              </div>
-            </dl>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="mt-5 flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={handleDownload}
-            disabled={downloading}
-            className="flex-1 flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 text-white font-semibold py-3 rounded-lg transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
-              />
-            </svg>
-            {downloading ? 'Preparing PDF...' : 'Download Voucher (PDF)'}
-          </button>
-          <button
-            onClick={onDone}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors"
-          >
-            Done
-          </button>
-        </div>
-
-        {downloadError && (
-          <p className="mt-3 text-xs text-red-600 text-center">{downloadError}</p>
-        )}
-
-        <p className="text-xs text-gray-500 text-center mt-4">
-          Present this voucher along with a valid ID at check-in.
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export default function HotelBookPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+    <Suspense fallback={<StepState><ResultsLoader title="Loading..." rows={2} /></StepState>}>
       <HotelBookPageInner />
     </Suspense>
   );

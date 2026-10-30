@@ -208,12 +208,12 @@ export const DateStrip = ({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg flex items-center overflow-hidden">
+    <div className="bg-white border border-(--color-tertiary-button) rounded-2xl shadow-sm flex items-center overflow-hidden">
       {/* Left arrow */}
       <button
         type="button"
         onClick={() => scroll('left')}
-        className="px-2 py-4 text-teal-600 hover:bg-gray-50 flex-shrink-0 border-r border-gray-200"
+        className="px-2 py-4 text-(--color-links) hover:bg-(--color-primary-tint) flex-shrink-0 border-r border-(--color-tertiary-button)"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -228,21 +228,21 @@ export const DateStrip = ({
             type="button"
             disabled={d.disabled}
             onClick={() => handleDateClick(d.dateStr, d.disabled)}
-            className={`flex-1 min-w-[120px] px-3 py-2.5 text-center border-r border-gray-100 last:border-r-0 transition-colors ${
+            className={`flex-1 min-w-[120px] px-3 py-2.5 text-center border-r border-slate-100 last:border-r-0 transition-colors ${
               d.isSelected
-                ? 'bg-gray-800 text-white'
+                ? 'bg-(--color-primary-button) text-white'
                 : d.disabled
                   ? 'text-gray-300 cursor-not-allowed'
-                  : 'text-gray-600 hover:bg-gray-50'
+                  : 'text-(--color-foreground) hover:bg-(--color-primary-tint)'
             }`}
           >
             <div
-              className={`text-xs font-medium ${d.isSelected ? 'text-white' : 'text-gray-500'}`}
+              className={`text-xs font-semibold ${d.isSelected ? 'text-white' : 'text-(--color-inactive)'}`}
             >
               {d.label}
             </div>
             <div
-              className={`text-xs mt-1 ${d.isSelected ? 'text-gray-200' : 'text-green-600'}`}
+              className={`text-xs mt-1 ${d.isSelected ? 'text-white/85' : 'text-(--color-success)'}`}
             >
               {renderPrice(d.dateStr, d.isSelected)}
             </div>
@@ -254,7 +254,7 @@ export const DateStrip = ({
       <button
         type="button"
         onClick={() => scroll('right')}
-        className="px-2 py-4 text-teal-600 hover:bg-gray-50 flex-shrink-0 border-l border-gray-200"
+        className="px-2 py-4 text-(--color-links) hover:bg-(--color-primary-tint) flex-shrink-0 border-l border-(--color-tertiary-button)"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

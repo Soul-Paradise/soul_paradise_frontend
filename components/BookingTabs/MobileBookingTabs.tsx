@@ -19,7 +19,7 @@ const tabs: { id: TabType; label: string; icon: React.ReactNode; bg: string; ico
     label: 'Flights',
     icon: <Plane className="w-8 h-8" strokeWidth={1.5} />,
     bg: 'bg-blue-50',
-    iconColor: 'text-[#1F7AC4]',
+    iconColor: 'text-(--color-links)',
   },
   {
     id: 'hotel',
@@ -74,7 +74,7 @@ const MobileBookingTabsInner = () => {
               onClick={() => handleTabClick(tab.id)}
               className={`flex flex-col items-center gap-2 py-4 px-2 rounded-2xl transition-all duration-200 ${
                 activeTab === tab.id
-                  ? `${tab.bg} ring-2 ring-[#1F7AC4] ring-offset-1 scale-[0.97]`
+                  ? `${tab.bg} ring-2 ring-(--color-links) ring-offset-1 scale-[0.97]`
                   : 'bg-gray-50 hover:bg-gray-100 active:scale-95'
               }`}
             >
@@ -83,7 +83,7 @@ const MobileBookingTabsInner = () => {
               </span>
               <span
                 className={`text-[12px] font-semibold text-center leading-tight ${
-                  activeTab === tab.id ? 'text-[#1F7AC4]' : 'text-gray-600'
+                  activeTab === tab.id ? 'text-(--color-links)' : 'text-gray-600'
                 }`}
               >
                 {tab.label}

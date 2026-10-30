@@ -3,8 +3,9 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { AlertCircle, BadgeCheck, ExternalLink, Lock } from 'lucide-react';
+import { AlertCircle, ExternalLink, Lock } from 'lucide-react';
 import { useAuth, useRequireAuth } from '@/contexts/AuthContext';
+import VerifiedBadge from '@/components/VerifiedBadge';
 import {
   PriceChangedError,
   formatCoverage,
@@ -21,6 +22,7 @@ import {
   type Title,
 } from '@/lib/insurance-api';
 import { ErrorCard, ProviderLogo, Spinner, TripSummaryBar, formatDay } from '@/components/Insurance/shared';
+import { BookButton } from '@/components/Results/ui';
 
 const TITLES: Title[] = ['Mr', 'Mrs', 'Ms', 'Master'];
 const NOMINEE_RELATIONS = ['Spouse', 'Father', 'Mother', 'Son', 'Daughter', 'Brother', 'Sister', 'Other'];
@@ -53,9 +55,9 @@ function Field({ label, hint, className = '', children }: { label: string; hint?
 
 function Section({ title, aside, children }: { title: string; aside?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
+    <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+        <h2 className="text-base font-bold text-(--color-foreground)">{title}</h2>
         {aside}
       </div>
       {children}
@@ -298,7 +300,7 @@ function BookingForm({ search, plan, tui }: { search: InsuranceSearch; plan: Ins
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
       <div className="space-y-5 min-w-0">
         {travellers.map((t, i) => (
           <Section
@@ -428,7 +430,7 @@ function BookingForm({ search, plan, tui }: { search: InsuranceSearch; plan: Ins
             aside={
               kyc === 'verified' ? (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-(--color-success)">
-                  <BadgeCheck className="w-4 h-4" /> Verified
+                  <VerifiedBadge size={16} /> Verified
                 </span>
               ) : null
             }
@@ -453,7 +455,7 @@ function BookingForm({ search, plan, tui }: { search: InsuranceSearch; plan: Ins
                   type="button"
                   onClick={runKyc}
                   disabled={kyc === 'checking'}
-                  className="px-5 py-2.5 text-sm font-semibold rounded-md border border-(--color-links) text-(--color-links) hover:bg-blue-50 disabled:opacity-50"
+                  className="px-5 py-2.5 text-sm font-bold rounded-full border border-(--color-links) text-(--color-links) hover:bg-(--color-links) hover:text-white transition-colors disabled:opacity-50"
                 >
                   {kyc === 'checking' ? 'Verifying…' : kyc === 'action' ? 'Verify again' : 'Verify PAN'}
                 </button>
@@ -475,7 +477,7 @@ function BookingForm({ search, plan, tui }: { search: InsuranceSearch; plan: Ins
 
       {/* Summary + pay */}
       <aside className="lg:sticky lg:top-4 space-y-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5">
           <div className="flex items-start gap-3">
             <ProviderLogo src={plan.providerLogo} label={plan.providerLabel} />
             <div className="min-w-0">
@@ -535,15 +537,12 @@ function BookingForm({ search, plan, tui }: { search: InsuranceSearch; plan: Ins
 
           {error && <p className="mt-3 text-sm text-(--color-danger)">{error}</p>}
 
-          <button
-            type="button"
-            onClick={pay}
-            disabled={submitting}
-            className="mt-4 w-full inline-flex items-center justify-center gap-2 py-3 bg-(--color-links) text-white text-sm font-semibold rounded-md hover:opacity-90 disabled:opacity-60"
-          >
-            <Lock className="w-4 h-4" />
-            {submitting ? 'Taking you to payment…' : `Pay ${formatInr(price)}`}
-          </button>
+          <div className="mt-4">
+            <BookButton block onClick={pay} disabled={submitting}>
+              <Lock className="w-4 h-4" />
+              {submitting ? 'Taking you to payment…' : `Pay ${formatInr(price)}`}
+            </BookButton>
+          </div>
           <p className="mt-2 text-[11px] text-center text-gray-400">Secure payment via ICICI Bank</p>
         </div>
       </aside>
@@ -575,7 +574,7 @@ function BookInsurance() {
   const planHref = `/booking/insurance/${encodeURIComponent(planId)}?${params.toString()}`;
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-(--color-background)">
       <TripSummaryBar search={search} title="Traveller details" backHref={planHref} backLabel="Back to plan" />
       {error ? (
         <ErrorCard message={error} actionHref={planHref} actionLabel="Back to plan" />

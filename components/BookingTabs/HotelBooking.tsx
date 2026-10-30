@@ -1,10 +1,22 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, CalendarDays, ChevronDown, Search } from 'lucide-react';
+import { MapPin, CalendarDays, BedDouble, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CalendarPanel } from './CalendarPanel';
-import { usePersistentSearch, notBeforeToday } from '@/lib/hooks/useSearchPersistence';
+import {
+  ActionButton,
+  ActionRow,
+  DateValue,
+  FIELD_GROUP,
+  FIELD_PLACEHOLDER,
+  FIELD_SUB,
+  FIELD_VALUE,
+  FieldLabel,
+  TabHeader,
+  fieldCell,
+} from './ui';
+import { usePersistentSearch, notBeforeToday, useDatePrefill } from '@/lib/hooks/useSearchPersistence';
 
 interface Location {
   id: string;
@@ -79,6 +91,13 @@ export const HotelBooking = () => {
       if (Array.isArray(s.rooms) && s.rooms.length > 0) setRooms(s.rooms);
     },
   );
+
+  // A suggested holiday window (?from=&to=): check in on the first day off,
+  // check out on the last.
+  useDatePrefill((from, to) => {
+    setCheckIn(new Date(from + 'T00:00:00'));
+    setCheckOut(new Date(to + 'T00:00:00'));
+  });
 
   // Panels
   const [activePanel, setActivePanel] = useState<'destination' | 'dates' | 'guests' | null>(null);
@@ -188,28 +207,25 @@ export const HotelBooking = () => {
 
   return (
     <div ref={wrapperRef} className="relative space-y-5">
+      <TabHeader tagline="Book Hotels in India and Worldwide" />
+
       {/* Main Search Bar */}
-      <div className="relative border-2 border-gray-200 rounded-xl overflow-visible bg-white">
+      <div className={FIELD_GROUP}>
         {/* Mobile: 2-col grid (destination full-width, dates side-by-side, guests full-width) */}
         {/* sm+: single flex row */}
         <div className="grid grid-cols-2 sm:flex sm:items-stretch divide-y divide-gray-200 sm:divide-y-0">
           {/* Destination - full width on mobile */}
           <button
             onClick={() => { setActivePanel(activePanel === 'destination' ? null : 'destination'); setSearchTerm(''); setSuggestions([]); }}
-            className={[
-              'col-span-2 sm:flex-[2] text-left px-5 py-4 sm:border-r sm:border-gray-200 transition-colors min-w-0',
-              activePanel === 'destination' ? 'bg-blue-50' : 'hover:bg-gray-50',
-            ].join(' ')}
+            className={`col-span-2 sm:flex-[2] min-w-0 sm:border-r sm:border-gray-200 ${fieldCell(activePanel === 'destination')}`}
           >
-            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${activePanel === 'destination' ? 'text-blue-600' : 'text-gray-500'}`}>
-              Enter your destination or property
+            <FieldLabel icon={MapPin} active={activePanel === 'destination'}>
+              Destination or Property
+            </FieldLabel>
+            <div className={`truncate ${destination ? FIELD_VALUE : FIELD_PLACEHOLDER}`}>
+              {destination ? destination.name : 'Select Destination'}
             </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              <span className={`text-lg font-bold truncate ${destination ? 'text-gray-900' : 'text-gray-400'}`}>
-                {destination ? destination.name : 'Select Destination'}
-              </span>
-            </div>
+            {destination?.fullName && <div className={FIELD_SUB}>{destination.fullName}</div>}
           </button>
 
           {/* Dates wrapper - relative so the calendar anchors under the date fields */}
@@ -217,41 +233,23 @@ export const HotelBooking = () => {
             {/* Check In */}
             <button
               onClick={() => openDatePanel('start')}
-              className={[
-                'sm:flex-1 text-left px-5 py-4 border-r border-gray-200 transition-colors',
-                activePanel === 'dates' && dateTab === 'start' ? 'bg-blue-50' : 'hover:bg-gray-50',
-              ].join(' ')}
+              className={`sm:flex-1 border-r border-gray-200 ${fieldCell(activePanel === 'dates' && dateTab === 'start')}`}
             >
-              <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'dates' && dateTab === 'start' ? 'text-blue-600' : 'text-gray-500'}`}>
-                <CalendarDays className="w-3 h-3" />
+              <FieldLabel icon={CalendarDays} active={activePanel === 'dates' && dateTab === 'start'}>
                 Check In
-                <ChevronDown className="w-3 h-3 ml-0.5" />
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold text-gray-900 leading-none">{formatDay(checkIn)}</span>
-                <span className="text-base font-bold text-gray-900">{formatMonthYear(checkIn)}</span>
-              </div>
-              <div className="text-xs text-gray-500 mt-0.5">{formatWeekday(checkIn)}</div>
+              </FieldLabel>
+              <DateValue day={formatDay(checkIn)} monthYear={formatMonthYear(checkIn)} weekday={formatWeekday(checkIn)} />
             </button>
 
             {/* Check Out */}
             <button
               onClick={() => openDatePanel('end')}
-              className={[
-                'sm:flex-1 text-left px-5 py-4 sm:border-r sm:border-gray-200 transition-colors',
-                activePanel === 'dates' && dateTab === 'end' ? 'bg-blue-50' : 'hover:bg-gray-50',
-              ].join(' ')}
+              className={`sm:flex-1 sm:border-r sm:border-gray-200 ${fieldCell(activePanel === 'dates' && dateTab === 'end')}`}
             >
-              <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 flex items-center gap-1 ${activePanel === 'dates' && dateTab === 'end' ? 'text-blue-600' : 'text-gray-500'}`}>
-                <CalendarDays className="w-3 h-3" />
+              <FieldLabel icon={CalendarDays} active={activePanel === 'dates' && dateTab === 'end'}>
                 Check Out
-                <ChevronDown className="w-3 h-3 ml-0.5" />
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold text-gray-900 leading-none">{formatDay(checkOut)}</span>
-                <span className="text-base font-bold text-gray-900">{formatMonthYear(checkOut)}</span>
-              </div>
-              <div className="text-xs text-gray-500 mt-0.5">{formatWeekday(checkOut)}</div>
+              </FieldLabel>
+              <DateValue day={formatDay(checkOut)} monthYear={formatMonthYear(checkOut)} weekday={formatWeekday(checkOut)} />
             </button>
 
             <CalendarPanel
@@ -276,18 +274,16 @@ export const HotelBooking = () => {
           {/* Rooms & Guests - full width on mobile */}
           <button
             onClick={() => setActivePanel(activePanel === 'guests' ? null : 'guests')}
-            className={[
-              'col-span-2 sm:flex-1 text-left px-5 py-4 transition-colors',
-              activePanel === 'guests' ? 'bg-blue-50' : 'hover:bg-gray-50',
-            ].join(' ')}
+            className={`col-span-2 sm:flex-1 ${fieldCell(activePanel === 'guests')}`}
           >
-            <div className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${activePanel === 'guests' ? 'text-blue-600' : 'text-gray-500'}`}>
+            <FieldLabel icon={BedDouble} active={activePanel === 'guests'}>
               Rooms &amp; Guests
+            </FieldLabel>
+            <div className={FIELD_VALUE}>
+              {rooms.length} Room{rooms.length !== 1 ? 's' : ''}
             </div>
-            <div className="text-lg font-bold text-gray-900 leading-tight">
-              <span>{rooms.length} Room{rooms.length !== 1 ? 's' : ''}</span>
-              <span className="mx-1 text-gray-400">·</span>
-              <span>{totalGuests()} Guest{totalGuests() !== 1 ? 's' : ''}</span>
+            <div className={FIELD_SUB}>
+              {totalGuests()} Guest{totalGuests() !== 1 ? 's' : ''}
             </div>
           </button>
         </div>
@@ -408,12 +404,12 @@ export const HotelBooking = () => {
               ))}
             </div>
             <div className="flex items-center justify-between mt-4 pt-2">
-              <button onClick={addRoom} className="text-sm font-bold text-[#e8262a] flex items-center gap-1 hover:underline">
+              <button onClick={addRoom} className="text-sm font-bold text-(--color-accent) flex items-center gap-1 hover:underline">
                 <span className="text-base">+</span> Add Another Room
               </button>
               <button
                 onClick={() => setActivePanel(null)}
-                className="px-5 py-2 bg-[#e8262a] text-white text-sm font-bold rounded hover:bg-[#c9191d] transition-colors"
+                className="px-5 py-2 bg-(--color-accent) text-white text-sm font-bold rounded hover:bg-(--color-accent-hover) transition-colors"
               >
                 DONE
               </button>
@@ -422,15 +418,10 @@ export const HotelBooking = () => {
         )}
       </div>
 
-      {/* Search Button row - matches Flights tab */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleSearch}
-          className="px-10 py-3.5 bg-[#D34E4E] hover:bg-red-600 text-white text-sm font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all uppercase tracking-wide"
-        >
-          SEARCH
-        </button>
-      </div>
+      {/* Search Button row - same as every tab */}
+      <ActionRow>
+        <ActionButton onClick={handleSearch}>Search</ActionButton>
+      </ActionRow>
     </div>
   );
 };

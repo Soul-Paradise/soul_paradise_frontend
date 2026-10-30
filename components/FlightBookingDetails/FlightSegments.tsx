@@ -111,7 +111,7 @@ const LegSummary = ({ segments, label }: LegSummaryProps) => {
 
   return (
     <div className="flex-1 min-w-0 max-w-full bg-sky-50/50 border border-sky-100 rounded-xl p-4 overflow-hidden">
-      <div className="flex items-center gap-2 text-base font-semibold text-gray-900 min-w-0">
+      <div className="flex items-center gap-2 text-base font-bold text-(--color-foreground) min-w-0">
         <span className="flex-shrink-0">{first.from}</span>
         <Arrow className={`w-4 h-4 ${accent} flex-shrink-0`} />
         <span className="flex-shrink-0">{last.to}</span>
@@ -145,7 +145,7 @@ const LegDetailed = ({ segments, label, refundable }: LegDetailedProps) => {
   const accent = label === 'Onward' ? 'text-sky-600' : 'text-violet-600';
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden w-full max-w-full min-w-0">
+    <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm overflow-hidden w-full max-w-full min-w-0">
       {/* Leg header */}
       <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-4 flex-wrap min-w-0">
         <div className="min-w-0">
@@ -398,7 +398,7 @@ export const FlightSegments = ({ segments }: FlightSegmentsProps) => {
   const isRoundTrip = ret.length > 0;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 w-full max-w-full min-w-0 overflow-hidden">
+    <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-4 sm:p-5 w-full max-w-full min-w-0 overflow-hidden">
       {/* Collapsed two-pane summary */}
       <div className="relative">
         <div

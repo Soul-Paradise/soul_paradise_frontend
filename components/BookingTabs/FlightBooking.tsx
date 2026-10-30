@@ -11,9 +11,17 @@ import {
   type CabinClass,
 } from './TravellerSelector';
 import type { Airport } from '@/lib/flights-api';
-import { usePersistentSearch, notBeforeToday } from '@/lib/hooks/useSearchPersistence';
+import { usePersistentSearch, notBeforeToday, useDatePrefill } from '@/lib/hooks/useSearchPersistence';
+import { CalendarDays } from 'lucide-react';
+import { ActionButton, ActionRow, FIELD_GROUP, FieldLabel, OptionPills, TabHeader, fieldCell } from './ui';
 
 type TripType = 'oneway' | 'roundtrip' | 'multicity';
+
+const TRIP_TYPES = [
+  { value: 'oneway', label: 'One Way' },
+  { value: 'roundtrip', label: 'Round Trip' },
+  { value: 'multicity', label: 'Multi City' },
+] as const;
 
 interface MultiLeg {
   from: Airport | null;
@@ -96,6 +104,13 @@ export const FlightBooking = () => {
       }
     },
   );
+
+  // A suggested holiday window (?from=&to=) is a there-and-back trip.
+  useDatePrefill((from, to) => {
+    setTripType('roundtrip');
+    setDepartDate(from);
+    setReturnDate(to);
+  });
 
   // Date panel state
   const [datePanelOpen, setDatePanelOpen] = useState(false);
@@ -305,14 +320,11 @@ export const FlightBooking = () => {
   const renderLegRow = (leg: MultiLeg, i: number) => {
     const minDate = i > 0 ? legs[i - 1].date : toDateStr(today);
     return (
-      <div
-        key={i}
-        className="border-2 border-gray-200 rounded-xl bg-white overflow-visible"
-      >
+      <div key={i} className={FIELD_GROUP}>
         <div className="grid grid-cols-2 sm:flex sm:items-stretch divide-y divide-gray-200 sm:divide-y-0">
           {/* Leg number */}
           <div className="hidden sm:flex items-center justify-center w-11 flex-shrink-0 border-r border-gray-200">
-            <span className="w-6 h-6 rounded-full bg-[#1F7AC4]/10 text-[#1F7AC4] text-xs font-bold flex items-center justify-center">
+            <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-xs font-bold flex items-center justify-center shadow-sm">
               {i + 1}
             </span>
           </div>
@@ -332,18 +344,16 @@ export const FlightBooking = () => {
               placeholder="City or Airport"
             />
           </div>
-          <div className="col-span-2 sm:flex-[1.6] min-w-0 px-6 flex flex-col justify-center py-3 sm:border-r sm:border-gray-200">
-            <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">
-              Departure
-            </label>
+          <label className={`col-span-2 sm:flex-[1.6] min-w-0 cursor-pointer sm:border-r sm:border-gray-200 ${fieldCell()}`}>
+            <FieldLabel icon={CalendarDays}>Departure</FieldLabel>
             <input
               type="date"
               value={leg.date}
               min={minDate}
               onChange={(e) => updateLeg(i, { date: e.target.value })}
-              className="w-full text-base font-bold text-gray-900 bg-transparent outline-none"
+              className="w-full text-lg font-extrabold text-gray-900 bg-transparent outline-none"
             />
-          </div>
+          </label>
           {/* Travellers & class - first leg only; empty spacer on the rest */}
           <div className="col-span-2 sm:flex-[1.5] min-w-0">
             {i === 0 && (
@@ -376,38 +386,19 @@ export const FlightBooking = () => {
   return (
     <div className="space-y-5">
       {/* Trip Type + subtitle row */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-1">
-          {(
-            [
-              { value: 'oneway', label: 'One Way' },
-              { value: 'roundtrip', label: 'Round Trip' },
-              { value: 'multicity', label: 'Multi City' },
-            ] as const
-          ).map((opt) => (
-            <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer px-3 py-1.5">
-              <input
-                type="radio"
-                name="tripType"
-                value={opt.value}
-                checked={tripType === opt.value}
-                onChange={() => handleTripTypeChange(opt.value)}
-                className="w-4 h-4 accent-[#1F7AC4]"
-              />
-              <span className={`text-sm font-semibold ${tripType === opt.value ? 'text-[#1F7AC4]' : 'text-gray-600'}`}>
-                {opt.label}
-              </span>
-            </label>
-          ))}
-        </div>
-        <span className="text-sm text-gray-500 font-medium hidden sm:block">
-          Book International and Domestic Flights
-        </span>
-      </div>
+      <TabHeader tagline="Book International and Domestic Flights">
+        <OptionPills
+          name="tripType"
+          label="Trip type"
+          options={TRIP_TYPES}
+          value={tripType}
+          onChange={handleTripTypeChange}
+        />
+      </TabHeader>
 
       {/* Main Search Fields - single bordered row (one-way / round-trip) */}
       {tripType !== 'multicity' && (
-      <div className="border-2 border-gray-200 rounded-xl overflow-visible bg-white">
+      <div className={FIELD_GROUP}>
         <div className="grid grid-cols-2 sm:flex sm:items-stretch divide-y divide-gray-200 sm:divide-y-0">
           {/* FROM - full width on mobile */}
           <div className="col-span-2 sm:flex-[2] min-w-0 relative sm:border-r sm:border-gray-200">
@@ -422,7 +413,7 @@ export const FlightBooking = () => {
             <button
               type="button"
               onClick={swapLocations}
-              className="absolute right-4 sm:right-[-18px] bottom-[-18px] sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 z-20 w-9 h-9 bg-(--color-links) hover:bg-blue-700 rounded-full flex items-center justify-center shadow-md transition-all transform hover:rotate-180"
+              className="absolute right-4 sm:right-[-18px] bottom-[-18px] sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 z-20 w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-md ring-4 ring-white transition-all transform hover:rotate-180"
               aria-label="Swap locations"
             >
               <svg
@@ -448,6 +439,7 @@ export const FlightBooking = () => {
               value={toAirport}
               onChange={setToAirport}
               placeholder="City or Airport"
+              insetLeft
             />
           </div>
 
@@ -521,7 +513,7 @@ export const FlightBooking = () => {
                 <button
                   type="button"
                   onClick={addLeg}
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1F7AC4] hover:underline"
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-(--color-links) hover:underline"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -533,13 +525,7 @@ export const FlightBooking = () => {
               )}
             </div>
             <div className="sm:ml-auto flex items-center">
-              <button
-                type="button"
-                onClick={handleMultiCitySearch}
-                className="px-10 py-3.5 bg-[#D34E4E] hover:bg-red-600 text-white text-sm font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all uppercase tracking-wide whitespace-nowrap"
-              >
-                SEARCH
-              </button>
+              <ActionButton onClick={handleMultiCitySearch}>Search</ActionButton>
             </div>
           </div>
         </div>
@@ -547,15 +533,9 @@ export const FlightBooking = () => {
 
       {/* Search Button (one-way / round-trip; multi-city has its own in-row button) */}
       {tripType !== 'multicity' && (
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={handleSearch}
-          className="px-10 py-3.5 bg-[#D34E4E] hover:bg-red-600 text-white text-sm font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all uppercase tracking-wide whitespace-nowrap"
-        >
-          SEARCH
-        </button>
-      </div>
+      <ActionRow>
+        <ActionButton onClick={handleSearch}>Search</ActionButton>
+      </ActionRow>
       )}
 
       {/* Error Message */}

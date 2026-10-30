@@ -1,0 +1,538 @@
+{
+  "GLOBAL.contact": {
+    "companyName": "Soul Paradise Travels",
+    "phones": [
+      {
+        "label": "Mobile",
+        "display": "+91-9876816688",
+        "tel": "+919876816688"
+      },
+      {
+        "label": "Office",
+        "display": "0181-4673955",
+        "tel": "01814673955"
+      }
+    ],
+    "whatsappNumber": "919876816688",
+    "salesPhone": "+919876816688",
+    "email": "soulparadise21@gmail.com",
+    "addressLines": [
+      "Shop No. 21, 1st Floor, PPR Plaza",
+      "Jalandhar, Punjab 144001"
+    ],
+    "directionsUrl": "https://www.google.com/maps/search/?api=1&query=SOUL+PARADISE+JALANDHAR+INDIA",
+    "mapEmbedUrl": "https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d27268.05989596027!2d75.599576!3d31.317355!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x391a5b68da0a20fb%3A0x54bdb5d17a992f5d!2sSOUL%20PARADISE%20JALANDHAR%20INDIA!5e0!3m2!1sen!2sin!4v1767454904897!5m2!1sen!2sin",
+    "weeklyHours": [
+      {
+        "closed": true
+      },
+      {
+        "closed": false,
+        "open": "09:00",
+        "close": "19:00"
+      },
+      {
+        "closed": false,
+        "open": "09:00",
+        "close": "19:00"
+      },
+      {
+        "closed": false,
+        "open": "09:00",
+        "close": "19:00"
+      },
+      {
+        "closed": false,
+        "open": "09:00",
+        "close": "19:00"
+      },
+      {
+        "closed": false,
+        "open": "09:00",
+        "close": "19:00"
+      },
+      {
+        "closed": false,
+        "open": "10:00",
+        "close": "18:00"
+      }
+    ],
+    "hoursRows": [
+      {
+        "label": "Monday - Friday",
+        "time": "9:00 AM - 7:00 PM",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      {
+        "label": "Saturday",
+        "time": "10:00 AM - 6:00 PM",
+        "days": [
+          6
+        ]
+      },
+      {
+        "label": "Sunday",
+        "time": "Closed",
+        "days": [
+          0
+        ]
+      }
+    ],
+    "social": {
+      "facebook": "https://m.facebook.com/soulparadisetravels/",
+      "instagram": "https://www.instagram.com/soulparadisetravels/"
+    }
+  },
+  "GLOBAL.footer": {
+    "blurb": "Your pocket-friendly tour planner. We have the best deals for international and domestic flights on all airlines.",
+    "quickLinksTitle": "Quick Links",
+    "quickLinks": [
+      {
+        "label": "About Us",
+        "href": "/about"
+      },
+      {
+        "label": "Privacy Policy",
+        "href": "/privacy-policy"
+      },
+      {
+        "label": "Terms & Conditions",
+        "href": "/terms"
+      },
+      {
+        "label": "Refund & Cancellation Policy",
+        "href": "/refund-cancellation-policy"
+      }
+    ],
+    "servicesTitle": "Our Services",
+    "serviceLinks": [
+      {
+        "label": "Flight Tickets",
+        "href": "/?tab=flights#booking"
+      },
+      {
+        "label": "Hotel Booking",
+        "href": "/?tab=hotel#booking"
+      },
+      {
+        "label": "Travel Insurance",
+        "href": "/?tab=insurance#booking"
+      },
+      {
+        "label": "Holiday Packages",
+        "href": "/service"
+      }
+    ],
+    "contactTitle": "Contact Details",
+    "copyright": "© Copyright {year}. All Rights Reserved.",
+    "iataLabel": "IATA Certified",
+    "iataLogo": null
+  },
+  "GLOBAL.plan_holiday_cta": {
+    "title": "Planning something bigger?",
+    "text": "Holiday packages, tourist visas and group tours. Tell us where you want to go and we'll plan the rest.",
+    "image": null,
+    "imagePosition": "center 40%",
+    "whatsappLabel": "Chat on WhatsApp",
+    "whatsappMessage": "Hi Soul Paradise, I would like help planning a trip.",
+    "callLabel": "Call us"
+  },
+  "HOME.hero": {
+    "title": "Where to next?",
+    "subtitle": "Flights, hotels, travel insurance and holiday packages, all in one place.",
+    "image": null,
+    "imagePosition": "center"
+  },
+  "HOME.offers": {
+    "eyebrow": "Deals",
+    "title": "Offers",
+    "emptyText": "No offers in this category right now."
+  },
+  "HOME.long_weekends": {
+    "eyebrow": "Holiday Planner",
+    "title": "Plan your next long weekend",
+    "subtitle": "Upcoming holidays, the smartest leave to take, and everything you need to book for them."
+  },
+  "HOME.popular_trips": {
+    "eyebrow": "Holiday Packages",
+    "title": "Trips our travellers loved",
+    "subtitle": "Holiday packages we plan end to end: flights, stays and sightseeing.",
+    "link": {
+      "label": "See the gallery",
+      "href": "/hall-of-fame"
+    },
+    "ctaLabel": "Get a quote",
+    "enquiryTemplate": "Hi Soul Paradise, I'd like a quote for a {name} holiday package."
+  },
+  "HOME.reviews": {
+    "eyebrow": "Testimonials",
+    "title": "What our travellers say",
+    "link": {
+      "label": "Read more stories",
+      "href": "/hall-of-fame"
+    }
+  },
+  "HOME.plan_holiday_cta": {},
+  "ABOUT.hero": {
+    "crumb": "About Us",
+    "title": "Your pocket-friendly tour planner",
+    "description": "Soul Paradise makes travel accessible, affordable and memorable for everyone, from a first family holiday to a last-minute business trip.",
+    "image": null,
+    "imagePosition": "center 60%",
+    "metaTitle": "About Us - Soul Paradise Travels",
+    "metaDescription": "Learn about Soul Paradise Travels - Your trusted IATA-accredited travel partner founded by Mr. Sanjay Srivastava and Mrs. Shafali Srivastava in Jalandhar, Punjab"
+  },
+  "ABOUT.story": {
+    "eyebrow": "Our Story",
+    "title": "More than a destination",
+    "paragraphs": [
+      "Soul Paradise is a proud initiative founded by **Mr. Sanjay Srivastava** and **Mrs. Shafali Srivastava**, driven by a passion for making travel accessible, affordable, and memorable for everyone.",
+      "What started as a vision to provide exceptional travel services has grown into a trusted name in the industry. We believe that every journey should be more than just a destination - it should be an experience that enriches your life.",
+      "Based in **Jalandhar, Punjab**, we've built our reputation on three pillars: competitive pricing, personalized service, and unwavering commitment to quality."
+    ],
+    "founderRole": "Founder",
+    "founders": [
+      {
+        "name": "Mr. Sanjay Srivastava",
+        "initials": "SS",
+        "accent": "blue"
+      },
+      {
+        "name": "Mrs. Shafali Srivastava",
+        "initials": "SS",
+        "accent": "orange"
+      }
+    ]
+  },
+  "ABOUT.iata": {
+    "title": "IATA Accredited",
+    "subtitle": "Certified by the International Air Transport Association",
+    "logo": null,
+    "facts": [
+      {
+        "label": "IATA Code",
+        "value": "14009881"
+      },
+      {
+        "label": "Accreditation",
+        "value": "GoLite"
+      }
+    ],
+    "galleryLabel": "Trips we've planned",
+    "galleryLinkLabel": "See gallery",
+    "galleryHref": "/hall-of-fame",
+    "collage": [
+      null,
+      null,
+      null
+    ]
+  },
+  "ABOUT.services": {
+    "eyebrow": "What We Do",
+    "title": "Every part of your trip, handled",
+    "subtitle": "From the first fare search to the moment you land back home.",
+    "items": [
+      {
+        "icon": "Plane",
+        "accent": "blue",
+        "title": "Flight Ticketing",
+        "body": "We search and compare routes across multiple airlines to find you the most competitive fares for both international and domestic travel."
+      },
+      {
+        "icon": "Palmtree",
+        "accent": "green",
+        "title": "Tour Packages",
+        "body": "Curated holiday packages designed to suit every budget and preference, from adventure trips to relaxing getaways."
+      },
+      {
+        "icon": "FileText",
+        "accent": "orange",
+        "title": "Visa Assistance",
+        "body": "Expert guidance for various tourist visas, handled by our highly experienced and skilled staff dedicated exclusively to visa processing."
+      },
+      {
+        "icon": "ShieldCheck",
+        "accent": "purple",
+        "title": "Travel Insurance",
+        "body": "Comprehensive travel insurance solutions to ensure peace of mind throughout your journey, covering unforeseen circumstances."
+      },
+      {
+        "icon": "Building2",
+        "accent": "teal",
+        "title": "Hotel Bookings",
+        "body": "Access to a wide range of accommodations worldwide, from budget-friendly options to luxury stays, tailored to your needs."
+      },
+      {
+        "icon": "Headphones",
+        "accent": "pink",
+        "title": "24/7 Support",
+        "body": "Round-the-clock customer support to assist you at every stage of your journey, ensuring a smooth travel experience."
+      }
+    ],
+    "linkLabel": "Explore all services",
+    "linkHref": "/service"
+  },
+  "ABOUT.reasons": {
+    "eyebrow": "Why Soul Paradise",
+    "title": "Why Choose Soul Paradise?",
+    "items": [
+      {
+        "icon": "Tag",
+        "title": "Best Price Guarantee",
+        "body": "We compare multiple airlines and routes to ensure you always get the most competitive rates for your journey."
+      },
+      {
+        "icon": "BadgeCheck",
+        "title": "IATA Certified",
+        "body": "Our IATA accreditation ensures you're working with a globally recognized and trusted travel service provider."
+      },
+      {
+        "icon": "Users",
+        "title": "Expert Team",
+        "body": "Our highly experienced staff, especially in visa processing, brings years of expertise to help you with every detail."
+      },
+      {
+        "icon": "Heart",
+        "title": "Personalized Service",
+        "body": "Every client's budget and preferences matter to us. We tailor our services to create your perfect travel experience."
+      }
+    ]
+  },
+  "ABOUT.commitment": {
+    "icon": "Sparkles",
+    "title": "Our Commitment to You",
+    "text": "At Soul Paradise, we don't just book tickets - we create experiences. Our commitment to service, quality, and operational excellence sets the benchmark for travel services in India. We continually innovate to bring you the best in tourism and hospitality, ensuring every journey with us is prompt, efficient, and memorable.",
+    "stats": [
+      {
+        "value": "100%",
+        "label": "Customer Satisfaction",
+        "accent": "blue"
+      },
+      {
+        "value": "24/7",
+        "label": "Support Available",
+        "accent": "green"
+      },
+      {
+        "value": "IATA",
+        "label": "Certified Agency",
+        "accent": "orange"
+      }
+    ]
+  },
+  "ABOUT.plan_holiday_cta": {},
+  "SERVICES.hero": {
+    "crumb": "Our Services",
+    "title": "Everything your trip needs, in one place",
+    "description": "Discover our comprehensive range of travel services designed to make your journey seamless, affordable, and memorable. From flight bookings to visa assistance, we've got you covered.",
+    "image": null,
+    "imagePosition": "center",
+    "metaTitle": "Our Services - Soul Paradise Travels",
+    "metaDescription": "Explore our travel services including international & domestic flights, holiday packages, hotels, visa & insurance"
+  },
+  "SERVICES.services": {
+    "bookLabel": "Search & book",
+    "enquiryLabel": "Get a quote on WhatsApp",
+    "items": [
+      {
+        "icon": "Globe2",
+        "accent": "blue",
+        "title": "International Air Tickets",
+        "body": "Competitive fares on international flights to destinations worldwide. We compare routes across multiple airlines to find you the best deals for your global travel.",
+        "tab": "flights"
+      },
+      {
+        "icon": "Plane",
+        "accent": "green",
+        "title": "Domestic Air Tickets",
+        "body": "Affordable domestic flight bookings across India. Get instant confirmations and the most competitive prices for all major Indian airlines.",
+        "tab": "flights"
+      },
+      {
+        "icon": "Palmtree",
+        "accent": "orange",
+        "title": "Holiday Packages",
+        "body": "Carefully curated holiday packages designed to suit every budget and preference, from adventure trips to relaxing getaways and family vacations.",
+        "enquiry": "Hi Soul Paradise, I'd like a quote for a holiday package."
+      },
+      {
+        "icon": "Building2",
+        "accent": "teal",
+        "title": "Hotel Booking",
+        "body": "Access to a wide range of accommodations worldwide, from budget-friendly options to luxury stays, tailored to your needs and preferences.",
+        "tab": "hotel"
+      },
+      {
+        "icon": "FileText",
+        "accent": "purple",
+        "title": "Tourist Visa",
+        "body": "Expert guidance for various tourist visas, handled by our highly experienced and skilled staff dedicated exclusively to visa processing.",
+        "enquiry": "Hi Soul Paradise, I need help with a tourist visa."
+      },
+      {
+        "icon": "ShieldCheck",
+        "accent": "pink",
+        "title": "Travel Insurance",
+        "body": "Comprehensive travel insurance solutions to ensure peace of mind throughout your journey, covering unforeseen circumstances and emergencies.",
+        "tab": "insurance"
+      }
+    ]
+  },
+  "SERVICES.steps": {
+    "eyebrow": "How It Works",
+    "title": "From idea to itinerary in three steps",
+    "items": [
+      {
+        "icon": "Search",
+        "title": "Tell us your plan",
+        "body": "Search flights, hotels or insurance right here, or message us about a package or visa."
+      },
+      {
+        "icon": "BadgeCheck",
+        "title": "We find the best option",
+        "body": "We compare airlines, routes and stays to match your budget and preferences."
+      },
+      {
+        "icon": "Headphones",
+        "title": "Travel with support",
+        "body": "Our team is on call around the clock, before, during and after your trip."
+      }
+    ]
+  },
+  "SERVICES.plan_holiday_cta": {},
+  "CONTACT.hero": {
+    "crumb": "Contact Us",
+    "title": "Let's plan your next journey",
+    "description": "We're here to help you plan your perfect journey. Reach out to us through any of the channels below, and our team will be happy to assist you.",
+    "image": null,
+    "imagePosition": "center 65%",
+    "metaTitle": "Contact Us - Soul Paradise Travels",
+    "metaDescription": "Get in touch with Soul Paradise Travels. Contact us via phone, WhatsApp, email, or visit our office in Jalandhar, Punjab for all your travel needs."
+  },
+  "CONTACT.channels": {
+    "items": [
+      {
+        "kind": "phone",
+        "accent": "blue",
+        "title": "Call Us",
+        "caption": "Mobile & office",
+        "action": "Call now"
+      },
+      {
+        "kind": "whatsapp",
+        "accent": "green",
+        "title": "WhatsApp",
+        "caption": "Quick replies · Available 24/7",
+        "action": "Start chat",
+        "lines": [
+          "Chat with us"
+        ]
+      },
+      {
+        "kind": "email",
+        "accent": "orange",
+        "title": "Email Us",
+        "caption": "We reply within 24 hours",
+        "action": "Send email"
+      },
+      {
+        "kind": "office",
+        "accent": "purple",
+        "title": "Visit Our Office",
+        "caption": "Walk-in anytime",
+        "action": "Get directions"
+      }
+    ]
+  },
+  "CONTACT.form": {
+    "eyebrow": "Write to us",
+    "title": "Send Us a Message",
+    "subtitle": "Fill out the form below and we'll get back to you within 24 hours",
+    "subjects": [
+      "Flight Booking",
+      "Tour Package",
+      "Visa Assistance",
+      "Hotel Booking",
+      "Travel Insurance",
+      "General Inquiry",
+      "Other"
+    ],
+    "submitLabel": "Send Message"
+  },
+  "CONTACT.hours": {
+    "title": "Office Hours",
+    "openLabel": "Open now",
+    "closedLabel": "Closed now",
+    "todayLabel": "Today",
+    "timezoneNote": "All times are Indian Standard Time (IST)."
+  },
+  "CONTACT.urgent": {
+    "title": "Need Urgent Assistance?",
+    "text": "For urgent travel queries outside office hours, please contact us via WhatsApp or call our mobile number.",
+    "whatsappLabel": "WhatsApp Now",
+    "callLabel": "Call Now"
+  },
+  "CONTACT.map": {
+    "eyebrow": "Find Us on Map",
+    "directionsNote": "Located in the heart of Jalandhar, easily accessible from major areas. Free parking available nearby.",
+    "buttonLabel": "Get directions",
+    "mapTitle": "Soul Paradise Office Location"
+  },
+  "HALL_OF_FAME.hero": {
+    "crumb": "Hall of Fame",
+    "title": "Real trips. Real travellers. Real smiles.",
+    "description": "Celebrating our valued customers and their unforgettable travel experiences. Browse through memories captured during amazing journeys with Soul Paradise.",
+    "image": null,
+    "imagePosition": "center 55%",
+    "metaTitle": "Hall of Fame - Soul Paradise Travels",
+    "metaDescription": "Celebrating our valued customers and their unforgettable travel experiences. Browse through memories captured during amazing journeys with Soul Paradise across Dubai, Kerala, Rajasthan, Northeast India, and more destinations."
+  },
+  "HALL_OF_FAME.stats": {
+    "items": [
+      {
+        "icon": "Smile",
+        "value": "1000+",
+        "label": "Happy Customers",
+        "accent": "blue"
+      },
+      {
+        "icon": "Globe2",
+        "value": "50+",
+        "label": "Destinations Covered",
+        "accent": "green"
+      },
+      {
+        "icon": "Trophy",
+        "value": "95%",
+        "label": "Success Rate",
+        "accent": "orange"
+      },
+      {
+        "icon": "Headphones",
+        "value": "24/7",
+        "label": "Customer Support",
+        "accent": "purple"
+      }
+    ]
+  },
+  "HALL_OF_FAME.gallery": {
+    "eyebrow": "Travel Gallery",
+    "title": "Moments from the road",
+    "subtitle": "Moments captured from our customers' amazing journeys across beautiful destinations",
+    "allLabel": "All",
+    "emptyText": "No photos to show yet."
+  },
+  "HALL_OF_FAME.testimonials": {
+    "eyebrow": "Testimonials",
+    "title": "What Our Customers Say",
+    "subtitle": "Don't just take our word for it. Here's what our satisfied customers have to say about their travel experiences with Soul Paradise.",
+    "emptyText": "No testimonials available at the moment."
+  },
+  "HALL_OF_FAME.plan_holiday_cta": {}
+}

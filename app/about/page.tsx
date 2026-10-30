@@ -1,272 +1,257 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
+import { PageHero, SectionHeading, IconTile, GRADIENTS } from '@/components/Page';
+import { PlanHolidayCta } from '@/components/Home';
+import {
+  CmsIcon,
+  HeroSpacer,
+  RichText,
+  getSiteContent,
+  hasImage,
+  heroMetadata,
+  iconForName,
+  orderedKeys,
+  type AboutSections,
+} from '@/lib/site-content';
 
-export const metadata: Metadata = {
-  title: 'About Us - Soul Paradise Travels',
-  description: 'Learn about Soul Paradise Travels - Your trusted IATA-accredited travel partner founded by Mr. Sanjay Srivastava and Mrs. Shafali Srivastava in Jalandhar, Punjab',
-};
+// Copy, photos and section visibility come from the admin panel (Site Content → About).
+export async function generateMetadata(): Promise<Metadata> {
+  const { sections } = await getSiteContent('about');
+  return heroMetadata(sections.hero, 'about');
+}
 
-export default function AboutPage() {
+/** Sections below the hero, in admin order. */
+const BODY_KEYS = ['story', 'iata', 'services', 'reasons', 'commitment', 'plan_holiday_cta'] as const;
+
+export default async function AboutPage() {
+  const { sections, order, global } = await getSiteContent('about');
+  const { hero, story, iata } = sections;
+  const keys = orderedKeys(order, BODY_KEYS);
+  // Story and IATA share the band that overlaps the hero; they render there
+  // together, at the position of whichever of the two comes first.
+  const introAt = keys.findIndex((k) => k === 'story' || k === 'iata');
+
   return (
     <main className="min-h-screen bg-(--color-background)">
-      {/* Our Story Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12 md:pt-28 md:pb-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
-          <div>
-              <div className="flex items-center mb-6">
-                <div className="w-16 h-1 bg-(--color-links) mr-4 rounded-xl"></div>
-                <h2 className="text-3xl sm:text-4xl font-bold text-(--color-foreground)">
-                  Our Story
-                </h2>
-              </div>
-            <div className="space-y-4 text-(--color-inactive) leading-relaxed text-base">
-              <p>
-                Soul Paradise is a proud initiative founded by <span className="font-semibold text-(--color-foreground)">Mr. Sanjay Srivastava</span> and <span className="font-semibold text-(--color-foreground)">Mrs. Shafali Srivastava</span>, driven by a passion for making travel accessible, affordable, and memorable for everyone.
-              </p>
-              <p>
-                What started as a vision to provide exceptional travel services has grown into a trusted name in the industry. We believe that every journey should be more than just a destination - it should be an experience that enriches your life.
-              </p>
-              <p>
-                Based in <span className="font-semibold text-(--color-foreground)">Jalandhar, Punjab</span>, we've built our reputation on three pillars: competitive pricing, personalized service, and unwavering commitment to quality.
-              </p>
-            </div>
-          </div>
-          <div className="bg-(--color-peace) p-6 sm:p-8 rounded-lg shadow-lg">
-            <div className="flex items-center justify-center mb-6">
-              <Image
-                src="/iata_logo.png"
-                alt="IATA Accredited"
-                width={150}
-                height={150}
-                className="object-contain"
-              />
-            </div>
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-(--color-foreground) mb-2">
-                IATA Accredited
-              </h3>
-              <p className="text-(--color-inactive) mb-4">
-                Certified by the International Air Transport Association
-              </p>
-              <div className="bg-(--color-background) p-4 rounded-lg">
-                <p className="text-sm text-(--color-inactive)">
-                  <span className="font-semibold text-(--color-foreground)">IATA Code:</span> 14009881
-                </p>
-                <p className="text-sm text-(--color-inactive)">
-                  <span className="font-semibold text-(--color-foreground)">Accreditation Type:</span> GoLite
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {hero ? (
+        <PageHero
+          crumb={hero.crumb}
+          title={hero.title}
+          description={hero.description}
+          image={hero.image}
+          imagePosition={hero.imagePosition}
+        />
+      ) : (
+        <HeroSpacer />
+      )}
 
-      {/* What We Do Section */}
-      <section className="bg-(--color-peace) py-12 md:py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-(--color-foreground) text-center mb-8 md:mb-12">
-            What We Do
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {/* Service 1 */}
-            <div className="bg-(--color-background) p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-(--color-links) rounded-full flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-(--color-peace)" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-(--color-foreground) mb-3">
-                Flight Ticketing
-              </h3>
-              <p className="text-(--color-inactive)">
-                We search and compare routes across multiple airlines to find you the most competitive fares for both international and domestic travel.
-              </p>
-            </div>
-
-            {/* Service 2 */}
-            <div className="bg-(--color-background) p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-(--color-success) rounded-full flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-(--color-peace)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-(--color-foreground) mb-3">
-                Tour Packages
-              </h3>
-              <p className="text-(--color-inactive)">
-                Curated holiday packages designed to suit every budget and preference, from adventure trips to relaxing getaways.
-              </p>
-            </div>
-
-            {/* Service 3 */}
-            <div className="bg-(--color-background) p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-(--color-warn) rounded-full flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-(--color-peace)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-(--color-foreground) mb-3">
-                Visa Assistance
-              </h3>
-              <p className="text-(--color-inactive)">
-                Expert guidance for various tourist visas, handled by our highly experienced and skilled staff dedicated exclusively to visa processing.
-              </p>
-            </div>
-
-            {/* Service 4 */}
-            <div className="bg-(--color-background) p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-(--color-secondary-button) rounded-full flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-(--color-peace)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-(--color-foreground) mb-3">
-                Travel Insurance
-              </h3>
-              <p className="text-(--color-inactive)">
-                Comprehensive travel insurance solutions to ensure peace of mind throughout your journey, covering unforeseen circumstances.
-              </p>
-            </div>
-
-            {/* Service 5 */}
-            <div className="bg-(--color-background) p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-(--color-primary-button) rounded-full flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-(--color-peace)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-(--color-foreground) mb-3">
-                Hotel Bookings
-              </h3>
-              <p className="text-(--color-inactive)">
-                Access to a wide range of accommodations worldwide, from budget-friendly options to luxury stays, tailored to your needs.
-              </p>
-            </div>
-
-            {/* Service 6 */}
-            <div className="bg-(--color-background) p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-(--color-danger) rounded-full flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-(--color-peace)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-(--color-foreground) mb-3">
-                24/7 Support
-              </h3>
-              <p className="text-(--color-inactive)">
-                Round-the-clock customer support to assist you at every stage of your journey, ensuring a smooth travel experience.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Why Choose Us Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
-        <h2 className="text-3xl sm:text-4xl font-bold text-(--color-foreground) text-center mb-8 md:mb-12">
-          Why Choose Soul Paradise?
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-          <div className="flex gap-4">
-            <div className="shrink-0">
-              <div className="w-10 h-10 bg-(--color-success) rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-(--color-peace)" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-(--color-foreground) mb-2">
-                Best Price Guarantee
-              </h3>
-              <p className="text-(--color-inactive)">
-                We compare multiple airlines and routes to ensure you always get the most competitive rates for your journey.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="shrink-0">
-              <div className="w-10 h-10 bg-(--color-success) rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-(--color-peace)" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-(--color-foreground) mb-2">
-                IATA Certified
-              </h3>
-              <p className="text-(--color-inactive)">
-                Our IATA accreditation ensures you're working with a globally recognized and trusted travel service provider.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="shrink-0">
-              <div className="w-10 h-10 bg-(--color-success) rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-(--color-peace)" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-(--color-foreground) mb-2">
-                Expert Team
-              </h3>
-              <p className="text-(--color-inactive)">
-                Our highly experienced staff, especially in visa processing, brings years of expertise to help you with every detail.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="shrink-0">
-              <div className="w-10 h-10 bg-(--color-success) rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-(--color-peace)" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-(--color-foreground) mb-2">
-                Personalized Service
-              </h3>
-              <p className="text-(--color-inactive)">
-                Every client's budget and preferences matter to us. We tailor our services to create your perfect travel experience.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Our Commitment Section */}
-      <section className="bg-(--color-peace) py-12 md:py-16">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-6">
-            Our Commitment to You
-          </h2>
-          <p className="text-lg sm:text-xl leading-relaxed mb-8">
-            At Soul Paradise, we don't just book tickets - we create experiences. Our commitment to service, quality, and operational excellence sets the benchmark for travel services in India. We continually innovate to bring you the best in tourism and hospitality, ensuring every journey with us is prompt, efficient, and memorable.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4 md:gap-6 mt-8">
-            <div className="bg-(--color-background) px-6 py-4 rounded-lg min-w-[140px] shadow hover:shadow-md transition-shadow">
-              <p className="text-2xl sm:text-3xl font-bold mb-1">100%</p>
-              <p className="text-xs sm:text-sm">Customer Satisfaction</p>
-            </div>
-            <div className="bg-(--color-background) px-6 py-4 rounded-lg min-w-[140px] shadow hover:shadow-md transition-shadow">
-              <p className="text-2xl sm:text-3xl font-bold mb-1">24/7</p>
-              <p className="text-xs sm:text-sm">Support Available</p>
-            </div>
-            <div className="bg-(--color-background) px-6 py-4 rounded-lg min-w-[140px] shadow hover:shadow-md transition-shadow">
-              <p className="text-2xl sm:text-3xl font-bold mb-1">IATA</p>
-              <p className="text-xs sm:text-sm">Certified Agency</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      {keys.map((key, i) => {
+        if (key === 'story' || key === 'iata') {
+          return i === introAt ? <IntroBand key="intro" story={story} iata={iata} overlap={!!hero && i === 0} /> : null;
+        }
+        if (key === 'services' && sections.services) return <WhatWeDo key={key} content={sections.services} />;
+        if (key === 'reasons' && sections.reasons) return <Reasons key={key} content={sections.reasons} />;
+        if (key === 'commitment' && sections.commitment) return <Commitment key={key} content={sections.commitment} />;
+        if (key === 'plan_holiday_cta') {
+          return <PlanHolidayCta key={key} content={global.plan_holiday_cta} contact={global.contact} />;
+        }
+        return null;
+      })}
     </main>
+  );
+}
+
+function IntroBand({
+  story,
+  iata,
+  overlap,
+}: {
+  story?: AboutSections['story'];
+  iata?: AboutSections['iata'];
+  /** Pull up over the hero photo (only when it directly follows the hero). */
+  overlap: boolean;
+}) {
+  if (!story && !iata) return null;
+  return (
+    <section className={`relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${overlap ? '-mt-16' : 'pt-16'}`}>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        {story && (
+          <div
+            className={`rounded-2xl bg-(--color-peace) p-6 shadow-xl ring-1 ring-(--color-tertiary-button) sm:p-8 ${iata ? 'lg:col-span-3' : 'lg:col-span-5'}`}
+          >
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-(--color-links)">{story.eyebrow}</p>
+            <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-(--color-foreground) sm:text-3xl">{story.title}</h2>
+            <div className="mt-4 space-y-4 text-base leading-relaxed text-(--color-inactive)">
+              {story.paragraphs.map((p, i) => (
+                <p key={i}>
+                  <RichText text={p} />
+                </p>
+              ))}
+            </div>
+
+            {story.founders.length > 0 && (
+              <div className="mt-6 flex flex-wrap gap-3 border-t border-(--color-tertiary-button) pt-6">
+                {story.founders.map((f) => (
+                  <div key={f.name} className="flex items-center gap-3 rounded-xl bg-(--color-background) py-2 pl-2 pr-4">
+                    <span
+                      className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br ${GRADIENTS[f.accent]} text-sm font-bold text-white`}
+                    >
+                      {f.initials}
+                    </span>
+                    <span>
+                      <span className="block text-sm font-bold text-(--color-foreground)">{f.name}</span>
+                      <span className="block text-xs text-(--color-inactive)">{story.founderRole}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {iata && (
+          <div
+            className={`flex flex-col overflow-hidden rounded-2xl bg-(--color-peace) shadow-xl ring-1 ring-(--color-tertiary-button) ${story ? 'lg:col-span-2' : 'lg:col-span-5'}`}
+          >
+            <div className="relative bg-gradient-to-br from-blue-500 to-indigo-600 px-6 pb-14 pt-6 text-white">
+              <span className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-white/10" />
+              <span className="pointer-events-none absolute -bottom-12 left-6 h-24 w-24 rounded-full bg-white/10" />
+              <h3 className="relative text-2xl font-extrabold">{iata.title}</h3>
+              <p className="relative mt-1 text-sm text-white/85">{iata.subtitle}</p>
+            </div>
+            {hasImage(iata.logo) && (
+              <div className="relative -mt-10 flex justify-center">
+                <span className="flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-lg ring-4 ring-(--color-peace)">
+                  <Image src={iata.logo} alt={iata.title} width={56} height={56} className="object-contain" />
+                </span>
+              </div>
+            )}
+            {iata.facts.length > 0 && (
+              <dl className="grid grid-cols-2 gap-3 px-6 pt-5">
+                {iata.facts.map((f) => (
+                  <div key={f.label} className="rounded-xl bg-(--color-background) p-4 text-center">
+                    <dt className="text-[11px] font-bold uppercase tracking-wider text-(--color-inactive)">{f.label}</dt>
+                    <dd className="mt-1 text-lg font-extrabold text-(--color-foreground)">{f.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+
+            {/* A glimpse of real trips, pinned to the bottom of the card */}
+            {iata.collage.some(hasImage) && (
+              <Link href={iata.galleryHref} className="group mt-auto block p-6 pt-5">
+                <span className="mb-2 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-(--color-inactive)">
+                  {iata.galleryLabel}
+                  <span className="inline-flex items-center gap-1 normal-case tracking-normal text-(--color-links)">
+                    {iata.galleryLinkLabel}{' '}
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </span>
+                <span className="grid grid-cols-3 gap-2">
+                  {iata.collage.filter(hasImage).slice(0, 3).map((src) => (
+                    <span key={src} className="relative aspect-square overflow-hidden rounded-lg">
+                      <Image
+                        src={src}
+                        alt=""
+                        fill
+                        sizes="120px"
+                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                    </span>
+                  ))}
+                </span>
+              </Link>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function WhatWeDo({ content }: { content: NonNullable<AboutSections['services']> }) {
+  return (
+    <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-20 lg:px-8">
+      <SectionHeading eyebrow={content.eyebrow} title={content.title} subtitle={content.subtitle} />
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {content.items.map((s) => (
+          <div
+            key={s.title}
+            className="group relative overflow-hidden rounded-2xl bg-(--color-peace) p-6 shadow-sm ring-1 ring-(--color-tertiary-button) transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+          >
+            <IconTile icon={iconForName(s.icon)} accent={s.accent} />
+            <h3 className="mt-4 text-lg font-bold text-(--color-foreground)">{s.title}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-(--color-inactive)">{s.body}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-8 text-center">
+        <Link
+          href={content.linkHref}
+          className="group inline-flex items-center gap-1.5 text-sm font-semibold text-(--color-links) hover:opacity-80"
+        >
+          {content.linkLabel}
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function Reasons({ content }: { content: NonNullable<AboutSections['reasons']> }) {
+  return (
+    <section className="relative overflow-hidden bg-(--color-ink) py-16 md:py-20">
+      <span className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl" />
+      <span className="pointer-events-none absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-orange-500/15 blur-3xl" />
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <SectionHeading eyebrow={content.eyebrow} title={content.title} tone="dark" />
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          {content.items.map(({ icon, title, body }, i) => (
+            <div
+              key={title}
+              className="group flex gap-5 rounded-2xl bg-white/5 p-6 ring-1 ring-inset ring-white/10 backdrop-blur-sm transition hover:bg-white/10"
+            >
+              <span className="text-4xl font-extrabold leading-none text-white/20 transition group-hover:text-sky-300/60">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <div>
+                <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+                  <CmsIcon name={icon} className="h-5 w-5 text-sky-300" />
+                  {title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-white/75">{body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Commitment({ content }: { content: NonNullable<AboutSections['commitment']> }) {
+  return (
+    <section className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 md:py-20 lg:px-8">
+      <CmsIcon name={content.icon} className="mx-auto h-8 w-8 text-(--color-warn)" />
+      <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-(--color-foreground) sm:text-4xl">{content.title}</h2>
+      <p className="mx-auto mt-5 max-w-3xl text-lg leading-relaxed text-(--color-inactive)">{content.text}</p>
+      {content.stats.length > 0 && (
+        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {content.stats.map((stat) => (
+            <div
+              key={stat.label}
+              className="rounded-2xl bg-(--color-peace) p-6 shadow-sm ring-1 ring-(--color-tertiary-button) transition hover:-translate-y-1 hover:shadow-lg"
+            >
+              <p className={`bg-gradient-to-br ${GRADIENTS[stat.accent]} bg-clip-text text-4xl font-extrabold text-transparent`}>
+                {stat.value}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-(--color-inactive)">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

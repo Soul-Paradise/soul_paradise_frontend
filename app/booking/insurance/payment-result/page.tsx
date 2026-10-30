@@ -1,9 +1,9 @@
 'use client';
 
 import { Suspense, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRequireAuth } from '@/contexts/AuthContext';
+import { BookButton, SecondaryButton, StatusCard } from '@/components/Results/ui';
 import { getInsuranceBookingStatus } from '@/lib/insurance-api';
 
 // After a successful payment the backend calls Benzy StartPay, which can take
@@ -13,10 +13,6 @@ const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 120000;
 
 type View = 'issuing' | 'failed_payment' | 'failed_booking' | 'slow';
-
-function Spinner() {
-  return <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-(--color-links)" />;
-}
 
 function ResultContent() {
   useRequireAuth();
@@ -63,82 +59,67 @@ function ResultContent() {
     };
   }, [status, merchantTxnNo, router]);
 
+  if (view === 'issuing') {
+    return (
+      <StatusCard
+        tone="loading"
+        title="Issuing your policy…"
+        message="Payment received. Please keep this page open while the insurer issues your policy. This can take up to two minutes."
+      />
+    );
+  }
+
+  if (view === 'slow') {
+    return (
+      <StatusCard
+        tone="pending"
+        title="Your payment went through"
+        message={
+          <>
+            The insurer is still issuing your policy. It will appear under{' '}
+            <span className="font-semibold text-(--color-foreground)">My Bookings</span> and we&apos;ll email it to
+            you. You can safely leave this page.
+          </>
+        }
+        actions={
+          <>
+            <SecondaryButton href="/orders?tab=insurance">My Bookings</SecondaryButton>
+            <BookButton href="/">Back to home</BookButton>
+          </>
+        }
+      />
+    );
+  }
+
+  if (view === 'failed_payment') {
+    return (
+      <StatusCard
+        tone="error"
+        title="Payment not completed"
+        message={
+          <>
+            Your payment was {status === 'CANCELLED' ? 'cancelled' : 'not successful'}, so no policy was bought and
+            you have not been charged. You can try again.
+          </>
+        }
+        actions={<BookButton href="/?tab=insurance">Search again</BookButton>}
+      />
+    );
+  }
+
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-16">
-      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-        {view === 'issuing' && (
-          <>
-            <Spinner />
-            <h1 className="mt-6 text-xl font-semibold text-gray-900">Issuing your policy…</h1>
-            <p className="mt-2 text-sm text-gray-500">
-              Payment received. Please keep this page open while the insurer issues your policy. This can take up to two
-              minutes.
-            </p>
-          </>
-        )}
-
-        {view === 'slow' && (
-          <>
-            <h1 className="text-xl font-semibold text-gray-900">Your payment went through</h1>
-            <p className="mt-2 text-sm text-gray-600">
-              The insurer is still issuing your policy. It will appear under{' '}
-              <span className="font-medium">My Bookings</span> and we&apos;ll email it to you. You can safely leave this
-              page.
-            </p>
-            <Link
-              href="/orders?tab=insurance"
-              className="mt-6 inline-block rounded-md bg-(--color-links) px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
-            >
-              Go to My Bookings
-            </Link>
-          </>
-        )}
-
-        {view === 'failed_payment' && (
-          <>
-            <h1 className="text-xl font-semibold text-gray-900">Payment not completed</h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Your payment was {status === 'CANCELLED' ? 'cancelled' : 'not successful'}, so no policy was bought and
-              you have not been charged. You can try again.
-            </p>
-            <Link
-              href="/?tab=insurance"
-              className="mt-6 inline-block rounded-md bg-(--color-links) px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
-            >
-              Search again
-            </Link>
-          </>
-        )}
-
-        {view === 'failed_booking' && (
-          <>
-            <h1 className="text-xl font-semibold text-gray-900">We couldn&apos;t issue your policy</h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Your payment was received, but the insurer could not issue the policy. Our team has been notified and
-              will refund you in full. Please contact support if you have any questions.
-            </p>
-            <Link
-              href="/"
-              className="mt-6 inline-block rounded-md bg-(--color-links) px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
-            >
-              Back to home
-            </Link>
-          </>
-        )}
-      </div>
-    </main>
+    <StatusCard
+      tone="error"
+      title="We couldn't issue your policy"
+      message="Your payment was received, but the insurer could not issue the policy. Our team has been notified and will refund you in full. Please contact support if you have any questions."
+      actions={<BookButton href="/">Back to home</BookButton>}
+    />
   );
 }
 
 export default function InsurancePaymentResultPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <Spinner />
-        </div>
-      }
-    >
+    <Suspense fallback={<StatusCard tone="loading" title="Issuing your policy…" message="" />}>
       <ResultContent />
     </Suspense>
   );

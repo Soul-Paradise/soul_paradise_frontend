@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import type { FlightResult } from '@/lib/flights-api';
 import { FlightDetails } from './FlightDetails';
+import { BookButton, RESULT_CARD } from '@/components/Results/ui';
 
 interface FlightCardProps {
   flight: FlightResult;
@@ -85,7 +86,6 @@ export const FlightCard = ({
     const params = new URLSearchParams({
       tui,
       index: flight.index,
-      netFare: String(flight.netFare),
       tripType,
     });
     router.push(`/booking/flights/details?${params.toString()}`);
@@ -112,15 +112,15 @@ export const FlightCard = ({
   return (
     <div
       onClick={selectionMode ? () => onSelect?.(flight) : undefined}
-      className={`bg-white border rounded-lg hover:shadow-md transition-all relative ${
-        selectionMode ? 'cursor-pointer' : ''
-      } ${
-        selected ? 'border-red-500 ring-2 ring-red-500/30 shadow-md' : 'border-gray-200'
+      className={`relative ${selectionMode ? 'cursor-pointer' : ''} ${
+        selected
+          ? 'rounded-2xl border border-(--color-links) bg-white shadow-md ring-2 ring-(--color-links)/25'
+          : RESULT_CARD
       }`}
     >
       {/* Return Special ribbon */}
       {flight.fareType === 'RS' && (
-        <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg tracking-wide z-10">
+        <div className="absolute top-0 right-0 bg-(--color-accent) text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg rounded-tr-2xl tracking-wide z-10">
           RETURN SPECIAL
         </div>
       )}
@@ -134,10 +134,10 @@ export const FlightCard = ({
           {selectionMode && (
             <div
               className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                selected ? 'border-red-500' : 'border-gray-300'
+                selected ? 'border-(--color-links)' : 'border-gray-300'
               }`}
             >
-              {selected && <div className="w-2 h-2 rounded-full bg-red-500" />}
+              {selected && <div className="w-2 h-2 rounded-full bg-(--color-links)" />}
             </div>
           )}
 
@@ -259,23 +259,16 @@ export const FlightCard = ({
           {/* Action button */}
           {!selectionMode && (
             <div className="flex flex-col items-end gap-1 flex-shrink-0">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleBook();
-                }}
-                className="px-4 py-1.5 bg-red-500 text-white text-sm font-bold rounded hover:bg-red-600 transition-colors whitespace-nowrap"
-              >
-                View Fare
-              </button>
+              <span onClick={(e) => e.stopPropagation()}>
+                <BookButton onClick={handleBook}>View Fare</BookButton>
+              </span>
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowDetails(!showDetails);
                 }}
-                className="text-[11px] text-blue-600 hover:underline font-medium"
+                className="text-[11px] text-(--color-links) hover:underline font-medium"
               >
                 + Details
               </button>
@@ -300,7 +293,7 @@ export const FlightCard = ({
                   e.stopPropagation();
                   setShowDetails(!showDetails);
                 }}
-                className="text-blue-500 hover:underline font-medium"
+                className="text-(--color-links) hover:underline font-medium"
               >
                 (More)
               </button>
@@ -319,7 +312,7 @@ export const FlightCard = ({
                   e.stopPropagation();
                   setShowDetails(!showDetails);
                 }}
-                className="text-[11px] text-blue-600 hover:underline font-semibold"
+                className="text-[11px] text-(--color-links) hover:underline font-semibold"
               >
                 {showDetails ? '− Details' : '+ Details'}
               </button>

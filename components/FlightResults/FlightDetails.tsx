@@ -188,7 +188,7 @@ export const FlightDetails = ({ flight, tui }: FlightDetailsProps) => {
           >
             {tab.label}
             {activeTab === tab.key && (
-              <span className="absolute bottom-0 left-0 right-0 h-[3px] bg-red-500 rounded-t" />
+              <span className="absolute bottom-0 left-0 right-0 h-[3px] bg-(--color-links) rounded-t" />
             )}
           </button>
         ))}
@@ -383,7 +383,7 @@ function FlightInfoTab({
         {/* Inclusions + advisories, divided off from the itinerary */}
         <div className="border-t border-gray-100 px-5 py-3 space-y-2">
           <div className="flex items-center gap-1.5 text-xs">
-            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+            <span className="bg-blue-100 text-(--color-secondary-button) px-2 py-0.5 rounded text-[10px] font-bold uppercase">
               Info
             </span>
             <span className="text-gray-500">
@@ -450,7 +450,7 @@ function FareSummaryTab({ flight, tui }: { flight: FlightResult; tui: string }) 
     setLoading(true);
     setError(null);
     try {
-      const res = await getFareRules(tui, flight.index, flight.netFare);
+      const res = await getFareRules(tui, flight.index);
       setRules(res.fareRules);
     } catch (e) {
       setError(
@@ -459,7 +459,7 @@ function FareSummaryTab({ flight, tui }: { flight: FlightResult; tui: string }) 
     } finally {
       setLoading(false);
     }
-  }, [tui, flight.index, flight.netFare]);
+  }, [tui, flight.index]);
 
   useEffect(() => {
     void load();
@@ -587,7 +587,7 @@ function BaggageTab({ flight, tui }: { flight: FlightResult; tui: string }) {
     setLoading(true);
     setError(null);
     try {
-      setData(await getBaggage(tui, flight.index, flight.netFare));
+      setData(await getBaggage(tui, flight.index));
     } catch (e) {
       setError(
         e instanceof Error ? e.message : 'Could not load baggage details.',
@@ -595,7 +595,7 @@ function BaggageTab({ flight, tui }: { flight: FlightResult; tui: string }) {
     } finally {
       setLoading(false);
     }
-  }, [tui, flight.index, flight.netFare]);
+  }, [tui, flight.index]);
 
   useEffect(() => {
     void load();

@@ -17,7 +17,7 @@
 
 /* @theme inline {
   --color-background: [color.zinc.50];
-  --color-foreground: [#313647];
+  --color-foreground: (--color-foreground);
   --font-sans: var(--font-nunito);
   --font-mono: var(--font-geist-mono);
   --font-nunito: var(--font-nunito);
@@ -31,21 +31,57 @@ body {
   font-family: var(--font-nunito), sans-serif;
 } */
 
+/*
+ * "Horizon" colour scheme, taken from the logo (royal blue, sun orange, white).
+ * One job per colour keeps it professional:
+ *   - Brand blue   : every normal action, link, active/selected state, focus ring
+ *   - Sunset orange: only the primary booking actions (Search, Get Quote, Pay Now,
+ *                    choosing a room/plan) - so the most important button is obvious
+ *   - Navy ink     : headings, the footer and dark bands - the structure
+ *   - Neutrals     : backgrounds, cards, borders, secondary text
+ */
 @theme inline {
-  --color-background: #F9FAFC;
-  --color-foreground: #313647;
-  --color-primary-button: #313647;
-  --color-secondary-button: #435663;
-  --color-tertiary-button: #dce3e8;
-  --color-danger: #D34E4E;
-  --color-success: #84994F;
-  --color-warn: #CE7E5A;
+  /* Neutrals */
+  --color-background: #F6F8FB;
   --color-peace: #FFFFFF;
+  --color-tertiary-button: #E2E8F0; /* borders, dividers */
+  --color-foreground: #0E2238;
+  --color-inactive: #5B6B7F;
   --color-death: #000000;
-  --color-active: #313647;
-  --color-inactive: #41474a;
-  --color-links: #1F7AC4;
+
+  /* Brand blue */
+  --color-primary-button: #1D5FD1;
+  --color-secondary-button: #164BA6; /* primary hover / pressed */
+  --color-links: #1D5FD1;
+  --color-active: #1D5FD1;
+  --color-primary-tint: #EAF1FD;
+
+  /* Sunset orange - primary booking actions only */
+  --color-accent-light: #F7931E;
+  --color-accent: #EF5A24;
+  --color-accent-hover: #D94A17;
+
+  /* Navy ink - footer, dark bands */
+  --color-ink: #0E2238;
+  --color-ink-soft: #17324F;
+
+  /* Status */
+  --color-success: #16A36A;
+  --color-warn: #F59E0B;
+  --color-danger: #E5484D;
+
   --font-nunito: var(--font-nunito);
+}
+
+/* One consistent, visible keyboard focus ring for everything interactive. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-links);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--color-primary-tint);
+  color: var(--color-foreground);
 }
 
 body {
@@ -93,4 +129,41 @@ body {
 
 .animate-toast-progress {
   animation: toast-progress 4s linear forwards;
+}
+
+/* Page heroes: content rises in on load. */
+@keyframes fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.6s ease-out both;
+}
+
+/* Slow drift on hero backdrops. */
+@keyframes hero-zoom {
+  0% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-hero-zoom {
+  animation: hero-zoom 1.6s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-hero-zoom {
+    animation: none;
+  }
 }

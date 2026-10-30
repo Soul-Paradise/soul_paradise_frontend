@@ -11,6 +11,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { api, ApiError, type User, type LoginRequest, type RegisterRequest } from '@/lib/api';
+import { rememberLogin } from '@/lib/last-login';
 
 /**
  * Extract a safe ?next= redirect target from the current URL.
@@ -115,6 +116,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         const response = await api.login(credentials);
         setUser(response.user as User);
+        rememberLogin('email', response.user?.email || credentials.email);
 
         // Honor ?next= when present, else home
         router.push(readSafeNext() || '/');
@@ -141,6 +143,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         const response = await api.googleAuth(idToken);
         setUser(response.user as User);
+        rememberLogin('google');
 
         // Honor ?next= when present, else home
         router.push(readSafeNext() || '/');

@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
+  ArrowRight,
   Plane,
   CreditCard,
   Hash,
@@ -14,6 +15,7 @@ import {
   Users,
   Mail,
   XCircle,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   listFlightBookings,
@@ -27,6 +29,8 @@ import {
 import { api, type CustomPayment, type PaymentStatus } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
 import { showToast } from '@/lib/toast';
+import { PageHero, IconTile, type Accent } from '@/components/Page';
+import { useSiteImages } from '@/components/SiteImages';
 
 type TabKey = 'flights' | 'hotels' | 'insurance' | 'payments';
 
@@ -98,20 +102,60 @@ function canCancel(status: string) {
   return normalizeStatus(status) === 'Confirmed';
 }
 
-const TABS: { key: TabKey; label: string; icon: typeof Plane }[] = [
-  { key: 'flights', label: 'Flights', icon: Plane },
-  { key: 'hotels', label: 'Hotels', icon: Hotel },
-  { key: 'insurance', label: 'Insurance', icon: ShieldCheck },
-  { key: 'payments', label: 'Payments', icon: CreditCard },
+// Same accents and home-page tab ids as the booking widget, so each service
+// keeps one colour across the site. `homeTab` powers the empty-state CTA.
+const TABS: {
+  key: TabKey;
+  label: string;
+  icon: LucideIcon;
+  accent: Accent;
+  homeTab: string;
+  cta: string;
+}[] = [
+  { key: 'flights', label: 'Flights', icon: Plane, accent: 'blue', homeTab: 'flights', cta: 'Search flights' },
+  { key: 'hotels', label: 'Hotels', icon: Hotel, accent: 'green', homeTab: 'hotel', cta: 'Find a hotel' },
+  { key: 'insurance', label: 'Insurance', icon: ShieldCheck, accent: 'purple', homeTab: 'insurance', cta: 'Get insured' },
+  { key: 'payments', label: 'Payments', icon: CreditCard, accent: 'orange', homeTab: 'payment', cta: 'Make a payment' },
 ];
+
+const TAB_BY_KEY = Object.fromEntries(TABS.map((t) => [t.key, t])) as Record<
+  TabKey,
+  (typeof TABS)[number]
+>;
+
+function OrdersShell({ children }: { children: React.ReactNode }) {
+  const siteImages = useSiteImages();
+  return (
+    <main className="min-h-screen bg-(--color-background)">
+      <PageHero
+        crumb="My Orders"
+        title="Your trips & payments"
+        description="View your flight, hotel and insurance bookings, custom payments, and manage cancellations."
+        image={siteImages.pageHeroes?.orders}
+        imagePosition="center 60%"
+      />
+      <div className="relative z-10 mx-auto -mt-16 max-w-7xl px-4 pb-16 sm:px-6 md:pb-20 lg:px-8">
+        {children}
+      </div>
+    </main>
+  );
+}
+
+function PanelSpinner() {
+  return (
+    <div className="flex items-center justify-center rounded-2xl bg-(--color-peace) py-20 shadow-xl ring-1 ring-(--color-tertiary-button)">
+      <Loader2 className="h-8 w-8 animate-spin text-(--color-links)" />
+    </div>
+  );
+}
 
 export default function OrdersPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-(--color-foreground)" />
-        </div>
+        <OrdersShell>
+          <PanelSpinner />
+        </OrdersShell>
       }
     >
       <OrdersContent />
@@ -200,9 +244,9 @@ function OrdersContent() {
 
   if (authLoading || !isAuthenticated) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-(--color-foreground)" />
-      </div>
+      <OrdersShell>
+        <PanelSpinner />
+      </OrdersShell>
     );
   }
 
@@ -213,101 +257,111 @@ function OrdersContent() {
     payments: payments.length,
   };
 
+  const tab = TAB_BY_KEY[activeTab];
+  const emptyState = (message: string) => ({ message, tab });
+
   return (
-    <main className="min-h-screen bg-(--color-background) px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold text-(--color-foreground) sm:text-3xl">
-            My Orders
-          </h1>
-          <p className="mt-1 text-sm text-(--color-inactive)">
-            View your flight, hotel and insurance bookings, custom payments,
-            and manage cancellations.
-          </p>
-        </header>
-
-        {/* Tabs */}
-        <div className="mb-6 flex flex-wrap gap-2 border-b border-(--color-tertiary-button)">
-          {TABS.map(({ key, label, icon: Icon }) => {
-            const active = activeTab === key;
-            return (
-              <button
-                key={key}
-                onClick={() => setActiveTab(key)}
-                className={`flex items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-semibold transition ${
-                  active
-                    ? 'bg-(--color-peace) text-(--color-foreground) shadow-[inset_0_-2px_0_0_var(--color-active)]'
-                    : 'text-(--color-inactive) hover:text-(--color-foreground)'
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-                <span className="ml-1 rounded-full bg-(--color-tertiary-button) px-2 py-0.5 text-xs text-(--color-foreground)">
-                  {counts[key]}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-7 w-7 animate-spin text-(--color-foreground)" />
-          </div>
-        ) : error ? (
-          <div className="rounded-lg border border-(--color-tertiary-button) bg-(--color-peace) p-8 text-center">
-            <p className="text-sm text-(--color-danger)">{error}</p>
+    <OrdersShell>
+      {/* Tabs, overlapping the hero */}
+      <div
+        role="tablist"
+        aria-label="Order type"
+        className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+      >
+        {TABS.map(({ key, label, icon, accent }) => {
+          const active = activeTab === key;
+          return (
             <button
-              onClick={() => void loadAll()}
-              className="mt-4 rounded-lg bg-(--color-primary-button) px-4 py-2 text-sm font-semibold text-white"
+              key={key}
+              role="tab"
+              aria-selected={active}
+              onClick={() => setActiveTab(key)}
+              className={`group flex items-center gap-3 rounded-2xl bg-(--color-peace) p-4 text-left shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl sm:p-5 ${
+                active
+                  ? 'ring-2 ring-(--color-links)'
+                  : 'ring-1 ring-(--color-tertiary-button)'
+              }`}
             >
-              Retry
+              <IconTile icon={icon} accent={accent} />
+              <span className="min-w-0">
+                <span
+                  className={`block text-sm font-semibold ${
+                    active ? 'text-(--color-links)' : 'text-(--color-inactive)'
+                  }`}
+                >
+                  {label}
+                </span>
+                <span className="block text-2xl font-extrabold text-(--color-foreground)">
+                  {loading ? '–' : counts[key]}
+                </span>
+              </span>
             </button>
-          </div>
-        ) : (
-          <section>
-            {activeTab === 'flights' && (
-              <BookingList
-                empty="You have no flight bookings yet."
-                items={flights.map((b) => (
-                  <FlightCard key={b.bookingId} booking={b} />
-                ))}
-              />
-            )}
-            {activeTab === 'hotels' && (
-              <BookingList
-                empty="You have no hotel bookings yet."
-                items={hotels.map((b) => (
-                  <HotelCard
-                    key={b.bookingId}
-                    booking={b}
-                    onCancel={() => {
-                      setCancelRemarks('');
-                      setCancelTarget(b);
-                    }}
-                  />
-                ))}
-              />
-            )}
-            {activeTab === 'insurance' && (
-              <BookingList
-                empty="You have no insurance bookings yet."
-                items={insurance.map((b) => (
-                  <InsuranceCard key={b.bookingId} booking={b} />
-                ))}
-              />
-            )}
-            {activeTab === 'payments' && (
-              <BookingList
-                empty="You have not made any custom payments yet."
-                items={payments.map((p) => (
-                  <PaymentCard key={p.merchantTxnNo} payment={p} />
-                ))}
-              />
-            )}
-          </section>
-        )}
+          );
+        })}
       </div>
+
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-(--color-links)">
+        {tab.label}
+      </p>
+      <h2 className="mb-6 mt-2 text-2xl font-extrabold tracking-tight text-(--color-foreground) sm:text-3xl">
+        {activeTab === 'payments' ? 'Custom payments' : `Your ${tab.label.toLowerCase()} bookings`}
+      </h2>
+
+      {loading ? (
+        <PanelSpinner />
+      ) : error ? (
+        <div className="rounded-2xl bg-(--color-peace) p-10 text-center shadow-sm ring-1 ring-(--color-tertiary-button)">
+          <p className="text-sm text-(--color-danger)">{error}</p>
+          <button
+            onClick={() => void loadAll()}
+            className="mt-4 rounded-xl bg-(--color-primary-button) px-5 py-2.5 text-sm font-semibold text-(--color-peace) transition hover:bg-(--color-secondary-button)"
+          >
+            Retry
+          </button>
+        </div>
+      ) : (
+        <section>
+          {activeTab === 'flights' && (
+            <BookingList
+              empty={emptyState('You have no flight bookings yet.')}
+              items={flights.map((b) => (
+                <FlightCard key={b.bookingId} booking={b} />
+              ))}
+            />
+          )}
+          {activeTab === 'hotels' && (
+            <BookingList
+              empty={emptyState('You have no hotel bookings yet.')}
+              items={hotels.map((b) => (
+                <HotelCard
+                  key={b.bookingId}
+                  booking={b}
+                  onCancel={() => {
+                    setCancelRemarks('');
+                    setCancelTarget(b);
+                  }}
+                />
+              ))}
+            />
+          )}
+          {activeTab === 'insurance' && (
+            <BookingList
+              empty={emptyState('You have no insurance bookings yet.')}
+              items={insurance.map((b) => (
+                <InsuranceCard key={b.bookingId} booking={b} />
+              ))}
+            />
+          )}
+          {activeTab === 'payments' && (
+            <BookingList
+              empty={emptyState('You have not made any custom payments yet.')}
+              items={payments.map((p) => (
+                <PaymentCard key={p.merchantTxnNo} payment={p} />
+              ))}
+            />
+          )}
+        </section>
+      )}
 
       {/* Hotel cancellation modal */}
       {cancelTarget && (
@@ -316,7 +370,7 @@ function OrdersContent() {
           onClick={() => !cancelling && setCancelTarget(null)}
         >
           <div
-            className="w-full max-w-md rounded-xl bg-(--color-peace) p-6 shadow-2xl"
+            className="w-full max-w-md rounded-2xl bg-(--color-peace) p-6 shadow-2xl ring-1 ring-(--color-tertiary-button)"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">
@@ -341,7 +395,7 @@ function OrdersContent() {
                 onChange={(e) => setCancelRemarks(e.target.value)}
                 rows={2}
                 placeholder="Reason for cancellation"
-                className="mt-1 w-full resize-none rounded-lg border border-(--color-tertiary-button) bg-(--color-background) px-3 py-2 text-sm text-(--color-foreground) focus:border-(--color-active) focus:outline-none"
+                className="mt-1 w-full resize-none rounded-xl border border-(--color-tertiary-button) bg-(--color-background) px-4 py-3 text-sm text-(--color-foreground) outline-none transition-all focus:border-(--color-links) focus:bg-white focus:ring-4 focus:ring-(--color-links)/15"
               />
             </label>
 
@@ -349,14 +403,14 @@ function OrdersContent() {
               <button
                 onClick={() => setCancelTarget(null)}
                 disabled={cancelling}
-                className="rounded-lg border border-(--color-tertiary-button) px-4 py-2 text-sm font-semibold text-(--color-foreground) disabled:opacity-50"
+                className="rounded-xl border border-(--color-tertiary-button) px-4 py-2.5 text-sm font-semibold text-(--color-foreground) transition hover:bg-(--color-background) disabled:opacity-50"
               >
                 Keep booking
               </button>
               <button
                 onClick={() => void handleConfirmCancel()}
                 disabled={cancelling}
-                className="flex items-center gap-2 rounded-lg bg-(--color-danger) px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                className="flex items-center gap-2 rounded-xl bg-(--color-danger) px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
               >
                 {cancelling && <Loader2 className="h-4 w-4 animate-spin" />}
                 {cancelling ? 'Cancelling…' : 'Confirm cancellation'}
@@ -365,7 +419,7 @@ function OrdersContent() {
           </div>
         </div>
       )}
-    </main>
+    </OrdersShell>
   );
 }
 
@@ -374,23 +428,40 @@ function BookingList({
   empty,
 }: {
   items: React.ReactNode[];
-  empty: string;
+  empty: { message: string; tab: (typeof TABS)[number] };
 }) {
   if (items.length === 0) {
+    const { message, tab } = empty;
     return (
-      <div className="rounded-lg border border-dashed border-(--color-tertiary-button) bg-(--color-peace) p-10 text-center text-sm text-(--color-inactive)">
-        {empty}
+      <div className="group flex flex-col items-center rounded-2xl border border-dashed border-(--color-tertiary-button) bg-(--color-peace) px-6 py-14 text-center">
+        <IconTile icon={tab.icon} accent={tab.accent} size="lg" />
+        <p className="mt-4 text-base font-semibold text-(--color-foreground)">{message}</p>
+        <p className="mt-1 text-sm text-(--color-inactive)">
+          Once you book, it will show up here.
+        </p>
+        <Link
+          href={`/?tab=${tab.homeTab}#booking`}
+          className="group/btn mt-5 inline-flex items-center gap-2 rounded-xl bg-(--color-primary-button) px-5 py-2.5 text-sm font-semibold text-(--color-peace) shadow-lg transition hover:bg-(--color-secondary-button)"
+        >
+          {tab.cta}
+          <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
+        </Link>
       </div>
     );
   }
   return <div className="space-y-4">{items}</div>;
 }
 
-function CardShell({ children }: { children: React.ReactNode }) {
+/** Booking card: service-coloured icon tile on the left, details on the right. */
+function CardShell({ tab, children }: { tab: TabKey; children: React.ReactNode }) {
+  const { icon, accent } = TAB_BY_KEY[tab];
   return (
-    <div className="rounded-lg border border-(--color-tertiary-button) bg-(--color-peace) p-5 shadow-sm transition hover:shadow-md">
-      {children}
-    </div>
+    <article className="group flex gap-4 rounded-2xl bg-(--color-peace) p-5 shadow-sm ring-1 ring-(--color-tertiary-button) transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md sm:p-6">
+      <span className="hidden sm:block">
+        <IconTile icon={icon} accent={accent} />
+      </span>
+      <div className="min-w-0 flex-1">{children}</div>
+    </article>
   );
 }
 
@@ -398,39 +469,52 @@ function MetaRow({
   icon: Icon,
   children,
 }: {
-  icon: typeof Plane;
+  icon: LucideIcon;
   children: React.ReactNode;
 }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-sm text-(--color-inactive)">
-      <Icon className="h-4 w-4" />
+      <Icon className="h-4 w-4 text-(--color-links)" />
       {children}
     </span>
   );
 }
 
 function FlightCard({ booking }: { booking: FlightBookingSummary }) {
+  // Older bookings were saved without a route summary, and the Benzy
+  // transaction id only exists once ticketing succeeds - fall back gracefully.
+  const route =
+    booking.fromCode && booking.toCode
+      ? `${booking.fromCode} → ${booking.toCode}`
+      : 'Flight booking';
+  const reference = booking.pnr
+    ? `PNR ${booking.pnr}`
+    : booking.transactionId
+      ? `Txn ${booking.transactionId}`
+      : `Booking ${booking.bookingId}`;
   return (
-    <CardShell>
+    <CardShell tab="flights">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-bold text-(--color-foreground)">
-              {booking.fromCode} → {booking.toCode}
+            <h3 className="text-lg font-bold text-(--color-foreground)">
+              {route}
             </h3>
             <StatusBadge status={booking.status} />
           </div>
           <p className="mt-1 text-sm text-(--color-inactive)">
-            {booking.airline || 'Flight'} ·{' '}
-            {booking.pnr ? `PNR ${booking.pnr}` : `Txn ${booking.transactionId}`}
+            {booking.airline ? `${booking.airline} · ` : ''}
+            {reference}
           </p>
         </div>
-        <p className="text-base font-bold text-(--color-foreground)">
+        <p className="text-lg font-extrabold text-(--color-foreground)">
           {formatMoney(booking.totalAmount, booking.currency)}
         </p>
       </div>
       <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-        <MetaRow icon={CalendarDays}>{formatDate(booking.departureDate)}</MetaRow>
+        {booking.departureDate && (
+          <MetaRow icon={CalendarDays}>{formatDate(booking.departureDate)}</MetaRow>
+        )}
         <MetaRow icon={Users}>
           {booking.passengerCount} traveller
           {booking.passengerCount === 1 ? '' : 's'}
@@ -452,11 +536,11 @@ function HotelCard({
 }) {
   const cancellable = canCancel(booking.status);
   return (
-    <CardShell>
+    <CardShell tab="hotels">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-bold text-(--color-foreground)">
+            <h3 className="text-lg font-bold text-(--color-foreground)">
               {booking.hotelName || 'Hotel booking'}
             </h3>
             <StatusBadge status={booking.status} />
@@ -467,7 +551,7 @@ function HotelCard({
             </p>
           )}
         </div>
-        <p className="text-base font-bold text-(--color-foreground)">
+        <p className="text-lg font-extrabold text-(--color-foreground)">
           {formatMoney(booking.totalAmount, booking.currency)}
         </p>
       </div>
@@ -486,7 +570,7 @@ function HotelCard({
         <div className="mt-4 flex justify-end border-t border-(--color-tertiary-button) pt-3">
           <button
             onClick={onCancel}
-            className="rounded-lg border border-(--color-danger) px-4 py-2 text-sm font-semibold text-(--color-danger) transition hover:bg-(--color-danger) hover:text-white"
+            className="rounded-xl border border-(--color-danger) px-4 py-2 text-sm font-semibold text-(--color-danger) transition hover:bg-(--color-danger) hover:text-white"
           >
             Cancel booking
           </button>
@@ -498,11 +582,11 @@ function HotelCard({
 
 function InsuranceCard({ booking }: { booking: InsuranceBookingSummary }) {
   return (
-    <CardShell>
+    <CardShell tab="insurance">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-bold text-(--color-foreground)">
+            <h3 className="text-lg font-bold text-(--color-foreground)">
               {booking.policyType || 'Insurance policy'}
             </h3>
             <StatusBadge status={booking.status} />
@@ -513,7 +597,7 @@ function InsuranceCard({ booking }: { booking: InsuranceBookingSummary }) {
               : `Booking ${booking.bookingId}`}
           </p>
         </div>
-        <p className="text-base font-bold text-(--color-foreground)">
+        <p className="text-lg font-extrabold text-(--color-foreground)">
           {formatMoney(booking.totalAmount, booking.currency)}
         </p>
       </div>
@@ -532,9 +616,10 @@ function InsuranceCard({ booking }: { booking: InsuranceBookingSummary }) {
       {booking.transactionId && (
         <Link
           href={`/booking/insurance/confirmation/${encodeURIComponent(booking.transactionId)}`}
-          className="mt-3 inline-block text-sm font-semibold text-(--color-links) hover:underline"
+          className="group/btn mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-(--color-links) hover:opacity-80"
         >
           View policy
+          <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
         </Link>
       )}
     </CardShell>
@@ -565,11 +650,11 @@ function formatDateTime(value: string) {
 function PaymentCard({ payment }: { payment: CustomPayment }) {
   const status = PAYMENT_STATUS[payment.status];
   return (
-    <CardShell>
+    <CardShell tab="payments">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-bold text-(--color-foreground)">
+            <h3 className="text-lg font-bold text-(--color-foreground)">
               Custom payment
             </h3>
             <span
@@ -580,7 +665,7 @@ function PaymentCard({ payment }: { payment: CustomPayment }) {
           </div>
           <p className="mt-1 text-sm text-(--color-inactive)">Via ICICI Bank</p>
         </div>
-        <p className="text-base font-bold text-(--color-foreground)">
+        <p className="text-lg font-extrabold text-(--color-foreground)">
           {new Intl.NumberFormat('en-IN', {
             style: 'currency',
             currency: 'INR',

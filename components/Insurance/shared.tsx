@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import type { InsuranceSearch } from '@/lib/insurance-api';
-import { InsuranceSearchSummary } from '@/components/InsuranceResults/SearchSummary';
+import { AlertTriangle } from 'lucide-react';
+import { ResultsEmpty, ResultsLoader, StepHeader } from '@/components/Results/ui';
 
 export function formatDay(ymd: string | null | undefined): string {
   if (!ymd) return '';
@@ -17,9 +17,15 @@ export function tripDays(start: string, end: string): number {
   return Math.round(ms / 86_400_000) + 1;
 }
 
-/** Header on every insurance step - the same boxed summary as the results page. */
-export function TripSummaryBar({ search, backHref }: { search: InsuranceSearch; title?: string; backHref: string; backLabel?: string }) {
-  return <InsuranceSearchSummary search={search} backHref={backHref} />;
+/** Header on every insurance step - the same step header as flights and hotels. */
+export function TripSummaryBar({ search, title, backHref }: { search: InsuranceSearch; title?: string; backHref: string; backLabel?: string }) {
+  const n = search.travellers.length;
+  const subtitle = [
+    search.countryNames.join(', '),
+    `${formatDay(search.startDate)} - ${formatDay(search.endDate)}`,
+    `${n} traveller${n !== 1 ? 's' : ''}`,
+  ].join(' · ');
+  return <StepHeader title={title || 'Travel Insurance'} subtitle={subtitle} backHref={backHref} />;
 }
 
 /** Insurer logo with a text fallback when the image is missing or broken. */
@@ -46,11 +52,8 @@ export function ProviderLogo({ src, label, size = 'md' }: { src: string; label: 
 
 export function Spinner({ label }: { label: string }) {
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="bg-white rounded-lg p-8 text-center">
-        <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-(--color-links) mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900">{label}</h3>
-      </div>
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <ResultsLoader title={label} rows={2} />
     </div>
   );
 }
@@ -65,19 +68,8 @@ export function ErrorCard({
   actionLabel?: string;
 }) {
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="bg-white rounded-lg p-8 text-center">
-        <svg className="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-        </svg>
-        <p className="text-sm text-gray-500 mb-4">{message}</p>
-        <Link
-          href={actionHref}
-          className="inline-block px-6 py-2 bg-(--color-links) text-white text-sm font-semibold rounded-md hover:opacity-90 transition-opacity"
-        >
-          {actionLabel}
-        </Link>
-      </div>
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <ResultsEmpty icon={AlertTriangle} title="Something went wrong" message={message} action={{ label: actionLabel, href: actionHref }} />
     </div>
   );
 }

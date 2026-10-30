@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
+import { AlertTriangle, Plane, SlidersHorizontal } from 'lucide-react';
+import { ResultsEmpty, ResultsLoader } from '@/components/Results/ui';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useRequireAuth } from '@/contexts/AuthContext';
 import {
@@ -234,9 +236,7 @@ function FlightSearchResults() {
     const params = new URLSearchParams({
       tui: results.tui,
       index: selectedOnward.index,
-      netFare: String(selectedOnward.netFare),
       returnIndex: selectedReturn.index,
-      returnNetFare: String(selectedReturn.netFare),
       tripType,
     });
     router.push(`/booking/flights/details?${params.toString()}`);
@@ -274,7 +274,7 @@ function FlightSearchResults() {
   );
 
   return (
-    <main className="min-h-screen bg-gray-100">
+    <main className="min-h-screen bg-(--color-background)">
       {/* Search Header */}
       <SearchSummary
         from={from}
@@ -291,60 +291,29 @@ function FlightSearchResults() {
 
       {/* Loading State */}
       {loading && (
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="bg-white rounded-lg p-8 text-center mb-4">
-            <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-(--color-links) mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Searching flights...
-            </h3>
-            <p className="text-sm text-gray-500">
-              This may take up to 30 seconds as we search across multiple
-              airlines for the best fares.
-            </p>
-          </div>
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="bg-white border border-gray-200 rounded-lg p-5 mb-3 animate-pulse"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-gray-200 rounded" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-1/3" />
-                  <div className="h-3 bg-gray-200 rounded w-1/4" />
-                </div>
-                <div className="space-y-2 text-right">
-                  <div className="h-5 bg-gray-200 rounded w-20 ml-auto" />
-                  <div className="h-8 bg-gray-200 rounded w-16 ml-auto" />
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+          <ResultsLoader
+            title="Searching flights..."
+            subtitle="This may take up to 30 seconds as we search across multiple airlines for the best fares."
+          />
         </div>
       )}
 
       {/* Error State */}
       {!loading && error && (
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="bg-white rounded-lg p-8 text-center">
-            <svg className="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Search Failed</h3>
-            <p className="text-sm text-gray-500 mb-4">{error}</p>
-            <button
-              onClick={doSearch}
-              className="px-6 py-2 bg-(--color-links) text-white text-sm font-semibold rounded-md hover:opacity-90 transition-opacity"
-            >
-              Try Again
-            </button>
-          </div>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+          <ResultsEmpty
+            icon={AlertTriangle}
+            title="Search Failed"
+            message={error}
+            action={{ label: 'Try Again', onClick: doSearch }}
+          />
         </div>
       )}
 
       {/* Results */}
       {!loading && !error && results && (
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
           {/* Notices */}
           {showNotices && results.notices?.length > 0 && (
             <div className="mb-4">
@@ -359,7 +328,7 @@ function FlightSearchResults() {
             <div className="flex gap-5">
               {/* Filter Sidebar - Desktop */}
               <div className="hidden lg:block w-[280px] flex-shrink-0">
-                <div className="sticky top-[85px] max-h-[calc(100vh-100px)] overflow-y-auto pr-1">
+                <div className="sticky top-36 max-h-[calc(100vh-160px)] overflow-y-auto pr-1 scrollbar-hide">
                   <FilterSidebar
                     flights={results.flights}
                     filterState={filterState}
@@ -378,7 +347,7 @@ function FlightSearchResults() {
                     className="absolute inset-0 bg-black/40"
                     onClick={() => setShowMobileFilters(false)}
                   />
-                  <div className="relative w-[300px] max-w-[85vw] bg-gray-50 overflow-y-auto">
+                  <div className="relative w-[300px] max-w-[85vw] bg-(--color-background) overflow-y-auto">
                     <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between z-10">
                       <h2 className="text-base font-bold text-gray-900">Filters</h2>
                       <button
@@ -503,14 +472,14 @@ function FlightSearchResults() {
                   <button
                     type="button"
                     onClick={() => setShowMobileFilters(true)}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-white border border-(--color-tertiary-button) rounded-full text-sm font-semibold text-(--color-foreground) hover:border-(--color-links) hover:text-(--color-links)"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                     </svg>
                     Filters
                     {hasActiveFilters && (
-                      <span className="w-2 h-2 bg-blue-500 rounded-full" />
+                      <span className="w-2 h-2 bg-(--color-links) rounded-full" />
                     )}
                   </button>
                 </div>
@@ -520,8 +489,8 @@ function FlightSearchResults() {
                   filteredFlights.length > 0 || filteredReturnFlights.length > 0 ? (
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                       <div>
-                        <div className="sticky top-[85px] z-10 bg-gray-100 pb-2 mb-2">
-                          <div className="bg-white border border-gray-200 rounded-md px-3 py-2 flex items-center justify-between">
+                        <div className="sticky top-36 z-10 bg-(--color-background) pb-2 mb-2">
+                          <div className="bg-white border border-(--color-tertiary-button) rounded-xl px-4 py-2.5 flex items-center justify-between">
                             <div className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
                               Onward · {fromName || from} → {toName || to}
                             </div>
@@ -546,14 +515,14 @@ function FlightSearchResults() {
                             ))}
                           </div>
                         ) : (
-                          <div className="bg-white rounded-lg p-6 text-center text-sm text-gray-500">
+                          <div className="rounded-2xl border border-(--color-tertiary-button) bg-white p-6 text-center text-sm text-(--color-inactive)">
                             No onward flights match your filters.
                           </div>
                         )}
                       </div>
                       <div>
-                        <div className="sticky top-[85px] z-10 bg-gray-100 pb-2 mb-2">
-                          <div className="bg-white border border-gray-200 rounded-md px-3 py-2 flex items-center justify-between">
+                        <div className="sticky top-36 z-10 bg-(--color-background) pb-2 mb-2">
+                          <div className="bg-white border border-(--color-tertiary-button) rounded-xl px-4 py-2.5 flex items-center justify-between">
                             <div className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
                               Return · {toName || to} → {fromName || from}
                             </div>
@@ -578,26 +547,19 @@ function FlightSearchResults() {
                             ))}
                           </div>
                         ) : (
-                          <div className="bg-white rounded-lg p-6 text-center text-sm text-gray-500">
+                          <div className="rounded-2xl border border-(--color-tertiary-button) bg-white p-6 text-center text-sm text-(--color-inactive)">
                             No return flights match your filters.
                           </div>
                         )}
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-white rounded-lg p-8 text-center">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        No flights match your filters
-                      </h3>
-                      {hasActiveFilters && (
-                        <button
-                          onClick={clearFilters}
-                          className="text-sm font-medium text-blue-600 hover:underline"
-                        >
-                          Clear all filters
-                        </button>
-                      )}
-                    </div>
+                    <ResultsEmpty
+                      icon={SlidersHorizontal}
+                      title="No flights match your filters"
+                      message="Try adjusting your filters to see more results."
+                      action={hasActiveFilters ? { label: 'Clear all filters', onClick: clearFilters } : undefined}
+                    />
                   )
                 ) : filteredFlights.length > 0 ? (
                   <div className="space-y-3">
@@ -612,38 +574,22 @@ function FlightSearchResults() {
                     ))}
                   </div>
                 ) : (
-                  <div className="bg-white rounded-lg p-8 text-center">
-                    <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      No flights match your filters
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-3">
-                      Try adjusting your filters to see more results.
-                    </p>
-                    {hasActiveFilters && (
-                      <button
-                        onClick={clearFilters}
-                        className="text-sm font-medium text-blue-600 hover:underline"
-                      >
-                        Clear all filters
-                      </button>
-                    )}
-                  </div>
+                  <ResultsEmpty
+                    icon={SlidersHorizontal}
+                    title="No flights match your filters"
+                    message="Try adjusting your filters to see more results."
+                    action={hasActiveFilters ? { label: 'Clear all filters', onClick: clearFilters } : undefined}
+                  />
                 )}
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-lg p-8 text-center">
-              <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No flights found</h3>
-              <p className="text-sm text-gray-500">
-                Try different dates or airports for more results.
-              </p>
-            </div>
+            <ResultsEmpty
+              icon={Plane}
+              title="No flights found"
+              message="Try different dates or airports for more results."
+              action={{ label: 'Modify search', href: '/?tab=flights#booking' }}
+            />
           )}
         </div>
       )}
@@ -666,10 +612,9 @@ export default function FlightSearchPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-(--color-links) mb-4" />
-            <p className="text-gray-500">Loading search...</p>
+        <div className="min-h-screen bg-(--color-background)">
+          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <ResultsLoader title="Loading search..." subtitle="Getting your search ready." rows={2} />
           </div>
         </div>
       }

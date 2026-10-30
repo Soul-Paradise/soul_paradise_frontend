@@ -6,11 +6,12 @@ import type {
   FareBreakdownItem,
   PromoValidationResult,
 } from '@/lib/flights-api';
+import { BookButton } from '@/components/Results/ui';
 import { PromoCodeSection } from './PromoCodeSection';
 
 interface BookingSummaryProps {
   fareBreakdown: FareBreakdownItem[];
-  totalFare: { net: number; gross: number; currency: string };
+  totalFare: { gross: number; currency: string };
   passengerCounts: { adults: number; children: number; infants: number };
   selectedSSR: SSRSelection[];
   allSSROptions: SSROption[];
@@ -104,10 +105,10 @@ export const BookingSummary = ({
   const grandTotal = fareLinesTotal + ssrTotal - promoDiscount;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden sticky top-4">
+    <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm overflow-hidden sticky top-4">
       {/* Fare Details Header */}
       <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+        <h2 className="text-base font-bold text-(--color-foreground)">
           Fare Details
         </h2>
         <span className="text-xs text-(--color-links) font-medium">
@@ -173,23 +174,15 @@ export const BookingSummary = ({
         {/* Confirm & Pay button - only on last step */}
         {currentStep === totalSteps - 1 && (
           <>
-            <button
-              type="button"
-              onClick={onSubmit}
-              disabled={isSubmitting}
-              className="w-full mt-3 px-6 py-3 bg-(--color-links) text-white text-sm font-semibold rounded-md hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Processing...
-                </span>
-              ) : (
-                `Confirm & Pay ${formatCurrency(grandTotal, totalFare.currency)}`
-              )}
-            </button>
+            <div className="mt-3">
+              <BookButton onClick={onSubmit} disabled={isSubmitting} block>
+                {isSubmitting
+                  ? 'Processing...'
+                  : `Confirm & Pay ${formatCurrency(grandTotal, totalFare.currency)}`}
+              </BookButton>
+            </div>
 
-            <p className="text-[10px] text-gray-400 text-center">
+            <p className="text-[10px] text-(--color-inactive) text-center">
               By clicking Confirm & Pay, you agree to the fare rules and terms of service.
             </p>
           </>

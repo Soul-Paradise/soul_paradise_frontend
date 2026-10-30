@@ -96,7 +96,7 @@ export const PromoCodeSection = ({
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between text-sm font-semibold text-gray-900 uppercase tracking-wide"
+        className="w-full flex items-center justify-between text-base font-bold text-(--color-foreground)"
       >
         <span>Promo Code</span>
         <svg

@@ -1,6 +1,7 @@
 'use client';
 
 import type { FlightResult } from '@/lib/flights-api';
+import { BookButton } from '@/components/Results/ui';
 
 interface SelectionBarProps {
   selectedOnward: FlightResult | null;
@@ -53,12 +54,12 @@ interface PaneProps {
 const FlightPane = ({ flight, label, currency }: PaneProps) => {
   const pillColor =
     label === 'Onward'
-      ? 'bg-orange-400 text-white'
-      : 'bg-violet-500 text-white';
+      ? 'bg-(--color-primary-button) text-white'
+      : 'bg-(--color-ink) text-white';
 
   if (!flight) {
     return (
-      <div className="relative flex-1 min-w-0 border border-dashed border-gray-300 rounded-lg px-4 py-4 bg-white">
+      <div className="relative flex-1 min-w-0 border border-dashed border-slate-300 rounded-xl px-4 py-4 bg-white">
         <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10">
           <span
             className={`${pillColor} text-[10px] font-bold uppercase tracking-wide px-3 py-0.5 rounded-full inline-flex items-center gap-1 shadow-sm`}
@@ -84,7 +85,7 @@ const FlightPane = ({ flight, label, currency }: PaneProps) => {
   const airline = flight.airlineName.split('|')[0];
 
   return (
-    <div className="relative flex-1 min-w-0 border border-gray-200 rounded-lg px-4 py-3 bg-white">
+    <div className="relative flex-1 min-w-0 border border-(--color-tertiary-button) rounded-xl px-4 py-3 bg-white">
       {/* Pill */}
       <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10">
         <span
@@ -98,7 +99,7 @@ const FlightPane = ({ flight, label, currency }: PaneProps) => {
       <div className="flex items-center gap-3 min-w-0">
         {/* Airline */}
         <div className="flex flex-col min-w-0 flex-shrink-0 max-w-[140px]">
-          <div className="text-sm font-semibold text-gray-900 truncate leading-tight">
+          <div className="text-sm font-semibold text-(--color-foreground) truncate leading-tight">
             {airline}
           </div>
           <div className="text-[11px] text-gray-400 leading-tight truncate">
@@ -108,7 +109,7 @@ const FlightPane = ({ flight, label, currency }: PaneProps) => {
 
         {/* Departure */}
         <div className="flex flex-col items-start flex-shrink-0">
-          <div className="text-base font-bold text-gray-900 leading-tight">
+          <div className="text-base font-bold text-(--color-foreground) leading-tight">
             {formatTime(flight.departureTime)}
           </div>
           <div className="text-[11px] text-gray-500 leading-tight truncate max-w-[110px]">
@@ -133,7 +134,7 @@ const FlightPane = ({ flight, label, currency }: PaneProps) => {
 
         {/* Arrival */}
         <div className="flex flex-col items-start flex-shrink-0">
-          <div className="text-base font-bold text-gray-900 leading-tight">
+          <div className="text-base font-bold text-(--color-foreground) leading-tight">
             {formatTime(flight.arrivalTime)}
           </div>
           <div className="text-[11px] text-gray-500 leading-tight truncate max-w-[110px]">
@@ -143,7 +144,7 @@ const FlightPane = ({ flight, label, currency }: PaneProps) => {
 
         {/* Price */}
         <div className="text-right flex-shrink-0">
-          <div className="text-base font-bold text-gray-900 leading-tight">
+          <div className="text-base font-bold text-(--color-foreground) leading-tight">
             {formatCurrency(flight.grossFare, currency)}
           </div>
         </div>
@@ -163,8 +164,8 @@ export const SelectionBar = ({
   const canBook = !!selectedOnward && !!selectedReturn;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-(--color-tertiary-button) shadow-[0_-8px_24px_rgba(14,34,56,0.08)]">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3 min-w-0">
           <FlightPane flight={selectedOnward} label="Onward" currency={currency} />
           <FlightPane flight={selectedReturn} label="Return" currency={currency} />
@@ -174,24 +175,19 @@ export const SelectionBar = ({
             <div className="text-[10px] uppercase tracking-wide text-gray-400 leading-tight">
               Total
             </div>
-            <div className="text-xl font-bold text-gray-900 leading-tight">
+            <div className="text-xl font-bold text-(--color-foreground) leading-tight">
               {canBook ? formatCurrency(total, currency) : '-'}
             </div>
           </div>
           <div className="flex flex-col items-center gap-1">
-            <button
-              type="button"
-              onClick={onBook}
-              disabled={!canBook}
-              className="px-6 py-2.5 bg-red-500 text-white text-sm font-bold rounded hover:bg-red-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
-            >
+            <BookButton onClick={onBook} disabled={!canBook}>
               Book Now
-            </button>
+            </BookButton>
             <button
               type="button"
               disabled={!canBook}
               onClick={onBook}
-              className="text-[11px] text-blue-600 hover:underline font-medium disabled:text-gray-300 disabled:no-underline disabled:cursor-not-allowed"
+              className="text-[11px] text-(--color-links) hover:underline font-medium disabled:text-gray-300 disabled:no-underline disabled:cursor-not-allowed"
             >
               Flight Details
             </button>

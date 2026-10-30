@@ -1,7 +1,6 @@
 'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Check, ChevronDown, ChevronUp, FileText, HeartPulse, Sparkles } from 'lucide-react';
 import { useRequireAuth } from '@/contexts/AuthContext';
@@ -15,6 +14,7 @@ import {
   type InsurancePlan,
 } from '@/lib/insurance-api';
 import { ErrorCard, ProviderLogo, Spinner, TripSummaryBar } from '@/components/Insurance/shared';
+import { BookButton } from '@/components/Results/ui';
 
 const BENEFITS_PREVIEW = 8;
 
@@ -58,12 +58,12 @@ function PlanDetails() {
   ];
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-28">
+    <main className="min-h-screen bg-(--color-background) pb-28">
       <TripSummaryBar search={search} title={plan.planName} backHref={resultsHref} backLabel="Back to plans" />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 space-y-5">
         {/* Plan header */}
-        <section className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
+        <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-start gap-5 sm:justify-between">
             <div className="flex items-start gap-4 min-w-0">
               <ProviderLogo src={plan.providerLogo} label={plan.providerLabel} size="lg" />
@@ -108,8 +108,8 @@ function PlanDetails() {
 
         {/* Highlights */}
         {(plan.specialHighlights.length > 0 || plan.highlights.length > 0) && (
-          <section className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
-            <h3 className="text-base font-semibold text-gray-900 mb-4">Highlights</h3>
+          <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5 sm:p-6">
+            <h3 className="text-base font-bold text-(--color-foreground) mb-4">Highlights</h3>
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {plan.specialHighlights.map((h, i) => (
                 <li key={`s${i}`} className="flex items-start gap-2 text-sm text-amber-900 bg-amber-50 rounded-lg px-3 py-2">
@@ -129,8 +129,8 @@ function PlanDetails() {
 
         {/* Benefits */}
         {plan.benefits.length > 0 && (
-          <section className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
-            <h3 className="text-base font-semibold text-gray-900 mb-4">What&apos;s covered</h3>
+          <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5 sm:p-6">
+            <h3 className="text-base font-bold text-(--color-foreground) mb-4">What&apos;s covered</h3>
             <div className="overflow-x-auto -mx-5 sm:mx-0 px-5 sm:px-0">
               <table className="w-full text-sm min-w-[480px]">
                 <thead>
@@ -173,7 +173,7 @@ function PlanDetails() {
 
         {/* Health declaration + notes + documents */}
         {(plan.questions.length > 0 || plan.notes.length > 0 || documents.length > 0) && (
-          <section className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-5">
+          <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5 sm:p-6 space-y-5">
             {plan.questions.length > 0 && (
               <div className="flex items-start gap-3 rounded-lg bg-blue-50 px-4 py-3">
                 <HeartPulse className="w-5 h-5 text-(--color-links) shrink-0 mt-0.5" />
@@ -210,18 +210,13 @@ function PlanDetails() {
       </div>
 
       {/* Sticky footer */}
-      <div className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 z-20">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+      <div className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur border-t border-(--color-tertiary-button) shadow-[0_-8px_24px_rgba(14,34,56,0.08)] z-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
           <div>
             <p className="text-xl font-bold text-gray-900">{formatInr(plan.price)}</p>
             <p className="text-xs text-gray-500">Total, all-inclusive</p>
           </div>
-          <Link
-            href={bookHref}
-            className="px-6 py-2.5 bg-(--color-links) text-white text-sm font-semibold rounded-md hover:opacity-90"
-          >
-            Continue
-          </Link>
+          <BookButton href={bookHref}>Continue</BookButton>
         </div>
       </div>
     </main>
