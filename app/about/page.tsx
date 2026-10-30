@@ -26,8 +26,11 @@ export async function generateMetadata(): Promise<Metadata> {
 const BODY_KEYS = ['story', 'iata', 'services', 'reasons', 'commitment', 'plan_holiday_cta'] as const;
 
 export default async function AboutPage() {
-  const { sections, order, global } = await getSiteContent('about');
+  const { sections, order, global, gallery } = await getSiteContent('about');
   const { hero, story, iata } = sections;
+  // Photos picked for the collage win; with none picked, show the latest trips from the gallery.
+  const picked = iata?.collage.filter(hasImage) ?? [];
+  const collage = (picked.length ? picked : (gallery ?? []).map((g) => g.url)).slice(0, 4);
   const keys = orderedKeys(order, BODY_KEYS);
   // Story and IATA share the band that overlaps the hero; they render there
   // together, at the position of whichever of the two comes first.
@@ -49,7 +52,9 @@ export default async function AboutPage() {
 
       {keys.map((key, i) => {
         if (key === 'story' || key === 'iata') {
-          return i === introAt ? <IntroBand key="intro" story={story} iata={iata} overlap={!!hero && i === 0} /> : null;
+          return i === introAt ? (
+            <IntroBand key="intro" story={story} iata={iata} collage={collage} overlap={!!hero && i === 0} />
+          ) : null;
         }
         if (key === 'services' && sections.services) return <WhatWeDo key={key} content={sections.services} />;
         if (key === 'reasons' && sections.reasons) return <Reasons key={key} content={sections.reasons} />;
@@ -66,10 +71,13 @@ export default async function AboutPage() {
 function IntroBand({
   story,
   iata,
+  collage,
   overlap,
 }: {
   story?: AboutSections['story'];
   iata?: AboutSections['iata'];
+  /** Up to four trip photos for the IATA card. */
+  collage: string[];
   /** Pull up over the hero photo (only when it directly follows the hero). */
   overlap: boolean;
 }) {
@@ -140,8 +148,8 @@ function IntroBand({
             )}
 
             {/* A glimpse of real trips, pinned to the bottom of the card */}
-            {iata.collage.some(hasImage) && (
-              <Link href={iata.galleryHref} className="group mt-auto block p-6 pt-5">
+            {collage.length > 0 && (
+              <Link href={iata.galleryHref} className="group flex flex-1 flex-col p-6 pt-5">
                 <span className="mb-2 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-(--color-inactive)">
                   {iata.galleryLabel}
                   <span className="inline-flex items-center gap-1 normal-case tracking-normal text-(--color-links)">
@@ -149,14 +157,22 @@ function IntroBand({
                     <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                   </span>
                 </span>
-                <span className="grid grid-cols-3 gap-2">
-                  {iata.collage.filter(hasImage).slice(0, 3).map((src) => (
-                    <span key={src} className="relative aspect-square overflow-hidden rounded-lg">
+                {/* Mosaic that grows to fill the card: one large photo, the rest stacked beside it */}
+                <span
+                  className={`grid min-h-56 flex-1 gap-2 ${collage.length > 1 ? 'grid-cols-3' : 'grid-cols-1'}`}
+                  style={{ gridTemplateRows: `repeat(${Math.max(collage.length - 1, 1)}, minmax(0, 1fr))` }}
+                >
+                  {collage.map((src, i) => (
+                    <span
+                      key={src}
+                      className={`relative overflow-hidden rounded-lg ${i === 0 && collage.length > 1 ? 'col-span-2' : ''}`}
+                      style={i === 0 ? { gridRow: '1 / -1' } : undefined}
+                    >
                       <Image
                         src={src}
                         alt=""
                         fill
-                        sizes="120px"
+                        sizes={i === 0 ? '(min-width: 1024px) 280px, 66vw' : '(min-width: 1024px) 140px, 33vw'}
                         className="object-cover transition-transform duration-500 group-hover:scale-110"
                       />
                     </span>
