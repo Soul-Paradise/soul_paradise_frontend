@@ -6,8 +6,19 @@ import type { jsPDF } from 'jspdf';
 import { authHeaders } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
 import { formatDeadline } from '@/components/HotelResults/FreeCancellationBadge';
-import { AlertTriangle } from 'lucide-react';
-import { BookButton, ResultsEmpty, ResultsLoader, StepHeader, StepState } from '@/components/Results/ui';
+import { AlertTriangle, Download } from 'lucide-react';
+import {
+  BookButton,
+  ConfirmationHero,
+  ConfirmationPage,
+  ConfirmationRow,
+  ConfirmationSection,
+  ResultsEmpty,
+  ResultsLoader,
+  SecondaryButton,
+  StepHeader,
+  StepState,
+} from '@/components/Results/ui';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -690,7 +701,7 @@ function HotelBookPageInner() {
 
           {/* Traveller Details */}
           <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5">
-            <h2 className="font-bold text-slate-800 mb-1">Traveller Details</h2>
+            <h2 className="text-base font-bold text-(--color-foreground) mb-1">Traveller Details</h2>
 
 
             <div className="space-y-4">
@@ -771,7 +782,7 @@ function HotelBookPageInner() {
           {/* Contact information */}
           <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm overflow-hidden">
             <div className="px-5 pt-5 pb-3 border-b border-gray-200">
-              <h2 className="text-sm font-bold text-slate-800 tracking-wider uppercase">Contact Information</h2>
+              <h2 className="text-base font-bold text-(--color-foreground)">Contact Information</h2>
             </div>
 
             <div className="p-5 space-y-5">
@@ -846,11 +857,11 @@ function HotelBookPageInner() {
 
           {/* Essential Information */}
           <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5">
-            <h2 className="font-bold text-slate-800 mb-4">Essential Information</h2>
+            <h2 className="text-base font-bold text-(--color-foreground) mb-4">Essential Information</h2>
 
             {pricing.boardBasis && (
               <div className="mb-4">
-                <p className="text-sm font-bold text-(--color-foreground) mb-1">INCLUSIONS</p>
+                <p className="text-sm font-bold text-(--color-foreground) mb-1">Inclusions</p>
                 <p className="text-sm text-slate-700">Room {1}</p>
                 <p className="text-xs text-gray-600 mt-1">{pricing.boardBasis}</p>
               </div>
@@ -881,7 +892,7 @@ function HotelBookPageInner() {
 
             {checkInInstructions.length > 0 && (
               <div className="mb-4">
-                <p className="text-sm font-semibold text-slate-800 mb-1">HOTEL POLICY</p>
+                <p className="text-sm font-bold text-(--color-foreground) mb-1">Hotel Policy</p>
                 <ul className="list-disc pl-5 text-xs text-gray-700 space-y-1 marker:text-gray-400">
                   {checkInInstructions.map((note, i) => (
                     <li key={i}>{note}</li>
@@ -892,7 +903,7 @@ function HotelBookPageInner() {
 
             {checkInSpecial.length > 0 && (
               <div>
-                <p className="text-sm font-semibold text-slate-800 mb-1">CHECKIN SPECIAL INSTRUCTIONS</p>
+                <p className="text-sm font-bold text-(--color-foreground) mb-1">Check-in Instructions</p>
                 <ul className="list-disc pl-5 text-xs text-gray-700 space-y-1 marker:text-gray-400">
                   {checkInSpecial.map((note, i) => (
                     <li key={i}>{note}</li>
@@ -975,18 +986,18 @@ function HotelBookPageInner() {
 
 // ── Booking Confirmation (Voucher) ──
 
-function statusTone(status: string): { bg: string; text: string; label: string } {
+function statusTone(status: string): { tone: 'success' | 'pending' | 'error'; label: string } {
   const s = (status || '').toUpperCase();
   if (s === 'B0' || s === 'BO0' || s === 'CONFIRMED' || s.includes('SUCCESS')) {
-    return { bg: 'bg-green-100', text: 'text-green-700', label: 'Confirmed' };
+    return { tone: 'success', label: 'Confirmed' };
   }
   if (s === 'B1' || s === 'BO1' || s.includes('FAIL')) {
-    return { bg: 'bg-red-100', text: 'text-red-700', label: 'Failed' };
+    return { tone: 'error', label: 'Failed' };
   }
   if (s.includes('PEND') || s.includes('PROGRESS')) {
-    return { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Pending' };
+    return { tone: 'pending', label: 'Pending' };
   }
-  return { bg: 'bg-slate-100', text: 'text-slate-700', label: status || 'Booked' };
+  return { tone: 'success', label: status || 'Booked' };
 }
 
 function formatLongDate(iso: string): string {
@@ -1293,214 +1304,148 @@ function BookingConfirmation({ voucher, onDone }: { voucher: BookingVoucher; onD
     .filter(Boolean)
     .join(', ');
   const totalGuests = voucher.rooms.reduce((s, r) => s + r.guests.length, 0);
+  const stars = Math.min(5, Number(voucher.hotel.starRating) || 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-gray-50 py-8 px-4">
-      <div className="max-w-3xl mx-auto">
-        {/* Success banner */}
-        <div className="text-center mb-6">
-          <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${tone.bg} mb-3`}>
-            <svg className={`w-8 h-8 ${tone.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900">Booking {tone.label}</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            {voucher.contactInfo.email && (
-              <>A confirmation has been sent to <span className="font-medium">{voucher.contactInfo.email}</span></>
+    <ConfirmationPage
+      actions={
+        <>
+          <SecondaryButton href="/orders?tab=hotels">My Bookings</SecondaryButton>
+          <BookButton onClick={onDone}>Back to home</BookButton>
+        </>
+      }
+    >
+      <ConfirmationHero
+        tone={tone.tone}
+        title={`Booking ${tone.label}`}
+        subtitle={
+          voucher.contactInfo.email && (
+            <>A confirmation has been sent to <span className="font-semibold text-(--color-foreground)">{voucher.contactInfo.email}</span></>
+          )
+        }
+        refs={[
+          { label: 'Booking ID', value: voucher.bookingId },
+          { label: 'Confirmation', value: voucher.confirmationId || '-' },
+          { label: 'Total paid', value: fmt(voucher.totalAmount, voucher.currency) },
+        ]}
+      >
+        <SecondaryButton onClick={handleDownload} disabled={downloading} icon={Download}>
+          {downloading ? 'Preparing PDF...' : 'Download Voucher (PDF)'}
+        </SecondaryButton>
+      </ConfirmationHero>
+      {downloadError && <p className="text-xs text-(--color-danger) text-center">{downloadError}</p>}
+
+      <ConfirmationSection title="Your stay">
+        <div className="flex items-start gap-4">
+          {voucher.hotel.heroImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={voucher.hotel.heroImage}
+              alt={voucher.hotel.name}
+              className="w-24 h-24 rounded-xl object-cover shrink-0"
+            />
+          ) : (
+            <div className="w-24 h-24 rounded-xl bg-(--color-background) shrink-0" />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-lg font-bold text-(--color-foreground)">{voucher.hotel.name || 'Hotel'}</h3>
+              {stars > 0 && <Stars count={stars} />}
+            </div>
+            {addressLine && <p className="text-xs text-(--color-inactive) mt-1">{addressLine}</p>}
+            {voucher.hotel.phone && (
+              <p className="text-xs text-(--color-inactive) mt-0.5">Phone: {voucher.hotel.phone}</p>
             )}
-          </p>
+          </div>
         </div>
 
-        {/* Voucher card */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-          {/* Header strip */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-5 flex items-start justify-between">
-            <div>
-              <p className="text-[10px] tracking-widest opacity-80">BOOKING ID</p>
-              <p className="font-mono text-lg font-bold">{voucher.bookingId}</p>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          {[
+            { label: 'Check-in', date: voucher.checkInDate, time: voucher.checkInTime && `After ${voucher.checkInTime}` },
+            { label: 'Check-out', date: voucher.checkOutDate, time: voucher.checkOutTime && `Before ${voucher.checkOutTime}` },
+          ].map(({ label, date, time }) => (
+            <div key={label} className="rounded-xl border border-(--color-tertiary-button) bg-(--color-background) p-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-(--color-inactive)">{label}</p>
+              <p className="text-sm font-bold text-(--color-foreground) mt-1">{formatLongDate(date)}</p>
+              {time && <p className="text-xs text-(--color-inactive) mt-0.5">{time}</p>}
             </div>
-            <div className="text-right">
-              <p className="text-[10px] tracking-widest opacity-80">CONFIRMATION</p>
-              <p className="font-mono text-lg font-bold">{voucher.confirmationId || '-'}</p>
-            </div>
-          </div>
+          ))}
+        </div>
+        <p className="text-xs text-(--color-inactive) mt-3">
+          <span className="font-bold text-(--color-foreground)">
+            {voucher.nights} night{voucher.nights === 1 ? '' : 's'}
+          </span>{' '}
+          • {voucher.rooms.length} room{voucher.rooms.length === 1 ? '' : 's'} • {totalGuests} guest
+          {totalGuests === 1 ? '' : 's'}
+        </p>
+      </ConfirmationSection>
 
-          {/* Hotel + Stay */}
-          <div className="p-6 border-b border-gray-100">
-            <div className="flex items-start gap-4">
-              {voucher.hotel.heroImage ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={voucher.hotel.heroImage}
-                  alt={voucher.hotel.name}
-                  className="w-24 h-24 rounded-lg object-cover shrink-0"
-                />
-              ) : (
-                <div className="w-24 h-24 rounded-lg bg-gray-100 shrink-0" />
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-lg font-bold text-slate-900">{voucher.hotel.name || 'Hotel'}</h2>
-                  {Number(voucher.hotel.starRating) > 0 && <Stars count={Number(voucher.hotel.starRating)} />}
+      <ConfirmationSection title="Rooms & Guests">
+        <div className="space-y-3">
+          {voucher.rooms.map((room, idx) => (
+            <div key={idx} className="rounded-xl border border-(--color-tertiary-button) bg-(--color-background) p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm font-bold text-(--color-foreground)">
+                    Room {idx + 1}: {room.name || 'Room'}
+                  </p>
+                  {room.capacity && (
+                    <p className="text-xs text-(--color-inactive) mt-0.5">
+                      {room.adults} Adult{room.adults === '1' ? '' : 's'}
+                      {Number(room.children) > 0 ? ` • ${room.children} Child` : ''}
+                    </p>
+                  )}
                 </div>
-                {addressLine && <p className="text-xs text-gray-600 mt-1">{addressLine}</p>}
-                {voucher.hotel.phone && (
-                  <p className="text-xs text-gray-500 mt-0.5">Phone: {voucher.hotel.phone}</p>
+                {room.supplierConfirmationNumber && (
+                  <span className="text-xs font-bold text-(--color-links) bg-(--color-primary-tint) rounded-full px-2.5 py-1 whitespace-nowrap">
+                    {room.supplierConfirmationNumber}
+                  </span>
                 )}
               </div>
-            </div>
-
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-gray-500 tracking-widest">CHECK-IN</p>
-                <p className="text-sm font-bold text-slate-800 mt-1">{formatLongDate(voucher.checkInDate)}</p>
-                {voucher.checkInTime && <p className="text-xs text-gray-600 mt-0.5">After {voucher.checkInTime}</p>}
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-gray-500 tracking-widest">CHECK-OUT</p>
-                <p className="text-sm font-bold text-slate-800 mt-1">{formatLongDate(voucher.checkOutDate)}</p>
-                {voucher.checkOutTime && <p className="text-xs text-gray-600 mt-0.5">Before {voucher.checkOutTime}</p>}
-              </div>
-            </div>
-            <p className="text-xs text-gray-600 mt-3">
-              <span className="font-semibold text-slate-700">
-                {voucher.nights} night{voucher.nights === 1 ? '' : 's'}
-              </span>{' '}
-              • {voucher.rooms.length} room{voucher.rooms.length === 1 ? '' : 's'} • {totalGuests} guest
-              {totalGuests === 1 ? '' : 's'}
-            </p>
-          </div>
-
-          {/* Rooms + Guests */}
-          <div className="p-6 border-b border-gray-100">
-            <h3 className="text-sm font-bold text-slate-800 tracking-wide mb-3">Rooms & Guests</h3>
-            <div className="space-y-3">
-              {voucher.rooms.map((room, idx) => (
-                <div key={idx} className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800">
-                        Room {idx + 1}: {room.name || 'Room'}
-                      </p>
-                      {room.capacity && (
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {room.adults} Adult{room.adults === '1' ? '' : 's'}
-                          {Number(room.children) > 0 ? ` • ${room.children} Child` : ''}
-                        </p>
-                      )}
-                    </div>
-                    {room.supplierConfirmationNumber && (
-                      <span className="text-[10px] bg-blue-50 text-(--color-secondary-button) font-mono px-2 py-1 rounded whitespace-nowrap">
-                        {room.supplierConfirmationNumber}
-                      </span>
+              <ul className="mt-2 space-y-1">
+                {room.guests.map((g, gIdx) => (
+                  <li key={gIdx} className="text-sm font-semibold text-(--color-foreground)">
+                    {g.title} {g.firstName} {g.lastName}
+                    {g.paxType === 'C' && g.age && (
+                      <span className="font-normal text-(--color-inactive)"> (age {g.age})</span>
                     )}
-                  </div>
-                  <ul className="mt-2 space-y-1">
-                    {room.guests.map((g, gIdx) => (
-                      <li key={gIdx} className="text-xs text-gray-700">
-                        <span className="text-gray-400">•</span>{' '}
-                        <span className="font-medium text-slate-800">
-                          {g.title} {g.firstName} {g.lastName}
-                        </span>
-                        {g.paxType === 'C' && g.age && (
-                          <span className="text-gray-500"> (age {g.age})</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
-
-          {/* Contact */}
-          <div className="p-6 border-b border-gray-100">
-            <h3 className="text-sm font-bold text-slate-800 tracking-wide mb-3">Contact</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-xs text-gray-500">Guest</p>
-                <p className="font-medium text-slate-800">
-                  {primaryGuest
-                    ? `${primaryGuest.title} ${primaryGuest.firstName} ${primaryGuest.lastName}`
-                    : `${voucher.contactInfo.firstName} ${voucher.contactInfo.lastName}`}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Mobile</p>
-                <p className="font-medium text-slate-800">{voucher.contactInfo.mobile || '-'}</p>
-              </div>
-              <div className="sm:col-span-2">
-                <p className="text-xs text-gray-500">Email</p>
-                <p className="font-medium text-slate-800 break-all">{voucher.contactInfo.email || '-'}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Fare */}
-          <div className="p-6">
-            <h3 className="text-sm font-bold text-slate-800 tracking-wide mb-3">Payment</h3>
-            <dl className="text-sm space-y-1.5">
-              <div className="flex justify-between text-gray-600">
-                <dt>Gross Fare</dt>
-                <dd>{fmt(voucher.grossAmount, voucher.currency)}</dd>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <dt>Net Fare</dt>
-                <dd>{fmt(voucher.netAmount, voucher.currency)}</dd>
-              </div>
-              <div className="flex justify-between pt-2 mt-2 border-t border-gray-200 font-bold text-slate-900">
-                <dt>Total Paid</dt>
-                <dd>{fmt(voucher.totalAmount, voucher.currency)}</dd>
-              </div>
-              {voucher.paymentStatus && (
-                <div className="flex justify-between text-xs text-gray-500 pt-1">
-                  <dt>Payment Status</dt>
-                  <dd>{voucher.paymentStatus}</dd>
-                </div>
-              )}
-              <div className="flex justify-between text-xs text-gray-500">
-                <dt>Transaction</dt>
-                <dd className="font-mono">{voucher.transactionId}</dd>
-              </div>
-            </dl>
-          </div>
+          ))}
         </div>
+      </ConfirmationSection>
 
-        {/* Actions */}
-        <div className="mt-5 flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={handleDownload}
-            disabled={downloading}
-            className="flex-1 flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 text-white font-semibold py-3 rounded-lg transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
-              />
-            </svg>
-            {downloading ? 'Preparing PDF...' : 'Download Voucher (PDF)'}
-          </button>
-          <button
-            onClick={onDone}
-            className="flex-1 bg-(--color-links) hover:bg-(--color-secondary-button) text-white font-semibold py-3 rounded-lg transition-colors"
-          >
-            Done
-          </button>
-        </div>
+      <ConfirmationSection title="Contact">
+        <dl>
+          <ConfirmationRow
+            label="Guest"
+            value={
+              primaryGuest
+                ? `${primaryGuest.title} ${primaryGuest.firstName} ${primaryGuest.lastName}`
+                : `${voucher.contactInfo.firstName} ${voucher.contactInfo.lastName}`
+            }
+          />
+          <ConfirmationRow label="Mobile" value={voucher.contactInfo.mobile || '-'} />
+          <ConfirmationRow label="Email" value={voucher.contactInfo.email || '-'} />
+        </dl>
+      </ConfirmationSection>
 
-        {downloadError && (
-          <p className="mt-3 text-xs text-red-600 text-center">{downloadError}</p>
-        )}
+      <ConfirmationSection title="Payment">
+        <dl>
+          <ConfirmationRow label="Gross Fare" value={fmt(voucher.grossAmount, voucher.currency)} />
+          <ConfirmationRow label="Net Fare" value={fmt(voucher.netAmount, voucher.currency)} />
+          <ConfirmationRow label="Payment Status" value={voucher.paymentStatus} />
+          <ConfirmationRow label="Transaction" value={voucher.transactionId} />
+          <ConfirmationRow label="Total Paid" value={fmt(voucher.totalAmount, voucher.currency)} strong />
+        </dl>
+      </ConfirmationSection>
 
-        <p className="text-xs text-gray-500 text-center mt-4">
-          Present this voucher along with a valid ID at check-in.
-        </p>
-      </div>
-    </div>
+      <p className="text-xs text-(--color-inactive) text-center">
+        Present this voucher along with a valid ID at check-in.
+      </p>
+    </ConfirmationPage>
   );
 }
 

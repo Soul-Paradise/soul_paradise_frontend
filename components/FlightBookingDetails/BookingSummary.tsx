@@ -6,6 +6,7 @@ import type {
   FareBreakdownItem,
   PromoValidationResult,
 } from '@/lib/flights-api';
+import { BookButton } from '@/components/Results/ui';
 import { PromoCodeSection } from './PromoCodeSection';
 
 interface BookingSummaryProps {
@@ -173,23 +174,15 @@ export const BookingSummary = ({
         {/* Confirm & Pay button - only on last step */}
         {currentStep === totalSteps - 1 && (
           <>
-            <button
-              type="button"
-              onClick={onSubmit}
-              disabled={isSubmitting}
-              className="w-full mt-3 px-6 py-3 bg-(--color-links) text-white text-sm font-semibold rounded-md hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Processing...
-                </span>
-              ) : (
-                `Confirm & Pay ${formatCurrency(grandTotal, totalFare.currency)}`
-              )}
-            </button>
+            <div className="mt-3">
+              <BookButton onClick={onSubmit} disabled={isSubmitting} block>
+                {isSubmitting
+                  ? 'Processing...'
+                  : `Confirm & Pay ${formatCurrency(grandTotal, totalFare.currency)}`}
+              </BookButton>
+            </div>
 
-            <p className="text-[10px] text-gray-400 text-center">
+            <p className="text-[10px] text-(--color-inactive) text-center">
               By clicking Confirm & Pay, you agree to the fare rules and terms of service.
             </p>
           </>

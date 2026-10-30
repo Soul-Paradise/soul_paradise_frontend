@@ -5,10 +5,13 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
+  ArrowRight,
   BadgeCheck,
   Briefcase,
   CalendarDays,
-  ChevronRight,
+  Clock,
+  CreditCard,
+  Headphones,
   KeyRound,
   Loader2,
   LogOut,
@@ -18,6 +21,7 @@ import {
   Receipt,
   ShieldCheck,
   User as UserIcon,
+  type LucideIcon,
 } from 'lucide-react';
 import { api, type AgentVerificationStatus, type UserProfile } from '@/lib/api';
 import { useAuth, useRequireAuth } from '@/contexts/AuthContext';
@@ -30,6 +34,7 @@ import {
 } from '@/lib/validations/auth';
 import FormInput from '@/components/FormInput';
 import { Avatar } from '@/components/Navbar/UserMenu';
+import { PageHero, IconTile, type Accent } from '@/components/Page';
 
 function formatDate(value: string | null | undefined) {
   if (!value) return '-';
@@ -67,10 +72,10 @@ const AGENT_STATUS: Record<AgentVerificationStatus, { label: string; cls: string
 };
 
 const primaryButtonClass =
-  'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed bg-(--color-primary-button) text-(--color-peace) hover:bg-(--color-secondary-button) disabled:bg-(--color-inactive)';
+  'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed bg-(--color-primary-button) text-(--color-peace) hover:bg-(--color-secondary-button) disabled:bg-(--color-inactive)';
 
 const secondaryButtonClass =
-  'inline-flex items-center justify-center rounded-lg border border-(--color-tertiary-button) px-4 py-2.5 text-sm font-semibold text-(--color-foreground) transition hover:bg-(--color-background) disabled:cursor-not-allowed disabled:opacity-60';
+  'inline-flex items-center justify-center rounded-xl border border-(--color-tertiary-button) px-4 py-2.5 text-sm font-semibold text-(--color-foreground) transition hover:bg-(--color-background) disabled:cursor-not-allowed disabled:opacity-60';
 
 export default function ProfilePage() {
   const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
@@ -119,16 +124,18 @@ export default function ProfilePage() {
 
   if (authLoading || !isAuthenticated || (!profile && !loadError)) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-(--color-foreground)" />
-      </div>
+      <ProfileShell>
+        <div className="flex items-center justify-center rounded-2xl bg-(--color-peace) py-20 shadow-xl ring-1 ring-(--color-tertiary-button)">
+          <Loader2 className="h-8 w-8 animate-spin text-(--color-links)" />
+        </div>
+      </ProfileShell>
     );
   }
 
   if (!profile) {
     return (
-      <main className="min-h-screen bg-(--color-background) px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-md rounded-lg border border-(--color-tertiary-button) bg-(--color-peace) p-6 text-center shadow-sm">
+      <ProfileShell>
+        <div className="mx-auto max-w-md rounded-2xl bg-(--color-peace) p-8 text-center shadow-xl ring-1 ring-(--color-tertiary-button)">
           <p className="text-base font-semibold text-(--color-foreground)">
             We couldn&apos;t load your profile
           </p>
@@ -143,7 +150,7 @@ export default function ProfilePage() {
             Try again
           </button>
         </div>
-      </main>
+      </ProfileShell>
     );
   }
 
@@ -156,24 +163,23 @@ export default function ProfilePage() {
       : 'Google sign-in'
     : 'Email & password';
 
-  return (
-    <main className="min-h-screen bg-(--color-background) px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold text-(--color-foreground) sm:text-3xl">
-            My Profile
-          </h1>
-          <p className="mt-1 text-sm text-(--color-inactive)">
-            Manage your account details and security settings.
-          </p>
-        </header>
+  const firstName = profile.name.trim().split(/\s+/)[0];
 
-        {/* Identity */}
-        <section className="mb-6 rounded-lg border border-(--color-tertiary-button) bg-(--color-peace) p-6 shadow-sm">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-            <Avatar src={profile.profilePicture} name={profile.name} size="xl" />
+  return (
+    <ProfileShell firstName={firstName}>
+      {/* Identity, overlapping the hero */}
+      <section className="relative mb-6 overflow-hidden rounded-2xl bg-(--color-peace) p-6 shadow-xl ring-1 ring-(--color-tertiary-button) sm:p-8">
+        <span className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-(--color-links)/5" />
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center">
+          <div className="flex min-w-0 flex-1 flex-col gap-5 sm:flex-row sm:items-center">
+            <span className="inline-flex w-fit rounded-full bg-(--color-peace) p-1 shadow-md ring-1 ring-(--color-tertiary-button)">
+              <Avatar src={profile.profilePicture} name={profile.name} size="xl" />
+            </span>
             <div className="min-w-0 flex-1">
-              <h2 className="flex items-center gap-1.5 text-xl font-bold text-(--color-foreground)">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-(--color-links)">
+                Your account
+              </p>
+              <h2 className="mt-1 flex items-center gap-1.5 text-2xl font-extrabold tracking-tight text-(--color-foreground)">
                 <span className="truncate">{profile.name}</span>
                 {profile.emailVerified && (
                   <span title="Verified email" className="inline-flex shrink-0">
@@ -194,102 +200,120 @@ export default function ProfilePage() {
                 <Badge>{signInMethods}</Badge>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:text-right">
-              <span className="text-(--color-inactive)">Member since</span>
-              <span className="font-semibold text-(--color-foreground)">
-                {formatDate(profile.createdAt)}
-              </span>
-              <span className="text-(--color-inactive)">Last sign-in</span>
-              <span className="font-semibold text-(--color-foreground)">
-                {formatDate(profile.lastLoginAt)}
-              </span>
-            </div>
           </div>
-        </section>
-
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="space-y-6 lg:col-span-2">
-            <PersonalDetailsCard
-              profile={profile}
-              onSaved={(updated) => {
-                setProfile(updated);
-                // Keep the navbar's name/initials in sync
-                checkAuth();
-              }}
-            />
-
-            {profile.agentProfile && <AgencyCard agency={profile.agentProfile} />}
-
-            {profile.hasPassword ? (
-              <ChangePasswordCard
-                passwordChangedAt={profile.passwordChangedAt}
-                linkedToGoogle={isGoogle}
-                onChanged={loadProfile}
-              />
-            ) : (
-              <Card
-                icon={KeyRound}
-                title="Password"
-                subtitle="How you sign in"
-              >
-                <p className="text-sm text-(--color-inactive)">
-                  You sign in with Google, so there is no Soul Paradise password on
-                  this account. Manage your password and security from your Google
-                  account.
-                </p>
-              </Card>
-            )}
+          <div className="grid grid-cols-2 gap-3 lg:w-80">
+            <Stat icon={CalendarDays} label="Member since" value={formatDate(profile.createdAt)} />
+            <Stat icon={Clock} label="Last sign-in" value={formatDate(profile.lastLoginAt)} />
           </div>
-
-          <aside className="space-y-6">
-            <Card icon={Receipt} title="Quick links">
-              <nav className="-mx-2 flex flex-col">
-                <QuickLink href="/orders" label="My Orders" />
-                <QuickLink href="/orders?tab=payments" label="Custom Payments" />
-                <QuickLink href="/contact" label="Contact Support" />
-              </nav>
-            </Card>
-
-            <Card icon={ShieldCheck} title="Sessions">
-              <p className="text-sm text-(--color-inactive)">
-                Signed in on a device you no longer use? Sign out everywhere,
-                including this browser.
-              </p>
-              {confirmLogoutAll ? (
-                <div className="mt-4 space-y-2">
-                  <p className="text-sm font-semibold text-(--color-foreground)">
-                    Sign out of all devices?
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleLogoutAll}
-                      disabled={loggingOutAll}
-                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-(--color-danger) px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-                    >
-                      {loggingOutAll && <Loader2 className="h-4 w-4 animate-spin" />}
-                      Sign out
-                    </button>
-                    <button
-                      onClick={() => setConfirmLogoutAll(false)}
-                      disabled={loggingOutAll}
-                      className={`${secondaryButtonClass} flex-1`}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setConfirmLogoutAll(true)}
-                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-(--color-danger) px-4 py-2.5 text-sm font-semibold text-(--color-danger) transition hover:bg-(--color-danger) hover:text-white"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign out of all devices
-                </button>
-              )}
-            </Card>
-          </aside>
         </div>
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <PersonalDetailsCard
+            profile={profile}
+            onSaved={(updated) => {
+              setProfile(updated);
+              // Keep the navbar's name/initials in sync
+              checkAuth();
+            }}
+          />
+
+          {profile.agentProfile && <AgencyCard agency={profile.agentProfile} />}
+
+          {profile.hasPassword ? (
+            <ChangePasswordCard
+              passwordChangedAt={profile.passwordChangedAt}
+              linkedToGoogle={isGoogle}
+              onChanged={loadProfile}
+            />
+          ) : (
+            <Card
+              icon={KeyRound}
+              accent="orange"
+              title="Password"
+              subtitle="How you sign in"
+            >
+              <p className="text-sm text-(--color-inactive)">
+                You sign in with Google, so there is no Soul Paradise password on
+                this account. Manage your password and security from your Google
+                account.
+              </p>
+            </Card>
+          )}
+        </div>
+
+        <aside className="space-y-6">
+          <Card icon={Receipt} accent="teal" title="Quick links">
+            <nav className="-mx-2 flex flex-col">
+              <QuickLink href="/orders" icon={Receipt} label="My Orders" />
+              <QuickLink href="/orders?tab=payments" icon={CreditCard} label="Custom Payments" />
+              <QuickLink href="/contact" icon={Headphones} label="Contact Support" />
+            </nav>
+          </Card>
+
+          <Card icon={ShieldCheck} accent="pink" title="Sessions">
+            <p className="text-sm text-(--color-inactive)">
+              Signed in on a device you no longer use? Sign out everywhere,
+              including this browser.
+            </p>
+            {confirmLogoutAll ? (
+              <div className="mt-4 space-y-2">
+                <p className="text-sm font-semibold text-(--color-foreground)">
+                  Sign out of all devices?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleLogoutAll}
+                    disabled={loggingOutAll}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-(--color-danger) px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                  >
+                    {loggingOutAll && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Sign out
+                  </button>
+                  <button
+                    onClick={() => setConfirmLogoutAll(false)}
+                    disabled={loggingOutAll}
+                    className={`${secondaryButtonClass} flex-1`}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmLogoutAll(true)}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-(--color-danger) px-4 py-2.5 text-sm font-semibold text-(--color-danger) transition hover:bg-(--color-danger) hover:text-white"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out of all devices
+              </button>
+            )}
+          </Card>
+        </aside>
+      </div>
+    </ProfileShell>
+  );
+}
+
+function ProfileShell({
+  firstName,
+  children,
+}: {
+  firstName?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <main className="min-h-screen bg-(--color-background)">
+      <PageHero
+        crumb="My Profile"
+        title={firstName ? `Welcome back, ${firstName}` : 'My Profile'}
+        description="Manage your account details, password and sign-in security, all in one place."
+        image="/hero_bg.jpg"
+        imagePosition="center 70%"
+      />
+      <div className="relative z-10 mx-auto -mt-16 max-w-7xl px-4 pb-16 sm:px-6 md:pb-20 lg:px-8">
+        {children}
       </div>
     </main>
   );
@@ -342,6 +366,7 @@ function PersonalDetailsCard({
   return (
     <Card
       icon={UserIcon}
+      accent="blue"
       title="Personal details"
       subtitle="Your name appears on bookings and emails"
       action={
@@ -446,6 +471,7 @@ function ChangePasswordCard({
   return (
     <Card
       icon={KeyRound}
+      accent="orange"
       title="Password"
       subtitle={
         passwordChangedAt
@@ -533,6 +559,7 @@ function AgencyCard({ agency }: { agency: NonNullable<UserProfile['agentProfile'
   return (
     <Card
       icon={Briefcase}
+      accent="purple"
       title="Agency details"
       subtitle="Verified during booking-partner onboarding"
       action={
@@ -562,27 +589,27 @@ function AgencyCard({ agency }: { agency: NonNullable<UserProfile['agentProfile'
 }
 
 function Card({
-  icon: Icon,
+  icon,
+  accent = 'blue',
   title,
   subtitle,
   action,
   children,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
+  accent?: Accent;
   title: string;
   subtitle?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-(--color-tertiary-button) bg-(--color-peace) p-5 shadow-sm">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <span className="mt-0.5 rounded-lg bg-(--color-background) p-2 text-(--color-secondary-button)">
-            <Icon className="h-4 w-4" />
-          </span>
+    <section className="group rounded-2xl bg-(--color-peace) p-6 shadow-sm ring-1 ring-(--color-tertiary-button) transition-shadow hover:shadow-md">
+      <div className="mb-5 flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <IconTile icon={icon} accent={accent} size="sm" />
           <div>
-            <h3 className="text-base font-bold text-(--color-foreground)">{title}</h3>
+            <h3 className="text-lg font-bold text-(--color-foreground)">{title}</h3>
             {subtitle && (
               <p className="mt-0.5 text-xs text-(--color-inactive)">{subtitle}</p>
             )}
@@ -595,6 +622,18 @@ function Card({
   );
 }
 
+function Stat({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-(--color-background) p-3 ring-1 ring-(--color-tertiary-button)">
+      <span className="flex items-center gap-1.5 text-xs font-semibold text-(--color-inactive)">
+        <Icon className="h-3.5 w-3.5 text-(--color-links)" />
+        {label}
+      </span>
+      <p className="mt-1 text-sm font-bold text-(--color-foreground)">{value}</p>
+    </div>
+  );
+}
+
 function Field({
   label,
   value,
@@ -602,15 +641,15 @@ function Field({
 }: {
   label: string;
   value: string;
-  icon?: React.ComponentType<{ className?: string }>;
+  icon?: LucideIcon;
 }) {
   return (
-    <div className="min-w-0">
-      <dt className="text-xs font-semibold uppercase tracking-wide text-(--color-inactive)">
+    <div className="min-w-0 rounded-xl bg-(--color-background) px-4 py-3">
+      <dt className="text-xs font-bold uppercase tracking-wide text-(--color-inactive)">
         {label}
       </dt>
-      <dd className="mt-1 flex items-center gap-1.5 break-words text-sm font-medium text-(--color-foreground)">
-        {Icon && <Icon className="h-4 w-4 shrink-0 text-(--color-inactive)" />}
+      <dd className="mt-1 flex items-center gap-1.5 break-words text-sm font-semibold text-(--color-foreground)">
+        {Icon && <Icon className="h-4 w-4 shrink-0 text-(--color-links)" />}
         {value}
       </dd>
     </div>
@@ -620,31 +659,34 @@ function Field({
 function ReadOnlyField({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
     <div>
-      <p className="mb-1.5 block text-sm font-semibold text-gray-700">{label}</p>
-      <p className="block w-full rounded-lg border border-gray-200 bg-gray-100 px-3.5 py-2.5 text-sm text-gray-600">
+      <p className="mb-1.5 block text-sm font-semibold text-(--color-foreground)">{label}</p>
+      <p className="block w-full rounded-xl border border-(--color-tertiary-button) bg-(--color-background) px-3.5 py-2.5 text-sm text-(--color-inactive)">
         {value}
       </p>
-      <p className="mt-1 text-xs text-gray-500">{hint}</p>
+      <p className="mt-1 text-xs text-(--color-inactive)">{hint}</p>
     </div>
   );
 }
 
 function Badge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-(--color-tertiary-button) bg-(--color-background) px-3 py-1 text-xs font-semibold text-(--color-secondary-button)">
+    <span className="inline-flex items-center gap-1 rounded-full bg-(--color-links)/10 px-3 py-1 text-xs font-semibold text-(--color-links)">
       {children}
     </span>
   );
 }
 
-function QuickLink({ href, label }: { href: string; label: string }) {
+function QuickLink({ href, icon: Icon, label }: { href: string; icon: LucideIcon; label: string }) {
   return (
     <Link
       href={href}
-      className="flex items-center justify-between rounded-lg px-2 py-2.5 text-sm font-medium text-(--color-foreground) transition hover:bg-(--color-background) hover:text-(--color-active)"
+      className="group/link flex items-center justify-between rounded-lg px-2 py-2.5 text-sm font-medium text-(--color-foreground) transition hover:bg-(--color-background) hover:text-(--color-links)"
     >
-      {label}
-      <ChevronRight className="h-4 w-4 text-(--color-inactive)" />
+      <span className="flex items-center gap-2.5">
+        <Icon className="h-4 w-4 text-(--color-inactive) group-hover/link:text-(--color-links)" />
+        {label}
+      </span>
+      <ArrowRight className="h-4 w-4 text-(--color-inactive) transition group-hover/link:translate-x-0.5 group-hover/link:text-(--color-links)" />
     </Link>
   );
 }

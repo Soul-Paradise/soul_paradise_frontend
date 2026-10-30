@@ -9,6 +9,18 @@ import {
   type BookingDetailsResponse,
 } from '@/lib/flights-api';
 import { useRequireAuth } from '@/contexts/AuthContext';
+import { AlertTriangle, Download, ExternalLink, Plane } from 'lucide-react';
+import {
+  BookButton,
+  ConfirmationHero,
+  ConfirmationPage,
+  ConfirmationRow,
+  ConfirmationSection,
+  ResultsEmpty,
+  ResultsLoader,
+  SecondaryButton,
+  StepState,
+} from '@/components/Results/ui';
 
 function formatTime(isoString: string) {
   const date = new Date(isoString);
@@ -148,46 +160,22 @@ function ConfirmationContent() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-(--color-links) mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Loading booking details...
-          </h3>
-        </div>
-      </main>
+      <StepState>
+        <ResultsLoader title="Loading booking details..." rows={2} />
+      </StepState>
     );
   }
 
   if (error) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg p-8 text-center max-w-md mx-4">
-          <svg
-            className="w-16 h-16 text-red-400 mx-auto mb-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
-            />
-          </svg>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Something went wrong
-          </h3>
-          <p className="text-sm text-gray-500 mb-4">{error}</p>
-          <button
-            onClick={() => router.push('/')}
-            className="px-6 py-2 bg-(--color-links) text-white text-sm font-semibold rounded-md hover:opacity-90"
-          >
-            Go Home
-          </button>
-        </div>
-      </main>
+      <StepState>
+        <ResultsEmpty
+          icon={AlertTriangle}
+          title="Something went wrong"
+          message={error}
+          action={{ label: 'Go Home', href: '/' }}
+        />
+      </StepState>
     );
   }
 
@@ -201,6 +189,7 @@ function ConfirmationContent() {
       booking.paymentStatus?.toLowerCase().includes('cancel'),
   );
   const canCancel = isSuccess && !isCancelled;
+  const isFailed = /fail|cancel/i.test(statusInfo.label);
 
   const showTicketStatus = booking.passengers.some(
     (p) => p.ticketStatus && p.ticketStatus !== booking.status,
@@ -210,488 +199,269 @@ function ConfirmationContent() {
   );
   const showAge = booking.passengers.some((p) => p.age != null);
 
+  const th = 'text-left px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-(--color-inactive)';
+  const td = 'px-5 py-3 text-(--color-inactive)';
+
   return (
-    <main className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center">
-          {isSuccess ? (
-            <svg
-              className="w-16 h-16 text-green-500 mx-auto mb-3"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+    <ConfirmationPage
+      actions={
+        <>
+          {canCancel && (
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="inline-flex items-center justify-center rounded-full border border-(--color-danger) bg-white px-5 py-2.5 text-sm font-bold text-(--color-danger) transition-colors hover:bg-(--color-danger) hover:text-white disabled:opacity-60"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          ) : (
-            <svg
-              className="w-16 h-16 text-yellow-500 mx-auto mb-3"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+              {cancelling ? 'Cancelling…' : 'Cancel Booking'}
+            </button>
           )}
-          <h1 className="text-xl font-bold text-gray-900 mb-1">
-            {isSuccess ? 'Booking Confirmed!' : 'Booking Status'}
-          </h1>
+          <SecondaryButton href="/orders">My Bookings</SecondaryButton>
+          <BookButton onClick={() => router.push('/')}>Back to home</BookButton>
+        </>
+      }
+    >
+      <ConfirmationHero
+        tone={isSuccess ? 'success' : isFailed ? 'error' : 'pending'}
+        title={isSuccess ? 'Booking Confirmed' : 'Booking Status'}
+        badge={
           <span
             className={`inline-block px-3 py-1 text-xs font-semibold border rounded-full ${statusInfo.bgColor} ${statusInfo.color}`}
           >
             {statusInfo.label}
           </span>
+        }
+        subtitle={
+          booking.contactEmail && (
+            <>
+              Your e-ticket has been sent to{' '}
+              <span className="font-semibold text-(--color-foreground)">{booking.contactEmail}</span>
+            </>
+          )
+        }
+        refs={[
+          { label: 'Booking ID', value: booking.bookingId },
+          { label: 'Transaction ID', value: booking.transactionId },
+          ...(booking.flights[0]?.pnr ? [{ label: 'PNR', value: booking.flights[0].pnr }] : []),
+          { label: 'Total paid', value: formatCurrency(booking.totalAmount, booking.currency) },
+        ]}
+      >
+        <SecondaryButton onClick={handleDownload} disabled={downloading} icon={Download}>
+          {downloading ? 'Preparing…' : 'Download Ticket (PDF)'}
+        </SecondaryButton>
+      </ConfirmationHero>
+
+      {cancelMessage && (
+        <div className="rounded-2xl border border-(--color-success)/30 bg-(--color-success)/10 p-4 text-center text-sm font-semibold text-(--color-success)">
+          {cancelMessage}
         </div>
-      </div>
+      )}
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Booking Reference */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-            <div>
-              <div className="text-xs text-gray-500 uppercase font-medium mb-1">
-                Booking ID
-              </div>
-              <div className="text-sm font-semibold text-gray-900">
-                {booking.bookingId}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-gray-500 uppercase font-medium mb-1">
-                Transaction ID
-              </div>
-              <div className="text-sm font-semibold text-gray-900">
-                {booking.transactionId}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-gray-500 uppercase font-medium mb-1">
-                Total Amount
-              </div>
-              <div className="text-lg font-bold text-gray-900">
-                {formatCurrency(booking.totalAmount, booking.currency)}
-              </div>
-            </div>
-          </div>
-
-          {(booking.paymentStatus ||
-            booking.sectorType ||
-            booking.invoice) && (
-            <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-              {booking.paymentStatus && (
+      <ConfirmationSection title="Flight Details" flush>
+        <div className="divide-y divide-(--color-tertiary-button)">
+          {booking.flights.map((flight, i) => (
+            <div key={i} className="p-5 sm:p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-(--color-primary-tint) flex items-center justify-center text-xs font-bold text-(--color-links)">
+                  {flight.airlineCode}
+                </div>
                 <div>
-                  <div className="text-xs text-gray-500 uppercase font-medium mb-1">
-                    Payment Status
-                  </div>
-                  <div className="text-sm font-semibold text-gray-900">
-                    {booking.paymentStatus}
-                  </div>
+                  <div className="text-sm font-bold text-(--color-foreground)">{flight.airline}</div>
+                  <div className="text-xs text-(--color-inactive)">{flight.flightNo}</div>
                 </div>
-              )}
-              {booking.sectorType && (
-                <div>
-                  <div className="text-xs text-gray-500 uppercase font-medium mb-1">
-                    Sector
-                  </div>
-                  <div className="text-sm font-semibold text-gray-900 capitalize">
-                    {booking.sectorType.toLowerCase()}
-                  </div>
-                </div>
-              )}
-              {booking.invoice && (
-                <div>
-                  <div className="text-xs text-gray-500 uppercase font-medium mb-1">
-                    Invoice
-                  </div>
-                  <div className="text-sm font-semibold text-gray-900">
-                    {booking.invoice}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Flight Details */}
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <div className="px-5 py-3 bg-gray-50 border-b border-gray-200">
-            <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
-              Flight Details
-            </h2>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {booking.flights.map((flight, i) => (
-              <div key={i} className="p-4 sm:p-5">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-9 h-9 rounded bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600">
-                    {flight.airlineCode}
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900">
-                      {flight.airline}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {flight.flightNo}
-                    </div>
-                  </div>
-                  <div className="ml-auto flex items-center gap-2">
-                    {flight.refundable != null && (
-                      <span
-                        className={`inline-block px-2 py-0.5 text-[10px] font-semibold border rounded-full ${
-                          flight.refundable
-                            ? 'bg-green-50 border-green-200 text-green-700'
-                            : 'bg-red-50 border-red-200 text-red-700'
-                        }`}
-                      >
-                        {flight.refundable ? 'Refundable' : 'Non-refundable'}
-                      </span>
-                    )}
-                    {flight.pnr && (
-                      <div className="text-right">
-                        <div className="text-xs text-gray-500">PNR</div>
-                        <div className="text-sm font-bold text-(--color-links)">
-                          {flight.pnr}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {flight.airlineContact && (
-                  <div className="text-xs text-gray-500 mb-3">
-                    Airline care: {flight.airlineContact}
-                  </div>
-                )}
-
-                <div className="flex items-center gap-4">
-                  <div className="text-center">
-                    <div className="text-xl font-bold text-gray-900">
-                      {formatTime(flight.departureTime)}
-                    </div>
-                    <div className="text-xs text-gray-700 font-medium">
-                      {flight.from}
-                      {flight.departureTerminal
-                        ? ` T${flight.departureTerminal}`
-                        : ''}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {flight.fromName}
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {formatDate(flight.departureTime)}
-                    </div>
-                  </div>
-
-                  <div className="flex-1 flex flex-col items-center px-2">
-                    <div className="text-xs text-gray-500 mb-1">
-                      {flight.duration}
-                    </div>
-                    <div className="w-full flex items-center">
-                      <div className="h-px flex-1 bg-gray-300" />
-                      <svg
-                        className="w-4 h-4 text-gray-400 -ml-0.5"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-
-                  <div className="text-center">
-                    <div className="text-xl font-bold text-gray-900">
-                      {formatTime(flight.arrivalTime)}
-                    </div>
-                    <div className="text-xs text-gray-700 font-medium">
-                      {flight.to}
-                      {flight.arrivalTerminal
-                        ? ` T${flight.arrivalTerminal}`
-                        : ''}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {flight.toName}
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {formatDate(flight.arrivalTime)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Web check-in link */}
-                {flight.webCheckinUrl && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <a
-                      href={flight.webCheckinUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-sm font-medium text-(--color-links) hover:underline"
+                <div className="ml-auto flex items-center gap-3">
+                  {flight.refundable != null && (
+                    <span
+                      className={`inline-block px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
+                        flight.refundable
+                          ? 'bg-(--color-success)/10 text-(--color-success)'
+                          : 'bg-(--color-danger)/10 text-(--color-danger)'
+                      }`}
                     >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                        />
-                      </svg>
-                      Web Check-in
-                    </a>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Passengers & Tickets */}
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <div className="px-5 py-3 bg-gray-50 border-b border-gray-200">
-            <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
-              Passengers
-            </h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-gray-500 uppercase border-b border-gray-100">
-                  <th className="text-left px-5 py-2 font-medium">Name</th>
-                  <th className="text-left px-5 py-2 font-medium">Type</th>
-                  {showAge && (
-                    <th className="text-left px-5 py-2 font-medium">Age</th>
+                      {flight.refundable ? 'Refundable' : 'Non-refundable'}
+                    </span>
                   )}
-                  <th className="text-left px-5 py-2 font-medium">
-                    Ticket Number
-                  </th>
+                  {flight.pnr && (
+                    <div className="text-right">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-(--color-inactive)">PNR</div>
+                      <div className="text-sm font-bold text-(--color-links)">{flight.pnr}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {flight.airlineContact && (
+                <div className="text-xs text-(--color-inactive) mb-3">Airline care: {flight.airlineContact}</div>
+              )}
+
+              <div className="flex items-center gap-4">
+                <div className="text-center">
+                  <div className="text-xl font-extrabold text-(--color-foreground)">{formatTime(flight.departureTime)}</div>
+                  <div className="text-xs font-bold text-(--color-foreground)">
+                    {flight.from}
+                    {flight.departureTerminal ? ` T${flight.departureTerminal}` : ''}
+                  </div>
+                  <div className="text-xs text-(--color-inactive)">{flight.fromName}</div>
+                  <div className="text-xs text-(--color-inactive)">{formatDate(flight.departureTime)}</div>
+                </div>
+
+                <div className="flex-1 flex flex-col items-center px-2">
+                  <div className="text-xs text-(--color-inactive) mb-1">{flight.duration}</div>
+                  <div className="w-full flex items-center">
+                    <div className="h-px flex-1 border-t border-dashed border-(--color-tertiary-button)" />
+                    <Plane className="w-4 h-4 text-(--color-links) ml-1" />
+                  </div>
+                </div>
+
+                <div className="text-center">
+                  <div className="text-xl font-extrabold text-(--color-foreground)">{formatTime(flight.arrivalTime)}</div>
+                  <div className="text-xs font-bold text-(--color-foreground)">
+                    {flight.to}
+                    {flight.arrivalTerminal ? ` T${flight.arrivalTerminal}` : ''}
+                  </div>
+                  <div className="text-xs text-(--color-inactive)">{flight.toName}</div>
+                  <div className="text-xs text-(--color-inactive)">{formatDate(flight.arrivalTime)}</div>
+                </div>
+              </div>
+
+              {flight.webCheckinUrl && (
+                <div className="mt-4 pt-3 border-t border-(--color-tertiary-button)">
+                  <a
+                    href={flight.webCheckinUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-(--color-links) hover:underline"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Web Check-in
+                  </a>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </ConfirmationSection>
+
+      <ConfirmationSection title="Passengers" flush>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-(--color-background)">
+              <tr>
+                <th className={th}>Name</th>
+                <th className={th}>Type</th>
+                {showAge && <th className={th}>Age</th>}
+                <th className={th}>Ticket Number</th>
+                {showTicketStatus && <th className={th}>Ticket Status</th>}
+                {showPassport && <th className={th}>Passport</th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-(--color-tertiary-button)">
+              {booking.passengers.map((pax, i) => (
+                <tr key={i}>
+                  <td className="px-5 py-3 font-bold text-(--color-foreground)">{pax.name}</td>
+                  <td className={td}>
+                    {pax.paxType === 'ADT' ? 'Adult' : pax.paxType === 'CHD' ? 'Child' : 'Infant'}
+                  </td>
+                  {showAge && <td className={td}>{pax.age != null ? pax.age : '-'}</td>}
+                  <td className={td}>{pax.ticketNumber || 'Pending'}</td>
                   {showTicketStatus && (
-                    <th className="text-left px-5 py-2 font-medium">
-                      Ticket Status
-                    </th>
+                    <td className={td}>
+                      {pax.ticketStatus && pax.ticketStatus !== booking.status ? pax.ticketStatus : '-'}
+                    </td>
                   )}
                   {showPassport && (
-                    <th className="text-left px-5 py-2 font-medium">
-                      Passport
-                    </th>
+                    <td className={td}>
+                      {pax.passportNo || pax.nationality ? (
+                        <div className="space-y-0.5">
+                          {pax.passportNo && (
+                            <div className="font-semibold text-(--color-foreground)">{pax.passportNo}</div>
+                          )}
+                          {pax.nationality && <div className="text-xs">{pax.nationality}</div>}
+                          {pax.passportExpiry && <div className="text-xs">Exp: {pax.passportExpiry}</div>}
+                        </div>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
                   )}
                 </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </ConfirmationSection>
+
+      {booking.crossSell && booking.crossSell.length > 0 && (
+        <ConfirmationSection title="Add-ons" flush>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-(--color-background)">
+                <tr>
+                  <th className={th}>Item</th>
+                  <th className={th}>Status</th>
+                  <th className={`${th} text-right`}>Amount</th>
+                </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
-                {booking.passengers.map((pax, i) => (
+              <tbody className="divide-y divide-(--color-tertiary-button)">
+                {booking.crossSell.map((item, i) => (
                   <tr key={i}>
-                    <td className="px-5 py-3 text-gray-900 font-medium">
-                      {pax.name}
+                    <td className="px-5 py-3 font-bold text-(--color-foreground)">{item.code}</td>
+                    <td className={td}>{item.status}</td>
+                    <td className="px-5 py-3 text-right font-semibold text-(--color-foreground)">
+                      {formatCurrency(item.amount, booking.currency)}
                     </td>
-                    <td className="px-5 py-3 text-gray-600">
-                      {pax.paxType === 'ADT'
-                        ? 'Adult'
-                        : pax.paxType === 'CHD'
-                          ? 'Child'
-                          : 'Infant'}
-                    </td>
-                    {showAge && (
-                      <td className="px-5 py-3 text-gray-600">
-                        {pax.age != null ? pax.age : '-'}
-                      </td>
-                    )}
-                    <td className="px-5 py-3 text-gray-600">
-                      {pax.ticketNumber || 'Pending'}
-                    </td>
-                    {showTicketStatus && (
-                      <td className="px-5 py-3 text-gray-600">
-                        {pax.ticketStatus &&
-                        pax.ticketStatus !== booking.status
-                          ? pax.ticketStatus
-                          : '-'}
-                      </td>
-                    )}
-                    {showPassport && (
-                      <td className="px-5 py-3 text-gray-600">
-                        {pax.passportNo || pax.nationality ? (
-                          <div className="space-y-0.5">
-                            {pax.passportNo && (
-                              <div className="font-medium text-gray-900">
-                                {pax.passportNo}
-                              </div>
-                            )}
-                            {pax.nationality && (
-                              <div className="text-xs text-gray-500">
-                                {pax.nationality}
-                              </div>
-                            )}
-                            {pax.passportExpiry && (
-                              <div className="text-xs text-gray-400">
-                                Exp: {pax.passportExpiry}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          '-'
-                        )}
-                      </td>
-                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </ConfirmationSection>
+      )}
 
-        {/* Cross-sell add-ons */}
-        {booking.crossSell && booking.crossSell.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <div className="px-5 py-3 bg-gray-50 border-b border-gray-200">
-              <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
-                Add-ons
-              </h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs text-gray-500 uppercase border-b border-gray-100">
-                    <th className="text-left px-5 py-2 font-medium">Item</th>
-                    <th className="text-left px-5 py-2 font-medium">Status</th>
-                    <th className="text-right px-5 py-2 font-medium">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {booking.crossSell.map((item, i) => (
-                    <tr key={i}>
-                      <td className="px-5 py-3 text-gray-900 font-medium">
-                        {item.code}
-                      </td>
-                      <td className="px-5 py-3 text-gray-600">{item.status}</td>
-                      <td className="px-5 py-3 text-right text-gray-900">
-                        {formatCurrency(item.amount, booking.currency)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+      {(booking.cancellationId || booking.refundAmount != null || booking.cancellationCharge != null) && (
+        <ConfirmationSection title="Cancellation & Refund">
+          <dl>
+            <ConfirmationRow label="Cancellation ID" value={booking.cancellationId} />
+            {booking.refundAmount != null && (
+              <ConfirmationRow label="Refund Amount" value={formatCurrency(booking.refundAmount, booking.currency)} />
+            )}
+            {booking.cancellationCharge != null && (
+              <ConfirmationRow
+                label="Cancellation Charge"
+                value={formatCurrency(booking.cancellationCharge, booking.currency)}
+              />
+            )}
+          </dl>
+        </ConfirmationSection>
+      )}
 
-        {/* Refund / Cancellation summary */}
-        {(booking.cancellationId ||
-          booking.refundAmount != null ||
-          booking.cancellationCharge != null) && (
-          <div className="bg-white border border-red-200 rounded-lg p-5">
-            <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">
-              Cancellation & Refund
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-              {booking.cancellationId && (
-                <div>
-                  <div className="text-xs text-gray-500 uppercase font-medium mb-1">
-                    Cancellation ID
-                  </div>
-                  <div className="text-sm font-semibold text-gray-900">
-                    {booking.cancellationId}
-                  </div>
-                </div>
-              )}
-              {booking.refundAmount != null && (
-                <div>
-                  <div className="text-xs text-gray-500 uppercase font-medium mb-1">
-                    Refund Amount
-                  </div>
-                  <div className="text-sm font-semibold text-green-700">
-                    {formatCurrency(booking.refundAmount, booking.currency)}
-                  </div>
-                </div>
-              )}
-              {booking.cancellationCharge != null && (
-                <div>
-                  <div className="text-xs text-gray-500 uppercase font-medium mb-1">
-                    Cancellation Charge
-                  </div>
-                  <div className="text-sm font-semibold text-red-700">
-                    {formatCurrency(
-                      booking.cancellationCharge,
-                      booking.currency,
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Contact Info */}
-        {(booking.contactEmail || booking.contactMobile) && (
-          <div className="bg-white border border-gray-200 rounded-lg p-5">
-            <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">
-              Contact
-            </h2>
-            <div className="flex flex-wrap gap-6 text-sm">
-              {booking.contactEmail && (
-                <div>
-                  <span className="text-xs text-gray-500">Email: </span>
-                  <span className="text-gray-900">{booking.contactEmail}</span>
-                </div>
-              )}
-              {booking.contactMobile && (
-                <div>
-                  <span className="text-xs text-gray-500">Mobile: </span>
-                  <span className="text-gray-900">{booking.contactMobile}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {cancelMessage && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center text-sm text-green-700">
-            {cancelMessage}
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <button
-            onClick={handleDownload}
-            disabled={downloading}
-            className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-md hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {downloading ? 'Preparing…' : 'Download Ticket (PDF)'}
-          </button>
-          {canCancel && (
-            <button
-              onClick={handleCancel}
-              disabled={cancelling}
-              className="px-6 py-2.5 bg-white border border-red-300 text-red-700 text-sm font-semibold rounded-md hover:bg-red-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {cancelling ? 'Cancelling…' : 'Cancel Booking'}
-            </button>
+      <ConfirmationSection title="Payment">
+        <dl>
+          <ConfirmationRow label="Payment Status" value={booking.paymentStatus} />
+          <ConfirmationRow
+            label="Sector"
+            value={booking.sectorType ? booking.sectorType.charAt(0) + booking.sectorType.slice(1).toLowerCase() : null}
+          />
+          <ConfirmationRow label="Invoice" value={booking.invoice} />
+          {booking.fareBreakdown && booking.fareBreakdown.addOns > 0 && (
+            <>
+              <ConfirmationRow label="Ticket Fare" value={formatCurrency(booking.fareBreakdown.ticketFare, booking.currency)} />
+              <ConfirmationRow label="Add-ons" value={formatCurrency(booking.fareBreakdown.addOns, booking.currency)} />
+            </>
           )}
-          <button
-            onClick={() => router.push('/')}
-            className="px-6 py-2.5 bg-(--color-links) text-white text-sm font-semibold rounded-md hover:opacity-90 transition-opacity"
-          >
-            Back to Home
-          </button>
-        </div>
-      </div>
-    </main>
+          <ConfirmationRow label="Total Paid" value={formatCurrency(booking.totalAmount, booking.currency)} strong />
+        </dl>
+      </ConfirmationSection>
+
+      {(booking.contactEmail || booking.contactMobile) && (
+        <ConfirmationSection title="Contact">
+          <dl>
+            <ConfirmationRow label="Email" value={booking.contactEmail} />
+            <ConfirmationRow label="Mobile" value={booking.contactMobile} />
+          </dl>
+        </ConfirmationSection>
+      )}
+    </ConfirmationPage>
   );
 }
 
@@ -699,12 +469,9 @@ export default function BookingConfirmationPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-(--color-links) mb-4" />
-            <p className="text-gray-500">Loading booking...</p>
-          </div>
-        </div>
+        <StepState>
+          <ResultsLoader title="Loading booking..." rows={2} />
+        </StepState>
       }
     >
       <ConfirmationContent />

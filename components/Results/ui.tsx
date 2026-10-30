@@ -2,7 +2,16 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, ChevronDown, ChevronLeft, Pencil, type LucideIcon } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  ChevronDown,
+  ChevronLeft,
+  Clock,
+  Pencil,
+  type LucideIcon,
+} from 'lucide-react';
 
 /**
  * Shared look for the flight, hotel and insurance results pages. Each page is
@@ -404,6 +413,192 @@ export function ResultsEmpty({
           </button>
         ))}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// After payment: status + confirmation
+// ---------------------------------------------------------------------------
+
+/** Outlined pill for secondary actions (download, my bookings). */
+export function SecondaryButton({
+  children,
+  onClick,
+  href,
+  icon: Icon,
+  disabled,
+  external = false,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  href?: string;
+  icon?: LucideIcon;
+  disabled?: boolean;
+  /** Opens a file/URL in a new tab instead of client routing. */
+  external?: boolean;
+}) {
+  const className =
+    'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-(--color-links) bg-white px-5 py-2.5 text-sm font-bold text-(--color-links) transition-colors hover:bg-(--color-links) hover:text-white disabled:pointer-events-none disabled:opacity-60';
+  const content = (
+    <>
+      {Icon && <Icon className="h-4 w-4" />}
+      {children}
+    </>
+  );
+  if (href && external) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+        {content}
+      </a>
+    );
+  }
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {content}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} className={className}>
+      {content}
+    </button>
+  );
+}
+
+export type StatusTone = 'loading' | 'success' | 'pending' | 'error';
+
+const TONE_BADGE: Record<Exclude<StatusTone, 'loading'>, { icon: LucideIcon; className: string }> = {
+  success: { icon: CheckCircle2, className: 'bg-(--color-success)/10 text-(--color-success)' },
+  pending: { icon: Clock, className: 'bg-(--color-warn)/10 text-(--color-warn)' },
+  error: { icon: AlertTriangle, className: 'bg-(--color-danger)/10 text-(--color-danger)' },
+};
+
+/** Round status mark shared by the payment-result and confirmation pages. */
+export function StatusMark({ tone }: { tone: StatusTone }) {
+  if (tone === 'loading') {
+    return (
+      <span className="relative mx-auto flex h-14 w-14">
+        <span className="absolute inset-0 rounded-full border-4 border-(--color-primary-tint)" />
+        <span className="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-t-(--color-links)" />
+      </span>
+    );
+  }
+  const { icon: Icon, className } = TONE_BADGE[tone];
+  return (
+    <span className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${className}`}>
+      <Icon className="h-8 w-8" />
+    </span>
+  );
+}
+
+/**
+ * Centred card for the page the gateway returns to: verifying, issuing,
+ * payment failed, or still working.
+ */
+export function StatusCard({
+  tone,
+  title,
+  message,
+  actions,
+}: {
+  tone: StatusTone;
+  title: string;
+  message: React.ReactNode;
+  actions?: React.ReactNode;
+}) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-(--color-background) px-4 py-16">
+      <div className={`${STEP_CARD} w-full max-w-md p-8 text-center`} role="status" aria-live="polite">
+        <StatusMark tone={tone} />
+        <h1 className="mt-5 text-xl font-extrabold text-(--color-foreground)">{title}</h1>
+        <div className="mt-2 text-sm text-(--color-inactive)">{message}</div>
+        {actions && <div className="mt-6 flex flex-wrap justify-center gap-3">{actions}</div>}
+      </div>
+    </main>
+  );
+}
+
+/** Top card of every confirmation page: status mark, headline, references. */
+export function ConfirmationHero({
+  tone,
+  title,
+  subtitle,
+  refs = [],
+  badge,
+  children,
+}: {
+  tone: Exclude<StatusTone, 'loading'>;
+  title: string;
+  subtitle?: React.ReactNode;
+  /** Booking id, PNR, policy number ... shown as label/value tiles. */
+  refs?: { label: string; value: React.ReactNode }[];
+  badge?: React.ReactNode;
+  /** Actions under the references (e.g. download). */
+  children?: React.ReactNode;
+}) {
+  return (
+    <section className={`${STEP_CARD} overflow-hidden text-center`}>
+      <div className="px-6 pt-8 pb-6">
+        <StatusMark tone={tone} />
+        <h1 className="mt-4 text-2xl font-extrabold text-(--color-foreground)">{title}</h1>
+        {badge && <div className="mt-2">{badge}</div>}
+        {subtitle && <p className="mt-1 text-sm text-(--color-inactive)">{subtitle}</p>}
+        {children && <div className="mt-5 flex flex-wrap justify-center gap-3">{children}</div>}
+      </div>
+      {refs.length > 0 && (
+        <dl className="grid grid-cols-2 border-t border-(--color-tertiary-button) bg-(--color-primary-tint)/40 sm:flex sm:divide-x sm:divide-(--color-tertiary-button)">
+          {refs.map(({ label, value }) => (
+            <div key={label} className="flex-1 px-4 py-3">
+              <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-(--color-inactive)">{label}</dt>
+              <dd className="mt-0.5 truncate text-sm font-bold text-(--color-foreground)">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </section>
+  );
+}
+
+/** A titled STEP_CARD section on a confirmation page. */
+export function ConfirmationSection({
+  title,
+  children,
+  flush = false,
+}: {
+  title: string;
+  children: React.ReactNode;
+  /** No body padding (tables, edge-to-edge rows). */
+  flush?: boolean;
+}) {
+  return (
+    <section className={`${STEP_CARD} overflow-hidden`}>
+      <h2 className={`${STEP_HEADING} border-b border-(--color-tertiary-button) px-5 py-4 sm:px-6`}>{title}</h2>
+      <div className={flush ? '' : 'p-5 sm:p-6'}>{children}</div>
+    </section>
+  );
+}
+
+/** Label/value row inside a ConfirmationSection. */
+export function ConfirmationRow({ label, value, strong = false }: { label: string; value: React.ReactNode; strong?: boolean }) {
+  if (value === null || value === undefined || value === '') return null;
+  return (
+    <div className="flex justify-between gap-4 border-b border-(--color-tertiary-button)/60 py-2 text-sm last:border-0">
+      <dt className={strong ? 'font-bold text-(--color-foreground)' : 'text-(--color-inactive)'}>{label}</dt>
+      <dd className={`text-right ${strong ? 'text-base font-extrabold' : 'font-semibold'} text-(--color-foreground)`}>{value}</dd>
+    </div>
+  );
+}
+
+/** Page frame for a confirmation: same background and width on all three. */
+export function ConfirmationPage({ children, actions }: { children: React.ReactNode; actions?: React.ReactNode }) {
+  return (
+    <main className="min-h-screen bg-(--color-background)">
+      <div className="mx-auto max-w-3xl space-y-5 px-4 py-8 sm:px-6">
+        {children}
+        {actions && <div className="flex flex-wrap justify-center gap-3 pt-2">{actions}</div>}
+      </div>
+    </main>
   );
 }
 

@@ -379,8 +379,9 @@ export interface BookingRequest {
   // Multi-city (DM) only: echoed straight back from the pricing response. When
   // length > 1 the backend tickets each leg as its own itinerary.
   multiCitySessions?: Array<{ tui: string; netAmount: number }>;
-  // Route summary persisted for the orders list display.
-  tripSummary?: {
+  // Route summary persisted for the orders list. Required - the backend
+  // rejects a booking without a valid origin, destination and departure date.
+  tripSummary: {
     fromCode: string;
     toCode: string;
     departureDate: string;

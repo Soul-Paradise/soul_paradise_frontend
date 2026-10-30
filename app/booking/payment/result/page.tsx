@@ -2,8 +2,8 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { useRequireAuth } from '@/contexts/AuthContext';
+import { BookButton, SecondaryButton, StatusCard } from '@/components/Results/ui';
 import {
   getBookingStatusByTxn,
   type BookingStatusResponse,
@@ -95,101 +95,72 @@ function PaymentResultContent() {
     };
   }, [status, merchantTxnNo, router]);
 
+  if (view === 'verifying' || view === 'ticketing') {
+    return (
+      <StatusCard
+        tone="loading"
+        title={view === 'verifying' ? 'Confirming your payment…' : 'Issuing your ticket…'}
+        message={<>Please don&apos;t close or refresh this page. This can take up to a minute.</>}
+      />
+    );
+  }
+
+  if (view === 'slow') {
+    return (
+      <StatusCard
+        tone="pending"
+        title="Your payment went through"
+        message={
+          <>
+            We&apos;re still issuing your ticket. You&apos;ll receive a confirmation by email shortly, and it will
+            appear under <span className="font-semibold text-(--color-foreground)">My Bookings</span>. You can
+            safely leave this page.
+          </>
+        }
+        actions={
+          <>
+            <SecondaryButton href="/orders">My Bookings</SecondaryButton>
+            <BookButton href="/">Back to home</BookButton>
+          </>
+        }
+      />
+    );
+  }
+
+  if (view === 'failed_payment') {
+    return (
+      <StatusCard
+        tone="error"
+        title="Payment not completed"
+        message={
+          <>
+            Your payment was {status === 'CANCELLED' ? 'cancelled' : 'not successful'} and no ticket was booked.
+            You can try again.
+          </>
+        }
+        actions={<BookButton href="/booking/flights">Search flights again</BookButton>}
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-16">
-      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-        {(view === 'verifying' || view === 'ticketing') && (
-          <>
-            <Spinner />
-            <h1 className="mt-6 text-xl font-semibold text-gray-900">
-              {view === 'verifying'
-                ? 'Confirming your payment…'
-                : 'Issuing your ticket…'}
-            </h1>
-            <p className="mt-2 text-sm text-gray-500">
-              Please don&apos;t close or refresh this page. This can take up to
-              a minute.
-            </p>
-          </>
-        )}
-
-        {view === 'slow' && (
-          <>
-            <h1 className="text-xl font-semibold text-gray-900">
-              Your payment went through
-            </h1>
-            <p className="mt-2 text-sm text-gray-600">
-              We&apos;re still issuing your ticket. You&apos;ll receive a
-              confirmation by email shortly, and it will appear under{' '}
-              <span className="font-medium">My Bookings</span>. You can safely
-              leave this page.
-            </p>
-            <Link
-              href="/"
-              className="mt-6 inline-block rounded-lg bg-(--color-links) px-5 py-2.5 text-sm font-medium text-white hover:bg-(--color-secondary-button)"
-            >
-              Back to home
-            </Link>
-          </>
-        )}
-
-        {view === 'failed_payment' && (
-          <>
-            <h1 className="text-xl font-semibold text-gray-900">
-              Payment not completed
-            </h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Your payment was {status === 'CANCELLED' ? 'cancelled' : 'not successful'} and
-              no ticket was booked. You can try again.
-            </p>
-            <Link
-              href="/booking/flights"
-              className="mt-6 inline-block rounded-lg bg-(--color-links) px-5 py-2.5 text-sm font-medium text-white hover:bg-(--color-secondary-button)"
-            >
-              Search flights again
-            </Link>
-          </>
-        )}
-
-        {view === 'failed_ticket' && (
-          <>
-            <h1 className="text-xl font-semibold text-gray-900">
-              We couldn&apos;t complete your booking
-            </h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Your payment was received, but we were unable to issue the ticket
-              {detail ? ` (${detail})` : ''}. Our team has been notified and
-              will process a refund. Please contact support if you have any
-              questions.
-            </p>
-            <Link
-              href="/"
-              className="mt-6 inline-block rounded-lg bg-(--color-links) px-5 py-2.5 text-sm font-medium text-white hover:bg-(--color-secondary-button)"
-            >
-              Back to home
-            </Link>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Spinner() {
-  return (
-    <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
+    <StatusCard
+      tone="error"
+      title="We couldn't complete your booking"
+      message={
+        <>
+          Your payment was received, but we were unable to issue the ticket{detail ? ` (${detail})` : ''}. Our team
+          has been notified and will process a refund. Please contact support if you have any questions.
+        </>
+      }
+      actions={<BookButton href="/">Back to home</BookButton>}
+    />
   );
 }
 
 export default function PaymentResultPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <Spinner />
-        </div>
-      }
-    >
+    <Suspense fallback={<StatusCard tone="loading" title="Confirming your payment…" message="" />}>
       <PaymentResultContent />
     </Suspense>
   );
