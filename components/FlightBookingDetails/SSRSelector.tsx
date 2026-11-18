@@ -709,9 +709,10 @@ function BaggageList({
                   </span>
                 )}
               </p>
-              <p className="text-[10px] text-gray-400 truncate">
-                {opt.pieceDescription || opt.code}
-              </p>
+              {/* Piece allowance only - never the SSR code (e.g. "EB03"). */}
+              {opt.pieceDescription && (
+                <p className="text-[10px] text-gray-500 truncate">{opt.pieceDescription}</p>
+              )}
             </div>
 
             {/* Price + check */}

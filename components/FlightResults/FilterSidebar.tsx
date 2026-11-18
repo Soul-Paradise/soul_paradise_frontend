@@ -12,13 +12,7 @@ export interface FilterState {
   airlines: Set<string>;
   priceRange: [number, number];
   connectingAirports: Set<string>;
-  /** Fare brand (Benzy FCType), e.g. "SAVER", "CORPORATE FARES". */
-  fareTypes?: Set<string>;
 }
-
-/** Normalised fare-brand key used by the filter. */
-export const fareTypeKey = (f: Pick<FlightResult, 'fareHead'>) =>
-  (f.fareHead || '').trim().toUpperCase();
 
 interface FilterSidebarProps {
   flights: FlightResult[];
@@ -101,14 +95,12 @@ export const FilterSidebar = ({
 }: FilterSidebarProps) => {
   const [showAllAirlines, setShowAllAirlines] = useState(false);
   const [showAllAirports, setShowAllAirports] = useState(false);
-  const [showAllFareTypes, setShowAllFareTypes] = useState(false);
 
   // Compute filter options from all flights
   const filterData = useMemo(() => {
     const stopsMap = new Map<number, number>();
     const airlineMap = new Map<string, { name: string; count: number; cheapest: number }>();
     const connectingMap = new Map<string, { name: string; count: number }>();
-    const fareTypeMap = new Map<string, { count: number; cheapest: number }>();
     let minPrice = Infinity;
     let maxPrice = 0;
     let hasRefundable = false;
@@ -145,18 +137,6 @@ export const FilterSidebar = ({
         }
       }
 
-      // Fare brand
-      const ft = fareTypeKey(f);
-      if (ft) {
-        const e = fareTypeMap.get(ft);
-        if (e) {
-          e.count++;
-          e.cheapest = Math.min(e.cheapest, f.grossFare);
-        } else {
-          fareTypeMap.set(ft, { count: 1, cheapest: f.grossFare });
-        }
-      }
-
       // Price range
       minPrice = Math.min(minPrice, f.grossFare);
       maxPrice = Math.max(maxPrice, f.grossFare);
@@ -178,15 +158,10 @@ export const FilterSidebar = ({
       .map(([code, data]) => ({ code, ...data }))
       .sort((a, b) => b.count - a.count);
 
-    const fareTypes = Array.from(fareTypeMap.entries())
-      .map(([key, data]) => ({ key, ...data }))
-      .sort((a, b) => a.key.localeCompare(b.key));
-
     return {
       stops,
       airlines,
       connectingAirports,
-      fareTypes,
       minPrice: minPrice === Infinity ? 0 : minPrice,
       maxPrice,
       showRefundableFilter: hasRefundable && hasNonRefundable,
@@ -348,39 +323,6 @@ export const FilterSidebar = ({
         </FilterSection>
       )}
 
-      {/* Fare brand (Benzy FCType; Akbar labels this "Fare Type") - only useful
-          when the results carry more than one. */}
-      {filterData.fareTypes.length > 1 && (
-        <FilterSection title="Fare Brand">
-          {(showAllFareTypes ? filterData.fareTypes : filterData.fareTypes.slice(0, 6)).map((ft) => (
-            <FilterCheckbox
-              key={ft.key}
-              checked={!!filterState.fareTypes?.has(ft.key)}
-              onChange={() =>
-                onFilterChange({
-                  ...filterState,
-                  fareTypes: toggleSetValue(filterState.fareTypes ?? new Set<string>(), ft.key),
-                })
-              }
-              label={
-                <span className="block truncate capitalize">
-                  {ft.key.toLowerCase()} <span className="text-(--color-inactive)">({ft.count})</span>
-                </span>
-              }
-              meta={formatCurrency(ft.cheapest)}
-            />
-          ))}
-          {filterData.fareTypes.length > 6 && (
-            <button
-              type="button"
-              onClick={() => setShowAllFareTypes(!showAllFareTypes)}
-              className="mt-2 text-xs font-bold text-(--color-links) hover:underline"
-            >
-              {showAllFareTypes ? 'Show less' : `+ ${filterData.fareTypes.length - 6} Fare Brands`}
-            </button>
-          )}
-        </FilterSection>
-      )}
 
       {/* Price Range */}
       <FilterSection title="Price Range">

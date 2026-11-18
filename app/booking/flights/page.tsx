@@ -19,7 +19,6 @@ import { NoticeBanner } from '@/components/FlightResults/NoticeBanner';
 import { SortTabs, type SortOption } from '@/components/FlightResults/SortTabs';
 import {
   FilterSidebar,
-  fareTypeKey,
   getTimeRange,
   type FilterState,
 } from '@/components/FlightResults/FilterSidebar';
@@ -33,7 +32,6 @@ function createEmptyFilterState(maxPrice: number): FilterState {
     airlines: new Set(),
     priceRange: [0, maxPrice || 999999],
     connectingAirports: new Set(),
-    fareTypes: new Set(),
   };
 }
 
@@ -182,12 +180,6 @@ function FlightSearchResults() {
       });
     }
 
-    // Fare type (brand)
-    if (filterState.fareTypes && filterState.fareTypes.size > 0) {
-      const wanted = filterState.fareTypes;
-      flights = flights.filter((f) => wanted.has(fareTypeKey(f)));
-    }
-
     // Sort
     flights.sort((a, b) => {
       switch (sortBy) {
@@ -262,7 +254,6 @@ function FlightSearchResults() {
     filterState.arrivalTimeRanges.size > 0 ||
     filterState.airlines.size > 0 ||
     filterState.connectingAirports.size > 0 ||
-    (filterState.fareTypes?.size ?? 0) > 0 ||
     (allFlights.length > 0 &&
       filterState.priceRange[1] < Math.max(...allFlights.map((f) => f.grossFare)));
 

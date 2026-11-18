@@ -132,8 +132,6 @@ export const FlightCard = ({
   const depTerminal = terminalLabel(flight.departureTerminal);
   const arrTerminal = terminalLabel(flight.arrivalTerminal);
   const bag = splitBaggage(flight.baggage);
-  const fareBrand = (flight.fareHead || '').trim();
-  const fareBasis = (flight.fareBasisCode || '').trim();
 
   return (
     <div
@@ -321,19 +319,11 @@ export const FlightCard = ({
           )}
         </div>
 
-        {/* Fare identity + included baggage - lets two fares on the same
-            flight be told apart without opening details. */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px] text-gray-600">
-            {(fareBrand || fareBasis) && (
-              <span className="font-semibold text-gray-800 uppercase tracking-wide">
-                {fareBrand}
-                {fareBasis && (
-                  <span className="ml-1 font-normal normal-case text-gray-500">
-                    ({fareBasis})
-                  </span>
-                )}
-              </span>
-            )}
+        {/* Included baggage, straight from the API. No refundability label:
+            Benzy's yes/no flag can contradict the fare rules, which the
+            details panel shows in full. */}
+        {(bag.checkIn || bag.cabin) && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px] text-gray-600">
             {bag.checkIn && (
               <span className="inline-flex items-center gap-1 rounded border border-gray-200 px-1.5 py-0.5">
                 Check-in {bag.checkIn}
@@ -344,22 +334,19 @@ export const FlightCard = ({
                 Cabin {bag.cabin}
               </span>
             )}
-            <span className={flight.refundable ? 'text-green-700 font-medium' : 'text-gray-500'}>
-              {/* Benzy "Y" = refundable subject to the airline's cancellation fee. */}
-              {flight.refundable ? 'Partially refundable' : 'Non-refundable'}
-            </span>
-        </div>
+          </div>
+        )}
 
-        {/* Footer: meal note + details */}
+        {/* Footer: API inclusions only (no assumed "chargeable" text) + details */}
         <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-1 text-[11px] text-gray-500 min-w-0">
             <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span className="truncate">
-              {flight.mealsIncluded ? 'Meal included' : 'Meal, Seat are chargeable.'}
+              {flight.mealsIncluded && 'Meal included'}
               {flight.pieceDescription && (
-                <span className="text-gray-500"> · {flight.pieceDescription}</span>
+                <span className="text-gray-500">{flight.mealsIncluded ? ' · ' : ''}{flight.pieceDescription}</span>
               )}{' '}
               <button
                 type="button"
@@ -369,7 +356,7 @@ export const FlightCard = ({
                 }}
                 className="text-(--color-links) hover:underline font-medium"
               >
-                (More)
+                {flight.mealsIncluded || flight.pieceDescription ? '(More)' : 'Fare rules & baggage'}
               </button>
             </span>
           </div>

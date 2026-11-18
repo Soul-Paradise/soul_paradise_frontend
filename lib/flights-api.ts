@@ -170,7 +170,6 @@ export interface SegmentDetail {
   mealsIncluded?: string | null;
   pieceDescription?: string | null;
   refundable?: string;
-  fareBrand?: string; // Benzy FCType, e.g. "SPECIAL CP"
   operatingAirlineCode?: string; // codeshare operator, when different
   amenities?: string;
   equipmentType?: string;
@@ -441,7 +440,6 @@ export interface BookingFlightDetail {
   stops?: string;
   baggage?: string | null;
   cabinBaggage?: string | null;
-  fareBrand?: string;
   pnr: string; // airline PNR when known, else the CRS reference
   airlinePnr?: string;
   crsPnr?: string;

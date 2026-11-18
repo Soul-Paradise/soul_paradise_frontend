@@ -347,17 +347,8 @@ function ConfirmationContent() {
                   </div>
                 </div>
                 <div className="ml-auto flex items-center gap-3">
-                  {flight.refundable != null && (
-                    <span
-                      className={`inline-block px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
-                        flight.refundable
-                          ? 'bg-(--color-success)/10 text-(--color-success)'
-                          : 'bg-(--color-danger)/10 text-(--color-danger)'
-                      }`}
-                    >
-                      {flight.refundable ? 'Refundable' : 'Non-refundable'}
-                    </span>
-                  )}
+                  {/* No Refundable/Non-refundable badge: the yes/no flag can
+                      contradict the ticket's fare rules shown on this page. */}
                   {flight.pnr && (
                     <div className="text-right">
                       <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-(--color-inactive)">
@@ -372,11 +363,10 @@ function ConfirmationContent() {
                 </div>
               </div>
 
-              {/* Aircraft / class / fare brand / baggage - as printed on the e-ticket */}
+              {/* Aircraft / class / baggage - as printed on the e-ticket */}
               <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--color-inactive)">
                 {flight.aircraft && <span>Aircraft: <span className="font-semibold text-(--color-foreground)">{flight.aircraft}</span></span>}
                 {flight.cabin && <span>Class: <span className="font-semibold text-(--color-foreground)">{flight.cabin}</span></span>}
-                {flight.fareBrand && <span>Fare: <span className="font-semibold text-(--color-foreground)">{flight.fareBrand}</span></span>}
                 <span>
                   Check-in: <span className="font-semibold text-(--color-foreground)">{flight.baggage || 'As per airline policy'}</span>
                 </span>
