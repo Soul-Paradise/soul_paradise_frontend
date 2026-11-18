@@ -107,7 +107,7 @@ export const DateStrip = ({
     // For roundtrip context fire a single RT search per alt date (never ON);
     // for the depart strip we vary depart, for the return strip we vary
     // return. Backend splits onward vs return by from/to.
-    for (const dateStr of surroundingDates) {
+    const lookup = (dateStr: string) => {
       const isReturn = mode === 'return';
       const rtForReturn = sp.tripType === 'roundtrip' && isReturn && !!onwardDate;
       const rtForDepart = sp.tripType === 'roundtrip' && !isReturn && !!pairedReturnDate;
@@ -140,7 +140,7 @@ export const DateStrip = ({
             refundableOnly: sp.refundableOnly,
             nearbyAirports: sp.nearbyAirports,
           };
-      searchFlights(params)
+      return searchFlights(params)
         .then((res) => {
           if (cancelled) return;
           // Cheapest fare for that date, from the server-side facets (the
@@ -156,7 +156,18 @@ export const DateStrip = ({
           if (cancelled) return;
           setDatePrices((prev) => ({ ...prev, [dateStr]: null }));
         });
-    }
+    };
+
+    // At most 2 lookups in flight per strip: the browser allows ~6 connections
+    // per host, and result pages / filters must not queue behind these.
+    let next = 0;
+    const worker = async () => {
+      while (!cancelled && next < surroundingDates.length) {
+        await lookup(surroundingDates[next++]);
+      }
+    };
+    void worker();
+    void worker();
 
     return () => {
       cancelled = true;
