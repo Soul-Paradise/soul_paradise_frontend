@@ -1,47 +1,60 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { FilterCheckbox, FilterPanel, FilterSection, filterChip } from '@/components/Results/ui';
-import type { InsuranceQuote, QuotesResponse } from '@/lib/insurance-api';
+import type { InsuranceFacets } from '@/lib/insurance-api';
+import type { QueryParams } from '@/lib/results-api';
+import type { InsuranceSortOption } from './SortTabs';
 
 // Visual twin of components/FlightResults/FilterSidebar.tsx - keep the two in step.
 
+/**
+ * Selected insurance filters. Filtering happens on the server
+ * (GET /insurance/results/:id); this state only becomes query params.
+ */
 export interface InsuranceFilterState {
   coverBands: Set<string>;
   noSubLimitsOnly: boolean;
   categories: Set<string>;
   insurers: Set<string>;
-  maxPrice: number;
+  /** null = no price cap. */
+  maxPrice: number | null;
 }
 
-export function createEmptyInsuranceFilters(maxPrice: number): InsuranceFilterState {
+export function createEmptyInsuranceFilters(): InsuranceFilterState {
   return {
     coverBands: new Set(),
     noSubLimitsOnly: false,
     categories: new Set(),
     insurers: new Set(),
-    maxPrice: maxPrice || 999999,
+    maxPrice: null,
   };
 }
 
-export function bandKey(b: { currency: string; min: number; max: number }) {
-  return `${b.currency}:${b.min}-${b.max}`;
+export function hasActiveInsuranceFilters(f: InsuranceFilterState): boolean {
+  return (
+    f.categories.size > 0 ||
+    f.insurers.size > 0 ||
+    f.coverBands.size > 0 ||
+    f.noSubLimitsOnly ||
+    f.maxPrice !== null
+  );
 }
 
-export function quoteInBand(q: InsuranceQuote, key: string) {
-  const [currency, range] = key.split(':');
-  const [min, max] = range.split('-').map(Number);
-  return q.coverage.currency === currency && q.coverage.amount >= min && q.coverage.amount <= max;
+/** Server query for the results endpoint (defaults left out). */
+export function insuranceFilterQuery(f: InsuranceFilterState, sort: InsuranceSortOption): QueryParams {
+  return {
+    sort: sort === 'cheapest' ? undefined : sort,
+    categories: [...f.categories],
+    insurers: [...f.insurers],
+    coverBands: [...f.coverBands],
+    noSubLimits: f.noSubLimitsOnly,
+    maxPrice: f.maxPrice ?? undefined,
+  };
 }
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
-}
-
-function compact(n: number) {
-  if (n >= 1_000_000) return `${n / 1_000_000}M`;
-  if (n >= 1_000) return `${n / 1_000}K`;
-  return String(n);
 }
 
 const toggle = <T,>(set: Set<T>, value: T): Set<T> => {
@@ -52,68 +65,29 @@ const toggle = <T,>(set: Set<T>, value: T): Set<T> => {
 };
 
 interface Props {
-  data: QuotesResponse;
+  facets: InsuranceFacets;
   filterState: InsuranceFilterState;
   onFilterChange: (s: InsuranceFilterState) => void;
 }
 
-export const InsuranceFilterSidebar = ({ data, filterState, onFilterChange }: Props) => {
+/** Renders the server's facets; every change is sent back to the server. */
+export const InsuranceFilterSidebar = ({ facets, filterState, onFilterChange }: Props) => {
   const [showAllInsurers, setShowAllInsurers] = useState(false);
 
-  const filterData = useMemo(() => {
-    const quotes = data.quotes;
-    const insurerMap = new Map<string, { count: number; cheapest: number }>();
-    const categoryMap = new Map<string, number>();
-    let minPrice = Infinity;
-    let maxPrice = 0;
-    let withSub = false;
-    let withoutSub = false;
-
-    for (const q of quotes) {
-      const ins = insurerMap.get(q.providerLabel);
-      if (ins) {
-        ins.count++;
-        ins.cheapest = Math.min(ins.cheapest, q.price);
-      } else {
-        insurerMap.set(q.providerLabel, { count: 1, cheapest: q.price });
-      }
-      categoryMap.set(q.category, Math.min(categoryMap.get(q.category) ?? Infinity, q.price));
-      minPrice = Math.min(minPrice, q.price);
-      maxPrice = Math.max(maxPrice, q.price);
-      if (q.isWithSubLimits) withSub = true;
-      else withoutSub = true;
-    }
-
-    const bands = data.coverageBands
-      .map((b) => {
-        const key = bandKey(b);
-        const inBand = quotes.filter((q) => quoteInBand(q, key));
-        return { key, label: `${b.currency} ${compact(b.min)} - ${compact(b.max)}`, cheapest: Math.min(...inBand.map((q) => q.price)) };
-      })
-      .filter((b) => Number.isFinite(b.cheapest));
-
-    return {
-      bands,
-      insurers: [...insurerMap].map(([name, d]) => ({ name, ...d })).sort((a, b) => a.cheapest - b.cheapest),
-      categories: [...categoryMap].map(([name, cheapest]) => ({ name, cheapest })),
-      minPrice: minPrice === Infinity ? 0 : minPrice,
-      maxPrice,
-      showSubLimitFilter: withSub && withoutSub,
-    };
-  }, [data]);
-
-  const visibleInsurers = showAllInsurers ? filterData.insurers : filterData.insurers.slice(0, 5);
+  const visibleInsurers = showAllInsurers ? facets.insurers : facets.insurers.slice(0, 5);
+  const sliderValue = filterState.maxPrice ?? facets.maxPrice;
 
   return (
     <FilterPanel>
       {/* Plan type (e.g. Senior Citizen) - only when the results are split */}
-      {filterData.categories.length > 1 && (
+      {facets.categories.length > 1 && (
         <FilterSection title="Plan Type">
           <div className="flex gap-2">
-            {filterData.categories.map(({ name, cheapest }) => (
+            {facets.categories.map(({ name, cheapest }) => (
               <button
                 key={name || 'standard'}
                 type="button"
+                aria-pressed={filterState.categories.has(name)}
                 onClick={() => onFilterChange({ ...filterState, categories: toggle(filterState.categories, name) })}
                 className={`flex-1 ${filterChip(filterState.categories.has(name))}`}
               >
@@ -126,7 +100,7 @@ export const InsuranceFilterSidebar = ({ data, filterState, onFilterChange }: Pr
       )}
 
       {/* Claim limits */}
-      {filterData.showSubLimitFilter && (
+      {facets.showSubLimitFilter && (
         <FilterSection title="Claim Limits" hint="Sub-limits cap how much you can claim per benefit">
           <FilterCheckbox
             checked={filterState.noSubLimitsOnly}
@@ -137,13 +111,14 @@ export const InsuranceFilterSidebar = ({ data, filterState, onFilterChange }: Pr
       )}
 
       {/* Medical cover */}
-      {filterData.bands.length > 0 && (
+      {facets.bands.length > 0 && (
         <FilterSection title="Medical Cover" hint="Sum insured for medical emergencies abroad">
           <div className="grid grid-cols-2 gap-2">
-            {filterData.bands.map((b) => (
+            {facets.bands.map((b) => (
               <button
                 key={b.key}
                 type="button"
+                aria-pressed={filterState.coverBands.has(b.key)}
                 onClick={() => onFilterChange({ ...filterState, coverBands: toggle(filterState.coverBands, b.key) })}
                 className={filterChip(filterState.coverBands.has(b.key))}
               >
@@ -156,7 +131,7 @@ export const InsuranceFilterSidebar = ({ data, filterState, onFilterChange }: Pr
       )}
 
       {/* Insurers */}
-      {filterData.insurers.length > 0 && (
+      {facets.insurers.length > 0 && (
         <FilterSection title="Insurers">
           {visibleInsurers.map((ins) => (
             <FilterCheckbox
@@ -171,35 +146,36 @@ export const InsuranceFilterSidebar = ({ data, filterState, onFilterChange }: Pr
               meta={formatCurrency(ins.cheapest)}
             />
           ))}
-          {filterData.insurers.length > 5 && (
+          {facets.insurers.length > 5 && (
             <button
               type="button"
               onClick={() => setShowAllInsurers(!showAllInsurers)}
               className="mt-2 text-xs font-bold text-(--color-links) hover:underline"
             >
-              {showAllInsurers ? 'Show less' : `+ ${filterData.insurers.length - 5} Insurers`}
+              {showAllInsurers ? 'Show less' : `+ ${facets.insurers.length - 5} Insurers`}
             </button>
           )}
         </FilterSection>
       )}
 
       {/* Price range */}
-      {filterData.maxPrice > filterData.minPrice && (
+      {facets.maxPrice > facets.minPrice && (
         <FilterSection title="Price Range">
           <input
             type="range"
             aria-label="Maximum premium"
-            min={filterData.minPrice}
-            max={filterData.maxPrice}
-            value={Math.min(filterState.maxPrice, filterData.maxPrice)}
-            onChange={(e) => onFilterChange({ ...filterState, maxPrice: parseInt(e.target.value) })}
+            min={facets.minPrice}
+            max={facets.maxPrice}
+            value={sliderValue}
+            onChange={(e) => {
+              const v = parseInt(e.target.value, 10);
+              onFilterChange({ ...filterState, maxPrice: v >= facets.maxPrice ? null : v });
+            }}
             className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-(--color-links)"
           />
           <div className="mt-2 flex items-center justify-between text-xs text-(--color-inactive)">
-            <span>{formatCurrency(filterData.minPrice)}</span>
-            <span className="font-semibold text-(--color-foreground)">
-              {formatCurrency(Math.min(filterState.maxPrice, filterData.maxPrice))}
-            </span>
+            <span>{formatCurrency(facets.minPrice)}</span>
+            <span className="font-semibold text-(--color-foreground)">{formatCurrency(sliderValue)}</span>
           </div>
         </FilterSection>
       )}

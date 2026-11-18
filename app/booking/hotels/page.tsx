@@ -1,6 +1,9 @@
 'use client';
 
-import { useEffect, useState, Suspense, useMemo } from 'react';
+import { useCallback, useEffect, useState, Suspense, useMemo } from 'react';
+import { Pagination, ResultsBusy } from '@/components/Results/Pagination';
+import type { ResultPage } from '@/lib/results-api';
+import { useResultPage } from '@/lib/use-result-page';
 import {
   BookButton,
   FilterCheckbox,
@@ -97,22 +100,34 @@ interface Hotel {
   propertyType: string;
 }
 
-interface FilterData {
-  name: string;
-  category: string;
-  type: string;
-  options: Array<{ min?: number; max?: number; value?: string; label: string; count: number }> | null;
+interface HotelOption {
+  label: string;
+  value: string;
+  count: number;
 }
 
+/** Sidebar options, computed by the server from the whole result list. */
+interface HotelFacets {
+  starCounts: Record<number, number>;
+  amenities: HotelOption[];
+  chains: HotelOption[];
+  propertyTypes: HotelOption[];
+  /** max -1 = no upper bound */
+  priceBands: Array<{ min: number; max: number; label: string; count: number }>;
+}
+
+type HotelResultPage = ResultPage<Hotel, HotelFacets>;
+
 interface SearchResponse {
+  resultId: string;
   searchId: string; // Benzy searchId
   searchTracingKey: string; // Benzy TUI
   destinationCountryCode: string;
   checkIn: string; // MM/DD/YYYY (Benzy format)
   checkOut: string;
   locationName: string;
-  hotels: Hotel[];
-  filters: FilterData[];
+  /** Page 1; filters/sort/pages come from GET /hotels/results/:resultId. */
+  page: HotelResultPage;
   total: number;
   currency: string;
 }
@@ -484,8 +499,7 @@ function CompactHotelCard({
 
 // ── Sidebar ──
 function Sidebar({
-  hotels,
-  filters,
+  facets,
   onShowMap,
   starFilter, setStarFilter,
   minRating, setMinRating,
@@ -497,8 +511,7 @@ function Sidebar({
   breakfast, setBreakfast,
   nameSearch, setNameSearch,
 }: {
-  hotels: Hotel[];
-  filters: FilterData[];
+  facets: HotelFacets;
   onShowMap: () => void;
   starFilter: number[];
   setStarFilter: (v: number[]) => void;
@@ -519,69 +532,14 @@ function Sidebar({
   nameSearch: string;
   setNameSearch: (v: string) => void;
 }) {
-  // Compute star counts
-  const starCounts = useMemo(() => {
-    const map: Record<number, number> = {};
-    for (const h of hotels) {
-      const s = Math.round(h.starRating);
-      map[s] = (map[s] || 0) + 1;
-    }
-    return map;
-  }, [hotels]);
-
-  // Amenity options from filter API (Benzy returns "Facilities") or derive from hotels
+  // Options come from the server (facets of the whole result list); the
+  // selection goes back to it as query params.
   const [showAllAmenities, setShowAllAmenities] = useState(false);
-  const amenityOptions = useMemo(() => {
-    const apiFilter = filters.find(f => f.category === 'Facilities');
-    if (apiFilter?.options) {
-      // API sends `value` as the facility id; we match by label since hotel.facilities has name
-      return apiFilter.options
-        .map(o => ({ label: o.label, value: o.label, count: o.count }))
-        .sort((a, b) => b.count - a.count);
-    }
-    // Fallback: derive top amenities from hotel facilities
-    const map = new Map<string, number>();
-    for (const h of hotels) {
-      for (const f of (h.facilities || [])) {
-        map.set(f.name, (map.get(f.name) || 0) + 1);
-      }
-    }
-    return Array.from(map.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, count]) => ({ label: name, value: name, count }));
-  }, [filters, hotels]);
-
-  // Hotel chain options from API (sorted by count desc)
-  const chainOptions = useMemo(() => {
-    const apiFilter = filters.find(f => f.category === 'HotelChain');
-    if (!apiFilter?.options) return [];
-    return apiFilter.options
-      .filter(o => o.value && o.count > 0)
-      .map(o => ({ label: o.label, value: o.value as string, count: o.count }))
-      .sort((a, b) => b.count - a.count);
-  }, [filters]);
-
-  // Property type options from API
-  const propertyTypeOptions = useMemo(() => {
-    const apiFilter = filters.find(f => f.category === 'PropertyType');
-    if (!apiFilter?.options) return [];
-    return apiFilter.options
-      .filter(o => o.value && o.count > 0)
-      .map(o => ({ label: o.label, value: o.value as string, count: o.count }))
-      .sort((a, b) => b.count - a.count);
-  }, [filters]);
-
-  // Price range options from API filter or default
-  const priceOptions = useMemo(() => {
-    const apiFilter = filters.find(f => f.category === 'PriceGroup');
-    if (apiFilter?.options) return apiFilter.options;
-    return [
-      { min: 0, max: 3000, label: 'Upto ₹3,000', count: 0 },
-      { min: 3000, max: 7000, label: '₹3,000 to ₹7,000', count: 0 },
-      { min: 7000, max: 15000, label: '₹7,000 to ₹15,000', count: 0 },
-      { min: 15000, max: -1, label: '₹15,000 & More', count: 0 },
-    ];
-  }, [filters]);
+  const starCounts = facets.starCounts;
+  const amenityOptions = facets.amenities;
+  const chainOptions = facets.chains;
+  const propertyTypeOptions = facets.propertyTypes;
+  const priceOptions = facets.priceBands;
 
   function toggleStar(s: number) {
     setStarFilter(starFilter.includes(s) ? starFilter.filter(x => x !== s) : [...starFilter, s]);
@@ -809,6 +767,8 @@ function Sidebar({
   );
 }
 
+const MAP_VIEW = { view: 'map' } as const;
+
 const HOTEL_SORTS = [
   { key: 'featured', label: 'Featured', icon: Sparkles },
   { key: 'rating', label: 'Top Rated', icon: Star },
@@ -848,6 +808,8 @@ function HotelResults() {
   const [showMap, setShowMap] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [selectedHotelId, setSelectedHotelId] = useState<string | null>(null);
+  // Bumped to re-run the search when the stored results expire.
+  const [searchNonce, setSearchNonce] = useState(0);
 
   const nights = checkIn && checkOut
     ? Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000))
@@ -914,72 +876,47 @@ function HotelResults() {
       cancelled = true;
       controller.abort();
     };
-  }, [authLoading, isAuthenticated, locationId, lat, long, checkIn, checkOut, roomsParam, locationName, destinationCountryCode]);
+  }, [authLoading, isAuthenticated, locationId, lat, long, checkIn, checkOut, roomsParam, locationName, destinationCountryCode, searchNonce]);
 
-  // Filtered + sorted hotels
-  const displayed = useMemo(() => {
-    if (!results) return [];
-    let list = [...results.hotels];
-
-    if (nameSearch) {
-      const q = nameSearch.toLowerCase();
-      list = list.filter(h => h.name.toLowerCase().includes(q));
-    }
-    if (starFilter.length > 0) {
-      list = list.filter(h => starFilter.includes(Math.round(h.starRating)));
-    }
-    if (minRating > 0) {
-      list = list.filter(h => (h.userReview?.rating ?? 0) >= minRating);
-    }
-    if (priceRange) {
-      const [min, max] = priceRange;
-      list = list.filter(h => {
-        const p = h.rate?.total ?? 0;
-        return p >= min && (max === -1 || p <= max);
-      });
-    }
-    if (freeCancellation) list = list.filter(h => h.freeCancellation);
-    if (breakfast) list = list.filter(h => h.freeBreakfast);
-    if (amenities.length > 0) {
-      list = list.filter(h =>
-        amenities.every(a =>
-          (h.facilities || []).some(f => f.name === a)
-        )
-      );
-    }
-    if (chainFilter.length > 0) {
-      list = list.filter(h => h.chainName && chainFilter.includes(h.chainName));
-    }
-    if (propertyTypeFilter.length > 0) {
-      list = list.filter(h => h.propertyType && propertyTypeFilter.includes(h.propertyType.toLowerCase()));
-    }
-
-    if (sort === 'price') {
-      list.sort((a, b) => {
-        if (a.rate && b.rate) return a.rate.total - b.rate.total;
-        if (a.rate) return -1;
-        if (b.rate) return 1;
-        return 0;
-      });
-    } else if (sort === 'rating') {
-      list.sort((a, b) => (b.userReview?.rating ?? 0) - (a.userReview?.rating ?? 0));
-    } else {
-      // featured: priced first, then by savings desc
-      list.sort((a, b) => {
-        const aHasRate = a.rate !== null ? 1 : 0;
-        const bHasRate = b.rate !== null ? 1 : 0;
-        if (aHasRate !== bHasRate) return bHasRate - aHasRate;
-        if (a.rate && b.rate) {
-          const aSave = a.rate.baseRate - a.rate.total;
-          const bSave = b.rate.baseRate - b.rate.total;
-          return bSave - aSave;
-        }
-        return 0;
-      });
-    }
-
-    return list;
-  }, [results, nameSearch, starFilter, minRating, priceRange, freeCancellation, breakfast, amenities, chainFilter, propertyTypeFilter, sort]);
+  // Filters + sort go to the server (defaults left out); the list and map are
+  // answered from the stored search, never by re-searching.
+  const query = useMemo(
+    () => ({
+      sort: sort === 'featured' ? undefined : sort,
+      name: nameSearch.trim() || undefined,
+      stars: starFilter,
+      minRating: minRating || undefined,
+      priceMin: priceRange ? priceRange[0] : undefined,
+      priceMax: priceRange ? priceRange[1] : undefined,
+      freeCancellation,
+      breakfast,
+      amenities,
+      chains: chainFilter,
+      propertyTypes: propertyTypeFilter,
+    }),
+    [sort, nameSearch, starFilter, minRating, priceRange, freeCancellation, breakfast, amenities, chainFilter, propertyTypeFilter],
+  );
+  const reSearch = useCallback(() => setSearchNonce((n) => n + 1), []);
+  const list = useResultPage<Hotel, HotelFacets>({
+    kind: 'hotels',
+    initial: results?.page ?? null,
+    query,
+    onExpired: reSearch,
+  });
+  // Map view: every matching hotel (pins), fetched only while the map is open.
+  const map = useResultPage<Hotel, HotelFacets>({
+    kind: 'hotels',
+    initial: results?.page ?? null,
+    query,
+    fixed: MAP_VIEW,
+    enabled: showMap,
+    initialAnswers: false,
+    onExpired: reSearch,
+  });
+  const listPage = list.data;
+  const displayed = (showMap ? map.data?.items : listPage?.items) ?? [];
+  const matching = (showMap ? map.data?.total : listPage?.total) ?? 0;
+  const listError = showMap ? map.error : list.error;
 
   const hasActiveFilters = nameSearch || starFilter.length > 0 || minRating > 0 || priceRange || freeCancellation || breakfast || amenities.length > 0 || chainFilter.length > 0 || propertyTypeFilter.length > 0;
 
@@ -1012,10 +949,9 @@ function HotelResults() {
   }
 
   // Rendered in the desktop column and in the mobile drawer.
-  const sidebar = results ? (
+  const sidebar = listPage ? (
     <Sidebar
-      hotels={results.hotels}
-      filters={results.filters || []}
+      facets={listPage.facets}
       onShowMap={() => {
         setShowMobileFilters(false);
         setShowMap(true);
@@ -1080,7 +1016,7 @@ function HotelResults() {
         )}
 
         {/* Results */}
-        {!loading && !error && results && results.hotels.length === 0 && (
+        {!loading && !error && results && results.page.totalAll === 0 && (
           <ResultsEmpty
             icon={Building2}
             title="No hotels found"
@@ -1089,7 +1025,7 @@ function HotelResults() {
           />
         )}
 
-        {!loading && !error && results && results.hotels.length > 0 && (
+        {!loading && !error && results && listPage && results.page.totalAll > 0 && (
           <div className="flex gap-5">
             {/* Sidebar (hidden in map view) - independently scrollable (sticky).
                 Desktop only: on phones a fixed 280px column left the results
@@ -1146,11 +1082,17 @@ function HotelResults() {
                   options={HOTEL_SORTS}
                   active={sort}
                   onChange={setSort}
-                  shown={displayed.length}
-                  total={results.total}
+                  shown={matching}
+                  total={listPage.totalAll}
                   noun="Hotels"
                 />
               </div>
+
+              {listError && (
+                <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+                  {listError}
+                </div>
+              )}
 
               {/* Active filter pills */}
               {hasActiveFilters && (
@@ -1184,7 +1126,7 @@ function HotelResults() {
               )}
 
               {/* Hotel cards */}
-              {displayed.length === 0 ? (
+              {matching === 0 && !(showMap ? map.loading : list.loading) ? (
                 <ResultsEmpty
                   icon={SlidersHorizontal}
                   title="No hotels match your filters"
@@ -1193,7 +1135,11 @@ function HotelResults() {
                 />
               ) : showMap ? (
                 // ── Map view: compact list + map ──
-                <div className="flex gap-3" style={{ height: 'calc(100vh - 180px)' }}>
+                <div
+                  className={`flex gap-3 transition-opacity ${map.loading ? 'opacity-60' : ''}`}
+                  aria-busy={map.loading}
+                  style={{ height: 'calc(100vh - 180px)' }}
+                >
                   {/* Compact list */}
                   <div className="w-[380px] flex-shrink-0 flex flex-col gap-2 overflow-y-auto pr-1">
                     <button
@@ -1242,8 +1188,9 @@ function HotelResults() {
                   </div>
                 </div>
               ) : (
+                <ResultsBusy busy={list.loading} id="hotels-list">
                 <div className="space-y-3">
-                  {displayed.map((hotel) => (
+                  {listPage.items.map((hotel) => (
                     <HotelCard
                       key={hotel.id}
                       hotel={hotel}
@@ -1260,6 +1207,17 @@ function HotelResults() {
                     />
                   ))}
                 </div>
+                <Pagination
+                  page={listPage.page}
+                  totalPages={listPage.totalPages}
+                  total={listPage.total}
+                  pageSize={listPage.pageSize}
+                  onPageChange={list.setPage}
+                  noun="hotels"
+                  scrollTargetId="hotels-list"
+                  disabled={list.loading}
+                />
+                </ResultsBusy>
               )}
             </div>
           </div>

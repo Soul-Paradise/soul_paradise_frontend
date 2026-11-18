@@ -1,4 +1,5 @@
 import { authFetch } from './api';
+import type { ResultPage } from './results-api';
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
@@ -69,14 +70,33 @@ export interface FlightResult {
   operatingAirlineCode?: string;
 }
 
+/** Sidebar options for one leg, computed server-side from the whole search. */
+export interface FlightFacets {
+  stops: Array<{ stops: number; cheapest: number }>;
+  airlines: Array<{ code: string; name: string; count: number; cheapest: number }>;
+  connectingAirports: Array<{ code: string; name: string; count: number }>;
+  minPrice: number;
+  maxPrice: number;
+  fromLabel: string;
+  toLabel: string;
+}
+
+export type FlightResultPage = ResultPage<FlightResult, FlightFacets>;
+
+/**
+ * Search response: page 1 of each leg. Further pages, filters and sorting come
+ * from GET /flights/results/:resultId (see lib/results-api.ts) - the browser
+ * never receives or filters the full flight list.
+ */
 export interface FlightSearchResponse {
+  resultId: string;
   tui: string;
   completed: boolean;
   currency: string;
-  flights: FlightResult[];
-  returnFlights?: FlightResult[];
   notices: Array<{ notice: string; link: string }>;
   totalResults: number;
+  onward: FlightResultPage;
+  return?: FlightResultPage;
 }
 
 export interface FlightSearchParams {
@@ -123,10 +143,12 @@ export interface MultiCityLeg {
   // The search-session TUI this leg belongs to (DM: unique per leg; IM: shared).
   // Echoed back per-leg at pricing time.
   tui: string;
-  flights: FlightResult[];
+  /** Page 1 of this leg; more via GET /flights/results/:resultId?leg=<legIndex>. */
+  page: FlightResultPage;
 }
 
 export interface MultiCitySearchResponse {
+  resultId: string;
   tui: string;
   // Benzy multi-city FareType used ('DM' domestic / 'IM' international);
   // echoed back at pricing time as the SmartPricer TripType.
@@ -134,6 +156,8 @@ export interface MultiCitySearchResponse {
   completed: boolean;
   currency: string;
   legs: MultiCityLeg[];
+  /** Sidebar options across every leg (server-side). */
+  facets: FlightFacets;
   notices: Array<{ notice: string; link: string }>;
   totalResults: number;
 }

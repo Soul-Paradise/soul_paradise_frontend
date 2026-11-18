@@ -143,12 +143,11 @@ export const DateStrip = ({
       searchFlights(params)
         .then((res) => {
           if (cancelled) return;
-          const flights = rtForReturn
-            ? (res.returnFlights ?? [])
-            : res.flights;
-          if (flights.length > 0) {
-            const cheapest = Math.min(...flights.map((f) => f.grossFare));
-            setDatePrices((prev) => ({ ...prev, [dateStr]: cheapest }));
+          // Cheapest fare for that date, from the server-side facets (the
+          // response carries one page, not the whole list).
+          const leg = rtForReturn ? res.return : res.onward;
+          if (leg && leg.totalAll > 0) {
+            setDatePrices((prev) => ({ ...prev, [dateStr]: leg.facets.minPrice }));
           } else {
             setDatePrices((prev) => ({ ...prev, [dateStr]: null }));
           }

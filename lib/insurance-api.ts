@@ -1,4 +1,5 @@
 import { authFetch } from './api';
+import type { ResultPage } from './results-api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -70,11 +71,26 @@ export interface InsuranceQuote {
   maxTripDays: number;
 }
 
+/** Sidebar options, computed by the server from every quote of the search. */
+export interface InsuranceFacets {
+  bands: Array<{ key: string; label: string; cheapest: number }>;
+  insurers: Array<{ name: string; count: number; cheapest: number }>;
+  /** name "" = the standard plan group */
+  categories: Array<{ name: string; cheapest: number }>;
+  minPrice: number;
+  maxPrice: number;
+  showSubLimitFilter: boolean;
+}
+
+export type InsuranceResultPage = ResultPage<InsuranceQuote, InsuranceFacets>;
+
 export interface QuotesResponse {
+  resultId: string;
   tui: string;
-  quotes: InsuranceQuote[];
   providers: Array<{ provider: string; label: string; count: number }>;
   coverageBands: Array<{ currency: string; min: number; max: number; count: number }>;
+  /** Page 1; filters/sort/pages come from GET /insurance/results/:resultId. */
+  page: InsuranceResultPage;
 }
 
 export interface PlanQuestion {

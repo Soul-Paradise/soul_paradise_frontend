@@ -9,34 +9,27 @@ import {
   getQuotes,
   searchFromParams,
   searchToParams,
+  type InsuranceFacets,
   type InsuranceQuote,
   type InsuranceSearch,
   type QuotesResponse,
 } from '@/lib/insurance-api';
+import { useResultPage } from '@/lib/use-result-page';
+import { Pagination, ResultsBusy } from '@/components/Results/Pagination';
 import { InsuranceSearchSummary } from '@/components/InsuranceResults/SearchSummary';
 import { InsuranceSortTabs, type InsuranceSortOption } from '@/components/InsuranceResults/SortTabs';
 import { InsuranceQuoteCard } from '@/components/InsuranceResults/QuoteCard';
 import {
   InsuranceFilterSidebar,
   createEmptyInsuranceFilters,
-  quoteInBand,
+  hasActiveInsuranceFilters,
+  insuranceFilterQuery,
   type InsuranceFilterState,
 } from '@/components/InsuranceResults/FilterSidebar';
 import { tripDays } from '@/components/Insurance/shared';
 
 // Laid out exactly like app/booking/flights/page.tsx - keep the two in step.
-
-function sortQuotes(quotes: InsuranceQuote[], sortBy: InsuranceSortOption) {
-  return [...quotes].sort((a, b) => {
-    if (sortBy === 'cheapest') return a.price - b.price || b.coverage.amount - a.coverage.amount;
-    if (sortBy === 'highestCover') return b.coverage.amount - a.coverage.amount || a.price - b.price;
-    // Best value: insurer-recommended first, then most cover per rupee.
-    return (
-      Number(b.isRecommended) - Number(a.isRecommended) ||
-      b.coverage.amount / b.price - a.coverage.amount / a.price
-    );
-  });
-}
+// Filtering, sorting and paging are done by the backend on the stored quotes.
 
 function InsuranceResults({ search }: { search: InsuranceSearch }) {
   const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
@@ -44,17 +37,15 @@ function InsuranceResults({ search }: { search: InsuranceSearch }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [sortBy, setSortBy] = useState<InsuranceSortOption>('cheapest');
-  const [filterState, setFilterState] = useState<InsuranceFilterState>(createEmptyInsuranceFilters(0));
+  const [filterState, setFilterState] = useState<InsuranceFilterState>(createEmptyInsuranceFilters());
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
+  /** Re-runs the insurer search (retry, or the stored quotes expired); filters are kept. */
   const doSearch = useCallback(() => {
     setLoading(true);
     setError('');
     getQuotes(search)
-      .then((res) => {
-        setResults(res);
-        setFilterState(createEmptyInsuranceFilters(Math.max(0, ...res.quotes.map((q) => q.price))));
-      })
+      .then(setResults)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [search]);
@@ -63,11 +54,7 @@ function InsuranceResults({ search }: { search: InsuranceSearch }) {
     if (authLoading || !isAuthenticated) return;
     let cancelled = false;
     getQuotes(search)
-      .then((res) => {
-        if (cancelled) return;
-        setResults(res);
-        setFilterState(createEmptyInsuranceFilters(Math.max(0, ...res.quotes.map((q) => q.price))));
-      })
+      .then((res) => !cancelled && setResults(res))
       .catch((e: Error) => !cancelled && setError(e.message))
       .finally(() => !cancelled && setLoading(false));
     return () => {
@@ -75,30 +62,17 @@ function InsuranceResults({ search }: { search: InsuranceSearch }) {
     };
   }, [authLoading, isAuthenticated, search]);
 
-  const filteredQuotes = useMemo(() => {
-    if (!results) return [];
-    const f = filterState;
-    return sortQuotes(
-      results.quotes.filter(
-        (q) =>
-          (f.categories.size === 0 || f.categories.has(q.category)) &&
-          (f.insurers.size === 0 || f.insurers.has(q.providerLabel)) &&
-          (f.coverBands.size === 0 || [...f.coverBands].some((k) => quoteInBand(q, k))) &&
-          (!f.noSubLimitsOnly || !q.isWithSubLimits) &&
-          q.price <= f.maxPrice,
-      ),
-      sortBy,
-    );
-  }, [results, filterState, sortBy]);
+  const query = useMemo(() => insuranceFilterQuery(filterState, sortBy), [filterState, sortBy]);
+  const list = useResultPage<InsuranceQuote, InsuranceFacets>({
+    kind: 'insurance',
+    initial: results?.page ?? null,
+    query,
+    onExpired: doSearch,
+  });
+  const page = list.data;
 
-  const maxPrice = results ? Math.max(0, ...results.quotes.map((q) => q.price)) : 0;
-  const hasActiveFilters =
-    filterState.categories.size > 0 ||
-    filterState.insurers.size > 0 ||
-    filterState.coverBands.size > 0 ||
-    filterState.noSubLimitsOnly ||
-    filterState.maxPrice < maxPrice;
-  const clearFilters = () => setFilterState(createEmptyInsuranceFilters(maxPrice));
+  const hasActiveFilters = hasActiveInsuranceFilters(filterState);
+  const clearFilters = () => setFilterState(createEmptyInsuranceFilters());
   const days = tripDays(search.startDate, search.endDate);
 
   const planHref = (q: InsuranceQuote) => {
@@ -134,14 +108,14 @@ function InsuranceResults({ search }: { search: InsuranceSearch }) {
       )}
 
       {/* Results */}
-      {!loading && !error && results && (
+      {!loading && !error && results && page && (
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
-          {results.quotes.length > 0 ? (
+          {page.totalAll > 0 ? (
             <div className="flex gap-5">
               {/* Filter Sidebar - Desktop */}
               <div className="hidden lg:block w-[280px] flex-shrink-0">
                 <div className="sticky top-36 max-h-[calc(100vh-160px)] overflow-y-auto pr-1 scrollbar-hide">
-                  <InsuranceFilterSidebar data={results} filterState={filterState} onFilterChange={setFilterState} />
+                  <InsuranceFilterSidebar facets={page.facets} filterState={filterState} onFilterChange={setFilterState} />
                 </div>
               </div>
 
@@ -162,7 +136,7 @@ function InsuranceResults({ search }: { search: InsuranceSearch }) {
                         </svg>
                       </button>
                     </div>
-                    <InsuranceFilterSidebar data={results} filterState={filterState} onFilterChange={setFilterState} />
+                    <InsuranceFilterSidebar facets={page.facets} filterState={filterState} onFilterChange={setFilterState} />
                   </div>
                 </div>
               )}
@@ -173,8 +147,8 @@ function InsuranceResults({ search }: { search: InsuranceSearch }) {
                   <InsuranceSortTabs
                     activeSort={sortBy}
                     onSortChange={setSortBy}
-                    totalResults={results.quotes.length}
-                    filteredCount={filteredQuotes.length}
+                    totalResults={page.totalAll}
+                    filteredCount={page.total}
                   />
                 </div>
 
@@ -193,12 +167,30 @@ function InsuranceResults({ search }: { search: InsuranceSearch }) {
                   </button>
                 </div>
 
-                {filteredQuotes.length > 0 ? (
-                  <div className="space-y-3">
-                    {filteredQuotes.map((q) => (
-                      <InsuranceQuoteCard key={`${q.provider}-${q.planId}`} quote={q} href={planHref(q)} days={days} />
-                    ))}
+                {list.error && (
+                  <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+                    {list.error}
                   </div>
+                )}
+
+                {page.total > 0 ? (
+                  <ResultsBusy busy={list.loading} id="insurance-list">
+                    <div className="space-y-3">
+                      {page.items.map((q) => (
+                        <InsuranceQuoteCard key={`${q.provider}-${q.planId}`} quote={q} href={planHref(q)} days={days} />
+                      ))}
+                    </div>
+                    <Pagination
+                      page={page.page}
+                      totalPages={page.totalPages}
+                      total={page.total}
+                      pageSize={page.pageSize}
+                      onPageChange={list.setPage}
+                      noun="plans"
+                      scrollTargetId="insurance-list"
+                      disabled={list.loading}
+                    />
+                  </ResultsBusy>
                 ) : (
                   <ResultsEmpty
                     icon={SlidersHorizontal}

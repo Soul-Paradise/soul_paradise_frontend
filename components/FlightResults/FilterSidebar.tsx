@@ -1,24 +1,64 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { FilterCheckbox, FilterPanel, FilterSection, filterChip } from '@/components/Results/ui';
-import type { FlightResult } from '@/lib/flights-api';
+import type { FlightFacets } from '@/lib/flights-api';
+import type { QueryParams } from '@/lib/results-api';
+import type { SortOption } from './SortTabs';
 
+/**
+ * Selected flight filters. Filtering itself happens on the server
+ * (GET /flights/results/:id); this state only becomes query params.
+ */
 export interface FilterState {
   stops: Set<number>;
-  refundableOnly: boolean;
   departureTimeRanges: Set<string>;
   arrivalTimeRanges: Set<string>;
   airlines: Set<string>;
-  priceRange: [number, number];
   connectingAirports: Set<string>;
+  /** null = no price cap. */
+  maxPrice: number | null;
+}
+
+export function createEmptyFilterState(): FilterState {
+  return {
+    stops: new Set(),
+    departureTimeRanges: new Set(),
+    arrivalTimeRanges: new Set(),
+    airlines: new Set(),
+    connectingAirports: new Set(),
+    maxPrice: null,
+  };
+}
+
+export function hasActiveFlightFilters(f: FilterState): boolean {
+  return (
+    f.stops.size > 0 ||
+    f.departureTimeRanges.size > 0 ||
+    f.arrivalTimeRanges.size > 0 ||
+    f.airlines.size > 0 ||
+    f.connectingAirports.size > 0 ||
+    f.maxPrice !== null
+  );
+}
+
+/** Server query for the results endpoint (defaults left out). */
+export function flightFilterQuery(f: FilterState, sort: SortOption): QueryParams {
+  return {
+    sort: sort === 'cheapest' ? undefined : sort,
+    stops: [...f.stops],
+    dep: [...f.departureTimeRanges],
+    arr: [...f.arrivalTimeRanges],
+    airlines: [...f.airlines],
+    via: [...f.connectingAirports],
+    maxPrice: f.maxPrice ?? undefined,
+  };
 }
 
 interface FilterSidebarProps {
-  flights: FlightResult[];
+  facets: FlightFacets;
   filterState: FilterState;
   onFilterChange: (state: FilterState) => void;
-  currency: string;
   nearbyAirports: boolean;
   onNearbyAirportsChange: (value: boolean) => void;
 }
@@ -39,7 +79,7 @@ const TIME_RANGES: { key: TimeRange; label: string; subLabel: string; icon: Reac
     label: '05am - 12pm',
     subLabel: 'Morning',
     icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
       </svg>
     ),
@@ -49,7 +89,7 @@ const TIME_RANGES: { key: TimeRange; label: string; subLabel: string; icon: Reac
     label: '12pm - 6pm',
     subLabel: 'Afternoon',
     icon: (
-      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <circle cx="12" cy="12" r="5" />
         <path stroke="currentColor" strokeWidth={2} d="M12 1v2m0 18v2m11-11h-2M4 12H2m17.07 7.07l-1.41-1.41M6.34 6.34L4.93 4.93m14.14 0l-1.41 1.41M6.34 17.66l-1.41 1.41" />
       </svg>
@@ -60,7 +100,7 @@ const TIME_RANGES: { key: TimeRange; label: string; subLabel: string; icon: Reac
     label: '6pm - 11pm',
     subLabel: 'Evening',
     icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m-7.07-2.93l.707-.707m10.728 0l.707.707M3 12h1m16 0h1M7.757 7.757l-.707-.707m10.486 0l.707-.707M16 12a4 4 0 01-6.928 2A4 4 0 0116 12z" />
       </svg>
     ),
@@ -70,137 +110,49 @@ const TIME_RANGES: { key: TimeRange; label: string; subLabel: string; icon: Reac
     label: '11pm - 05am',
     subLabel: 'Night',
     icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
       </svg>
     ),
   },
 ];
 
-function getTimeRange(isoTime: string): TimeRange {
-  const hour = new Date(isoTime).getHours();
-  if (hour >= 5 && hour < 12) return 'morning';
-  if (hour >= 12 && hour < 18) return 'afternoon';
-  if (hour >= 18 && hour < 23) return 'evening';
-  return 'night';
-}
+const toggleSetValue = <T,>(set: Set<T>, value: T): Set<T> => {
+  const next = new Set(set);
+  if (next.has(value)) next.delete(value);
+  else next.add(value);
+  return next;
+};
 
+/** Renders the server's facets; every change is sent back to the server. */
 export const FilterSidebar = ({
-  flights,
+  facets,
   filterState,
   onFilterChange,
-  currency,
   nearbyAirports,
   onNearbyAirportsChange,
 }: FilterSidebarProps) => {
   const [showAllAirlines, setShowAllAirlines] = useState(false);
   const [showAllAirports, setShowAllAirports] = useState(false);
 
-  // Compute filter options from all flights
-  const filterData = useMemo(() => {
-    const stopsMap = new Map<number, number>();
-    const airlineMap = new Map<string, { name: string; count: number; cheapest: number }>();
-    const connectingMap = new Map<string, { name: string; count: number }>();
-    let minPrice = Infinity;
-    let maxPrice = 0;
-    let hasRefundable = false;
-    let hasNonRefundable = false;
-
-    for (const f of flights) {
-      // Stops with cheapest price
-      const stopKey = Math.min(f.stops, 2);
-      const existing = stopsMap.get(stopKey) ?? Infinity;
-      stopsMap.set(stopKey, Math.min(existing, f.grossFare));
-
-      // Airlines
-      const airline = airlineMap.get(f.airlineCode);
-      if (airline) {
-        airline.count++;
-        airline.cheapest = Math.min(airline.cheapest, f.grossFare);
-      } else {
-        airlineMap.set(f.airlineCode, {
-          name: f.airlineName,
-          count: 1,
-          cheapest: f.grossFare,
-        });
-      }
-
-      // Connecting airports
-      if (f.connections) {
-        for (const c of f.connections) {
-          const ap = connectingMap.get(c.airport);
-          if (ap) {
-            ap.count++;
-          } else {
-            connectingMap.set(c.airport, { name: c.airportName || c.airport, count: 1 });
-          }
-        }
-      }
-
-      // Price range
-      minPrice = Math.min(minPrice, f.grossFare);
-      maxPrice = Math.max(maxPrice, f.grossFare);
-
-      // Refundable
-      if (f.refundable) hasRefundable = true;
-      else hasNonRefundable = true;
-    }
-
-    const stops = Array.from(stopsMap.entries())
-      .sort(([a], [b]) => a - b)
-      .map(([stops, cheapest]) => ({ stops, cheapest }));
-
-    const airlines = Array.from(airlineMap.entries())
-      .map(([code, data]) => ({ code, ...data }))
-      .sort((a, b) => a.cheapest - b.cheapest);
-
-    const connectingAirports = Array.from(connectingMap.entries())
-      .map(([code, data]) => ({ code, ...data }))
-      .sort((a, b) => b.count - a.count);
-
-    return {
-      stops,
-      airlines,
-      connectingAirports,
-      minPrice: minPrice === Infinity ? 0 : minPrice,
-      maxPrice,
-      showRefundableFilter: hasRefundable && hasNonRefundable,
-    };
-  }, [flights]);
-
-  const toggleSetValue = <T,>(set: Set<T>, value: T): Set<T> => {
-    const next = new Set(set);
-    if (next.has(value)) next.delete(value);
-    else next.add(value);
-    return next;
-  };
-
-  const visibleAirlines = showAllAirlines
-    ? filterData.airlines
-    : filterData.airlines.slice(0, 5);
-
-  const visibleAirports = showAllAirports
-    ? filterData.connectingAirports
-    : filterData.connectingAirports.slice(0, 5);
+  const visibleAirlines = showAllAirlines ? facets.airlines : facets.airlines.slice(0, 5);
+  const visibleAirports = showAllAirports ? facets.connectingAirports : facets.connectingAirports.slice(0, 5);
+  const sliderValue = filterState.maxPrice ?? facets.maxPrice;
 
   return (
     <FilterPanel>
       {/* Stops */}
       <FilterSection title="Stops">
         <div className="flex gap-2">
-          {filterData.stops.map(({ stops, cheapest }) => {
+          {facets.stops.map(({ stops, cheapest }) => {
             const isActive = filterState.stops.has(stops);
             const label = stops === 0 ? 'Non-Stop' : stops === 1 ? '1 Stop' : '2+ Stops';
             return (
               <button
                 key={stops}
                 type="button"
-                onClick={() =>
-                  onFilterChange({
-                    ...filterState,
-                    stops: toggleSetValue(filterState.stops, stops),
-                  })
-                }
+                aria-pressed={isActive}
+                onClick={() => onFilterChange({ ...filterState, stops: toggleSetValue(filterState.stops, stops) })}
                 className={`flex-1 ${filterChip(isActive)}`}
               >
                 <div>{label}</div>
@@ -211,19 +163,8 @@ export const FilterSidebar = ({
         </div>
       </FilterSection>
 
-      {/* Fare Type */}
-      <FilterSection title="Fare Type">
-        <FilterCheckbox
-          checked={filterState.refundableOnly}
-          onChange={() =>
-            onFilterChange({
-              ...filterState,
-              refundableOnly: !filterState.refundableOnly,
-            })
-          }
-          label="Refundable flights only"
-        />
-      </FilterSection>
+      {/* No "Refundable flights only" filter: it keyed off Benzy's yes/no
+          Refundable flag, which can contradict the airline's fare rules. */}
 
       {/* Nearby Airports */}
       <FilterSection title="Nearby Airports" hint="Search nearby airports to find more flight options">
@@ -235,10 +176,7 @@ export const FilterSidebar = ({
       </FilterSection>
 
       {/* Departure Times */}
-      <FilterSection
-        title="Departure Times"
-        hint={`From ${flights[0]?.fromName || flights[0]?.from || 'Origin'}`}
-      >
+      <FilterSection title="Departure Times" hint={`From ${facets.fromLabel || 'Origin'}`}>
         <div className="grid grid-cols-2 gap-2">
           {TIME_RANGES.map((tr) => {
             const isActive = filterState.departureTimeRanges.has(tr.key);
@@ -246,6 +184,7 @@ export const FilterSidebar = ({
               <button
                 key={tr.key}
                 type="button"
+                aria-pressed={isActive}
                 onClick={() =>
                   onFilterChange({
                     ...filterState,
@@ -263,10 +202,7 @@ export const FilterSidebar = ({
       </FilterSection>
 
       {/* Arrival Times */}
-      <FilterSection
-        title="Arrival Times"
-        hint={`At ${flights[0]?.toName || flights[0]?.to || 'Destination'}`}
-      >
+      <FilterSection title="Arrival Times" hint={`At ${facets.toLabel || 'Destination'}`}>
         <div className="grid grid-cols-2 gap-2">
           {TIME_RANGES.map((tr) => {
             const isActive = filterState.arrivalTimeRanges.has(tr.key);
@@ -274,6 +210,7 @@ export const FilterSidebar = ({
               <button
                 key={tr.key}
                 type="button"
+                aria-pressed={isActive}
                 onClick={() =>
                   onFilterChange({
                     ...filterState,
@@ -291,17 +228,14 @@ export const FilterSidebar = ({
       </FilterSection>
 
       {/* Airlines */}
-      {filterData.airlines.length > 0 && (
+      {facets.airlines.length > 0 && (
         <FilterSection title="Airlines">
           {visibleAirlines.map((airline) => (
             <FilterCheckbox
               key={airline.code}
               checked={filterState.airlines.has(airline.code)}
               onChange={() =>
-                onFilterChange({
-                  ...filterState,
-                  airlines: toggleSetValue(filterState.airlines, airline.code),
-                })
+                onFilterChange({ ...filterState, airlines: toggleSetValue(filterState.airlines, airline.code) })
               }
               label={
                 <span className="block truncate">
@@ -311,43 +245,42 @@ export const FilterSidebar = ({
               meta={formatCurrency(airline.cheapest)}
             />
           ))}
-          {filterData.airlines.length > 5 && (
+          {facets.airlines.length > 5 && (
             <button
               type="button"
               onClick={() => setShowAllAirlines(!showAllAirlines)}
               className="mt-2 text-xs font-bold text-(--color-links) hover:underline"
             >
-              {showAllAirlines ? 'Show less' : `+ ${filterData.airlines.length - 5} Airlines`}
+              {showAllAirlines ? 'Show less' : `+ ${facets.airlines.length - 5} Airlines`}
             </button>
           )}
         </FilterSection>
       )}
 
-
       {/* Price Range */}
-      <FilterSection title="Price Range">
-        <input
-          type="range"
-          aria-label="Maximum price"
-          min={filterData.minPrice}
-          max={filterData.maxPrice}
-          value={filterState.priceRange[1]}
-          onChange={(e) =>
-            onFilterChange({
-              ...filterState,
-              priceRange: [filterState.priceRange[0], parseInt(e.target.value)],
-            })
-          }
-          className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-(--color-links)"
-        />
-        <div className="mt-2 flex items-center justify-between text-xs text-(--color-inactive)">
-          <span>{formatCurrency(filterData.minPrice)}</span>
-          <span className="font-semibold text-(--color-foreground)">{formatCurrency(filterState.priceRange[1])}</span>
-        </div>
-      </FilterSection>
+      {facets.maxPrice > facets.minPrice && (
+        <FilterSection title="Price Range">
+          <input
+            type="range"
+            aria-label="Maximum price"
+            min={facets.minPrice}
+            max={facets.maxPrice}
+            value={sliderValue}
+            onChange={(e) => {
+              const v = parseInt(e.target.value, 10);
+              onFilterChange({ ...filterState, maxPrice: v >= facets.maxPrice ? null : v });
+            }}
+            className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-(--color-links)"
+          />
+          <div className="mt-2 flex items-center justify-between text-xs text-(--color-inactive)">
+            <span>{formatCurrency(facets.minPrice)}</span>
+            <span className="font-semibold text-(--color-foreground)">{formatCurrency(sliderValue)}</span>
+          </div>
+        </FilterSection>
+      )}
 
       {/* Connecting Airports */}
-      {filterData.connectingAirports.length > 0 && (
+      {facets.connectingAirports.length > 0 && (
         <FilterSection title="Connecting Airports">
           {visibleAirports.map((ap) => (
             <FilterCheckbox
@@ -362,13 +295,13 @@ export const FilterSidebar = ({
               label={<span className="block truncate">{ap.name}</span>}
             />
           ))}
-          {filterData.connectingAirports.length > 5 && (
+          {facets.connectingAirports.length > 5 && (
             <button
               type="button"
               onClick={() => setShowAllAirports(!showAllAirports)}
               className="mt-2 text-xs font-bold text-(--color-links) hover:underline"
             >
-              {showAllAirports ? 'Show less' : `+ ${filterData.connectingAirports.length - 5} Airports`}
+              {showAllAirports ? 'Show less' : `+ ${facets.connectingAirports.length - 5} Airports`}
             </button>
           )}
         </FilterSection>
@@ -376,5 +309,3 @@ export const FilterSidebar = ({
     </FilterPanel>
   );
 };
-
-export { getTimeRange };
