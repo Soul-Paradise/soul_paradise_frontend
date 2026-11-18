@@ -68,7 +68,7 @@ body {
   /* Status */
   --color-success: #16A36A;
   --color-warn: #F59E0B;
-  --color-danger: #E5484D;
+  --color-danger: #CF3036; /* was #E5484D: 3.9:1 on white, below WCAG AA for small text */
 
   --font-nunito: var(--font-nunito);
 }

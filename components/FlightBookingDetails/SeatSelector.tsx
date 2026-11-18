@@ -15,9 +15,20 @@ interface SeatSelectorProps {
   passengerCount: number;
   selectedSeats: SSRSelection[];
   onSeatChange: (selections: SSRSelection[]) => void;
+  /** Passenger types by paxId - 1 ("ADT" | "CHD" | "INF"), for seat restrictions. */
+  paxTypes?: string[];
 }
 
 /* ─── Helpers ─── */
+/** Benzy SeatLayout SeatInfo: "WINDOW", "AISLE", "EES - Seat is not allowed for Child / Infant". */
+function seatPosition(info?: string) {
+  const v = (info || '').toUpperCase();
+  if (v.includes('WINDOW')) return 'Window';
+  if (v.includes('AISLE')) return 'Aisle';
+  if (v.includes('MIDDLE')) return 'Middle';
+  return '';
+}
+const noChildOrInfant = (info?: string) => /\bEES\b|not allowed for child|infant/i.test(info || '');
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -68,7 +79,9 @@ export const SeatSelector = ({
   passengerCount,
   selectedSeats,
   onSeatChange,
+  paxTypes = [],
 }: SeatSelectorProps) => {
+  const [seatNotice, setSeatNotice] = useState('');
   const [activeSegmentIndex, setActiveSegmentIndex] = useState(0);
   const [activePaxId, setActivePaxId] = useState(1);
   const [hoveredSeat, setHoveredSeat] = useState<number | null>(null);
@@ -156,11 +169,18 @@ export const SeatSelector = ({
         return;
       }
       if (owner !== null) return;
+      // Airline restriction (SeatInfo "EES"): exit-row seats can't go to a child or infant.
+      const paxType = paxTypes[activePaxId - 1];
+      if ((paxType === 'CHD' || paxType === 'INF') && noChildOrInfant(seat.seatInfo)) {
+        setSeatNotice(`Seat ${seat.seatNumber} can't be given to a ${paxType === 'CHD' ? 'child' : 'infant'} (airline restriction, e.g. emergency exit row). Please choose another seat.`);
+        return;
+      }
+      setSeatNotice('');
       const updated = selectedSeats.filter((s) => !(s.fuid === fuid && s.paxId === activePaxId));
       updated.push({ fuid, paxId: activePaxId, ssrId: seat.ssid });
       onSeatChange(updated);
     },
-    [currentSeatMap, activePaxId, selectedSeats, onSeatChange, getSeatOwner],
+    [currentSeatMap, activePaxId, selectedSeats, onSeatChange, getSeatOwner, paxTypes],
   );
 
   if (!seatMaps || seatMaps.length === 0) return null;
@@ -201,6 +221,11 @@ export const SeatSelector = ({
 
   return (
     <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm overflow-hidden shadow-sm">
+      {seatNotice && (
+        <div role="alert" className="px-5 py-2.5 bg-amber-50 border-b border-amber-200 text-xs font-medium text-amber-800">
+          {seatNotice}
+        </div>
+      )}
       {/* ═══ Header ═══ */}
       <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <div>
@@ -547,7 +572,8 @@ export const SeatSelector = ({
                                   onClick={() => handleSeatClick(seat)}
                                   onMouseEnter={() => seat.available && !isOtherPax && setHoveredSeat(seat.ssid)}
                                   onMouseLeave={() => setHoveredSeat(null)}
-                                  title={!seat.available ? 'Booked' : isOtherPax ? `Passenger ${owner}` : `${seat.seatNumber} · ${color.label}${seat.fare > 0 ? ` · ${formatCurrency(seat.fare)}` : ' · Free'}`}
+                                  title={!seat.available ? 'Booked' : isOtherPax ? `Passenger ${owner}` : `${seat.seatNumber}${seatPosition(seat.seatInfo) ? ` · ${seatPosition(seat.seatInfo)}` : ''} · ${color.label}${seat.fare > 0 ? ` · ${formatCurrency(seat.fare)}` : ' · Free'}${noChildOrInfant(seat.seatInfo) ? ' · Not for children/infants' : ''}`}
+                                  aria-label={`Seat ${seat.seatNumber}${seatPosition(seat.seatInfo) ? `, ${seatPosition(seat.seatInfo)}` : ''}${!seat.available ? ', booked' : seat.fare > 0 ? `, ${formatCurrency(seat.fare)}` : ', free'}`}
                                   style={{
                                     width: cellW, height: cellH, backgroundColor: seatBg, borderColor: seatBorder,
                                     color: textColor, cursor, boxShadow: shadow, transform,
@@ -579,7 +605,9 @@ export const SeatSelector = ({
                                         fontSize: 10, fontWeight: 600, zIndex: 50, boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
                                       }}
                                     >
-                                      {seat.seatNumber} · {seat.fare > 0 ? formatCurrency(seat.fare) : 'Free'}
+                                      {seat.seatNumber}
+                                      {seatPosition(seat.seatInfo) && ` · ${seatPosition(seat.seatInfo)}`} · {seat.fare > 0 ? formatCurrency(seat.fare) : 'Free'}
+                                      {noChildOrInfant(seat.seatInfo) && ' · No child/infant'}
                                       <span style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '4px solid transparent', borderRight: '4px solid transparent', borderTop: '4px solid #1e293b' }} />
                                     </span>
                                   )}

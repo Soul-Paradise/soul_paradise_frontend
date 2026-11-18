@@ -10,6 +10,7 @@ import {
 } from '@/lib/flights-api';
 import { useRequireAuth } from '@/contexts/AuthContext';
 import { AlertTriangle, Download, ExternalLink, Plane } from 'lucide-react';
+import { FareRulesAccordion } from '@/components/FlightBookingDetails/FareRulesAccordion';
 import {
   BookButton,
   ConfirmationHero,
@@ -41,6 +42,14 @@ function formatDate(isoString: string) {
   });
 }
 
+/** Benzy BookingDate "2020-05-21 02:24:24" -> "21 May 2020". */
+function formatBookingDate(raw: string) {
+  const d = new Date(raw.replace(' ', 'T'));
+  return Number.isNaN(d.getTime())
+    ? raw
+    : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 function formatCurrency(amount: number, currency: string) {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -49,6 +58,19 @@ function formatCurrency(amount: number, currency: string) {
   }).format(amount);
 }
 
+const STATE_STYLE: Record<string, { color: string; bgColor: string }> = {
+  confirmed: { color: 'text-green-700', bgColor: 'bg-green-50 border-green-200' },
+  held: { color: 'text-sky-700', bgColor: 'bg-sky-50 border-sky-200' },
+  partial: { color: 'text-amber-800', bgColor: 'bg-amber-50 border-amber-200' },
+  pending: { color: 'text-yellow-800', bgColor: 'bg-yellow-50 border-yellow-200' },
+  failed: { color: 'text-red-700', bgColor: 'bg-red-50 border-red-200' },
+  cancelled: { color: 'text-red-700', bgColor: 'bg-red-50 border-red-200' },
+};
+
+/** "1" -> "T1"; terminals arrive normalised ("Terminal 3" -> "3"). */
+const terminal = (t?: string) => (t ? ` · T${t}` : '');
+
+// Fallback for older API responses without statusLabel/statusState.
 function getStatusInfo(status: string): {
   label: string;
   color: string;
@@ -100,6 +122,7 @@ function ConfirmationContent() {
   const [downloading, setDownloading] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelMessage, setCancelMessage] = useState('');
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   const handleDownload = useCallback(async () => {
     if (!transactionId || downloading) return;
@@ -131,14 +154,11 @@ function ConfirmationContent() {
     }
   }, [transactionId]);
 
+  // Runs from the confirmation dialog, which shows the fare's cancellation
+  // charges first (RetrieveBooking.Rules) instead of a bare browser confirm().
   const handleCancel = useCallback(async () => {
     if (!transactionId || cancelling) return;
-    if (
-      !window.confirm(
-        'Are you sure you want to cancel this booking? This action cannot be undone.',
-      )
-    )
-      return;
+    setConfirmCancel(false);
     setCancelling(true);
     setError('');
     setCancelMessage('');
@@ -181,19 +201,25 @@ function ConfirmationContent() {
 
   if (!booking) return null;
 
-  const statusInfo = getStatusInfo(booking.status);
-  const isSuccess = ['BO0', 'TO0'].includes(booking.status);
-  const isCancelled = Boolean(
-    booking.cancellationId ||
-      booking.refundAmount != null ||
-      booking.paymentStatus?.toLowerCase().includes('cancel'),
-  );
-  const canCancel = isSuccess && !isCancelled;
-  const isFailed = /fail|cancel/i.test(statusInfo.label);
+  // The backend decodes Benzy's codes, including round trips ("TO0,TR0") and
+  // cancellations (CancellationID is 0 / RefundAmount null until cancelled).
+  const legacy = getStatusInfo(booking.status);
+  const state = booking.statusState ?? (['BO0', 'TO0'].includes(booking.status) ? 'confirmed' : /fail/i.test(legacy.label) ? 'failed' : 'pending');
+  const statusInfo = { label: booking.statusLabel || legacy.label, ...(STATE_STYLE[state] ?? STATE_STYLE.pending) };
+  const isCancelled = booking.cancelled ?? state === 'cancelled';
+  const isSuccess = (state === 'confirmed' || state === 'partial') && !isCancelled;
+  const canCancel = isSuccess;
+  const isFailed = state === 'failed' || isCancelled;
+  const fareRules = booking.fareRules ?? [];
 
   const showTicketStatus = booking.passengers.some(
-    (p) => p.ticketStatus && p.ticketStatus !== booking.status,
+    (p) => p.ticketStatus && p.ticketStatus !== statusInfo.label,
   );
+  // Per-flight ticket numbers matter when legs were ticketed separately.
+  const multiTicket = booking.passengers.some(
+    (p) => new Set((p.tickets ?? []).map((t) => t.ticketNumber).filter(Boolean)).size > 1,
+  );
+  const showAddOns = booking.passengers.some((p) => (p.addOns ?? []).length > 0);
   const showPassport = booking.passengers.some(
     (p) => p.passportNo || p.nationality || p.passportExpiry,
   );
@@ -209,7 +235,7 @@ function ConfirmationContent() {
           {canCancel && (
             <button
               type="button"
-              onClick={handleCancel}
+              onClick={() => setConfirmCancel(true)}
               disabled={cancelling}
               className="inline-flex items-center justify-center rounded-full border border-(--color-danger) bg-white px-5 py-2.5 text-sm font-bold text-(--color-danger) transition-colors hover:bg-(--color-danger) hover:text-white disabled:opacity-60"
             >
@@ -223,7 +249,15 @@ function ConfirmationContent() {
     >
       <ConfirmationHero
         tone={isSuccess ? 'success' : isFailed ? 'error' : 'pending'}
-        title={isSuccess ? 'Booking Confirmed' : 'Booking Status'}
+        title={
+          isCancelled
+            ? 'Booking Cancelled'
+            : state === 'partial'
+              ? 'Booking Partly Confirmed'
+              : isSuccess
+                ? 'Booking Confirmed'
+                : 'Booking Status'
+        }
         badge={
           <span
             className={`inline-block px-3 py-1 text-xs font-semibold border rounded-full ${statusInfo.bgColor} ${statusInfo.color}`}
@@ -242,7 +276,10 @@ function ConfirmationContent() {
         refs={[
           { label: 'Booking ID', value: booking.bookingId },
           { label: 'Transaction ID', value: booking.transactionId },
-          ...(booking.flights[0]?.pnr ? [{ label: 'PNR', value: booking.flights[0].pnr }] : []),
+          ...(booking.flights[0]?.pnr
+            ? [{ label: booking.flights[0].airlinePnr ? 'Airline PNR' : 'PNR', value: booking.flights[0].pnr }]
+            : []),
+          ...(booking.bookingDate ? [{ label: 'Booked on', value: formatBookingDate(booking.bookingDate) }] : []),
           { label: 'Total paid', value: formatCurrency(booking.totalAmount, booking.currency) },
         ]}
       >
@@ -250,6 +287,39 @@ function ConfirmationContent() {
           {downloading ? 'Preparing…' : 'Download Ticket (PDF)'}
         </SecondaryButton>
       </ConfirmationHero>
+
+      {confirmCancel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="cancel-title">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmCancel(false)} />
+          <div className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-white p-5 shadow-xl sm:p-6">
+            <h2 id="cancel-title" className="text-lg font-bold text-(--color-foreground)">Cancel this booking?</h2>
+            <p className="mt-1 text-sm text-(--color-inactive)">
+              The airline&apos;s cancellation charges below apply. The final refund is confirmed by the airline
+              after cancellation and will be shown on this page. This cannot be undone.
+            </p>
+            {fareRules.length > 0 ? (
+              <div className="mt-4">
+                <FareRulesAccordion fareRules={fareRules} />
+              </div>
+            ) : (
+              <p className="mt-4 rounded-lg bg-(--color-background) px-4 py-3 text-sm text-(--color-inactive)">
+                The airline has not published cancellation charges for this ticket. Charges apply as per airline
+                rules.
+              </p>
+            )}
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <SecondaryButton onClick={() => setConfirmCancel(false)}>Keep booking</SecondaryButton>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="inline-flex items-center justify-center rounded-full bg-(--color-danger) px-5 py-2.5 text-sm font-bold text-white hover:opacity-90"
+              >
+                Yes, cancel booking
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {cancelMessage && (
         <div className="rounded-2xl border border-(--color-success)/30 bg-(--color-success)/10 p-4 text-center text-sm font-semibold text-(--color-success)">
@@ -267,7 +337,14 @@ function ConfirmationContent() {
                 </div>
                 <div>
                   <div className="text-sm font-bold text-(--color-foreground)">{flight.airline}</div>
-                  <div className="text-xs text-(--color-inactive)">{flight.flightNo}</div>
+                  <div className="text-xs text-(--color-inactive)">
+                    {flight.airlineCode && !flight.flightNo.toUpperCase().startsWith(flight.airlineCode)
+                      ? `${flight.airlineCode} ${flight.flightNo}`
+                      : flight.flightNo}
+                    {flight.operatingAirlineCode && (
+                      <span className="ml-1">· Operated by {flight.operatingAirlineCode}</span>
+                    )}
+                  </div>
                 </div>
                 <div className="ml-auto flex items-center gap-3">
                   {flight.refundable != null && (
@@ -283,23 +360,38 @@ function ConfirmationContent() {
                   )}
                   {flight.pnr && (
                     <div className="text-right">
-                      <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-(--color-inactive)">PNR</div>
+                      <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-(--color-inactive)">
+                        {flight.airlinePnr ? 'Airline PNR' : 'PNR'}
+                      </div>
                       <div className="text-sm font-bold text-(--color-links)">{flight.pnr}</div>
+                      {flight.airlinePnr && flight.crsPnr && flight.crsPnr !== flight.airlinePnr && (
+                        <div className="text-[10px] text-(--color-inactive)">Booking ref {flight.crsPnr}</div>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
 
-              {flight.airlineContact && (
-                <div className="text-xs text-(--color-inactive) mb-3">Airline care: {flight.airlineContact}</div>
-              )}
+              {/* Aircraft / class / fare brand / baggage - as printed on the e-ticket */}
+              <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--color-inactive)">
+                {flight.aircraft && <span>Aircraft: <span className="font-semibold text-(--color-foreground)">{flight.aircraft}</span></span>}
+                {flight.cabin && <span>Class: <span className="font-semibold text-(--color-foreground)">{flight.cabin}</span></span>}
+                {flight.fareBrand && <span>Fare: <span className="font-semibold text-(--color-foreground)">{flight.fareBrand}</span></span>}
+                <span>
+                  Check-in: <span className="font-semibold text-(--color-foreground)">{flight.baggage || 'As per airline policy'}</span>
+                </span>
+                <span>
+                  Cabin: <span className="font-semibold text-(--color-foreground)">{flight.cabinBaggage || 'As per airline policy'}</span>
+                </span>
+                {flight.airlineContact && <span>Airline care: {flight.airlineContact}</span>}
+              </div>
 
               <div className="flex items-center gap-4">
                 <div className="text-center">
                   <div className="text-xl font-extrabold text-(--color-foreground)">{formatTime(flight.departureTime)}</div>
                   <div className="text-xs font-bold text-(--color-foreground)">
                     {flight.from}
-                    {flight.departureTerminal ? ` T${flight.departureTerminal}` : ''}
+                    {terminal(flight.departureTerminal)}
                   </div>
                   <div className="text-xs text-(--color-inactive)">{flight.fromName}</div>
                   <div className="text-xs text-(--color-inactive)">{formatDate(flight.departureTime)}</div>
@@ -309,15 +401,20 @@ function ConfirmationContent() {
                   <div className="text-xs text-(--color-inactive) mb-1">{flight.duration}</div>
                   <div className="w-full flex items-center">
                     <div className="h-px flex-1 border-t border-dashed border-(--color-tertiary-button)" />
-                    <Plane className="w-4 h-4 text-(--color-links) ml-1" />
+                    <Plane className="w-4 h-4 text-(--color-links) ml-1" aria-hidden="true" />
                   </div>
+                  {(flight.hops ?? []).length > 0 && (
+                    <div className="mt-1 text-[11px] text-(--color-inactive) text-center">
+                      {flight.hops!.map((h) => `Technical stop: ${h.name}${h.duration ? ` (${h.duration})` : ''}`).join(' · ')}
+                    </div>
+                  )}
                 </div>
 
                 <div className="text-center">
                   <div className="text-xl font-extrabold text-(--color-foreground)">{formatTime(flight.arrivalTime)}</div>
                   <div className="text-xs font-bold text-(--color-foreground)">
                     {flight.to}
-                    {flight.arrivalTerminal ? ` T${flight.arrivalTerminal}` : ''}
+                    {terminal(flight.arrivalTerminal)}
                   </div>
                   <div className="text-xs text-(--color-inactive)">{flight.toName}</div>
                   <div className="text-xs text-(--color-inactive)">{formatDate(flight.arrivalTime)}</div>
@@ -350,8 +447,9 @@ function ConfirmationContent() {
                 <th className={th}>Name</th>
                 <th className={th}>Type</th>
                 {showAge && <th className={th}>Age</th>}
-                <th className={th}>Ticket Number</th>
+                <th className={th}>{multiTicket ? 'Ticket Numbers' : 'Ticket Number'}</th>
                 {showTicketStatus && <th className={th}>Ticket Status</th>}
+                {showAddOns && <th className={th}>Seat / Meal / Baggage</th>}
                 {showPassport && <th className={th}>Passport</th>}
               </tr>
             </thead>
@@ -363,10 +461,39 @@ function ConfirmationContent() {
                     {pax.paxType === 'ADT' ? 'Adult' : pax.paxType === 'CHD' ? 'Child' : 'Infant'}
                   </td>
                   {showAge && <td className={td}>{pax.age != null ? pax.age : '-'}</td>}
-                  <td className={td}>{pax.ticketNumber || 'Pending'}</td>
+                  <td className={td}>
+                    {multiTicket ? (
+                      <div className="space-y-0.5">
+                        {(pax.tickets ?? []).map((t, ti) => (
+                          <div key={ti}>
+                            <span className="font-semibold text-(--color-foreground)">{t.ticketNumber || 'Pending'}</span>
+                            <span className="ml-1 text-xs">{t.flight}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      pax.ticketNumber || 'Pending'
+                    )}
+                  </td>
                   {showTicketStatus && (
                     <td className={td}>
-                      {pax.ticketStatus && pax.ticketStatus !== booking.status ? pax.ticketStatus : '-'}
+                      {pax.ticketStatus && pax.ticketStatus !== statusInfo.label ? pax.ticketStatus : '-'}
+                    </td>
+                  )}
+                  {showAddOns && (
+                    <td className={td}>
+                      {(pax.addOns ?? []).length ? (
+                        <div className="space-y-0.5">
+                          {pax.addOns!.map((a, ai) => (
+                            <div key={ai}>
+                              <span className="font-semibold text-(--color-foreground)">{a.item}</span>
+                              {a.flight && <span className="ml-1 text-xs">{a.flight}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        '-'
+                      )}
                     </td>
                   )}
                   {showPassport && (
@@ -418,22 +545,31 @@ function ConfirmationContent() {
         </ConfirmationSection>
       )}
 
-      {(booking.cancellationId || booking.refundAmount != null || booking.cancellationCharge != null) && (
+      {isCancelled && (
         <ConfirmationSection title="Cancellation & Refund">
           <dl>
-            <ConfirmationRow label="Cancellation ID" value={booking.cancellationId} />
-            {booking.refundAmount != null && (
-              <ConfirmationRow label="Refund Amount" value={formatCurrency(booking.refundAmount, booking.currency)} />
-            )}
+            <ConfirmationRow label="Cancellation ID" value={booking.cancellationId || null} />
+            <ConfirmationRow label="Amount paid" value={formatCurrency(booking.totalAmount, booking.currency)} />
+            <ConfirmationRow
+              label="Refund amount"
+              value={
+                booking.refundAmount != null
+                  ? formatCurrency(booking.refundAmount, booking.currency)
+                  : 'Being processed by the airline'
+              }
+            />
             {booking.cancellationCharge != null && (
               <ConfirmationRow
-                label="Cancellation Charge"
+                label="Cancellation charges"
                 value={formatCurrency(booking.cancellationCharge, booking.currency)}
               />
             )}
           </dl>
         </ConfirmationSection>
       )}
+
+      {/* Has its own "Fare Rules" card + heading. */}
+      {fareRules.length > 0 && !isCancelled && <FareRulesAccordion fareRules={fareRules} />}
 
       <ConfirmationSection title="Payment">
         <dl>
@@ -453,11 +589,13 @@ function ConfirmationContent() {
         </dl>
       </ConfirmationSection>
 
-      {(booking.contactEmail || booking.contactMobile) && (
+      {(booking.contactEmail || booking.contactMobile || booking.gstTin) && (
         <ConfirmationSection title="Contact">
           <dl>
             <ConfirmationRow label="Email" value={booking.contactEmail} />
             <ConfirmationRow label="Mobile" value={booking.contactMobile} />
+            {booking.gstTin && <ConfirmationRow label="GST company" value={booking.gstCompanyName || null} />}
+            {booking.gstTin && <ConfirmationRow label="GSTIN" value={booking.gstTin} />}
           </dl>
         </ConfirmationSection>
       )}

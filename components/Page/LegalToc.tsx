@@ -52,7 +52,7 @@ export function LegalToc({ items }: { items: { id: string; number: number; title
                   : 'text-(--color-inactive) hover:bg-(--color-background) hover:text-(--color-foreground)'
               }`}
             >
-              <span className={`mt-px w-5 shrink-0 text-xs font-bold ${isActive ? '' : 'text-(--color-tertiary-button)'}`}>
+              <span className={`mt-px w-5 shrink-0 text-xs font-bold ${isActive ? '' : 'text-(--color-inactive)'}`}>
                 {String(number).padStart(2, '0')}
               </span>
               <span className="leading-snug">{title}</span>

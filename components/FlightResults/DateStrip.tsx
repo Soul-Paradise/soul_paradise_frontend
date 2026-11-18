@@ -213,6 +213,7 @@ export const DateStrip = ({
       <button
         type="button"
         onClick={() => scroll('left')}
+        aria-label="Earlier dates"
         className="px-2 py-4 text-(--color-links) hover:bg-(--color-primary-tint) flex-shrink-0 border-r border-(--color-tertiary-button)"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -254,6 +255,7 @@ export const DateStrip = ({
       <button
         type="button"
         onClick={() => scroll('right')}
+        aria-label="Later dates"
         className="px-2 py-4 text-(--color-links) hover:bg-(--color-primary-tint) flex-shrink-0 border-l border-(--color-tertiary-button)"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -100,6 +100,19 @@ interface LegSummaryProps {
   label: 'Onward' | 'Return';
 }
 
+/**
+ * Leg refundability from Benzy's per-segment flag ("Y"/"R" refundable with the
+ * airline's penalty, "N" non-refundable). One non-refundable segment makes the
+ * leg non-refundable; undefined when the airline sent no flag at all.
+ */
+function legRefundable(segments: SegmentDetail[]): boolean | undefined {
+  const flags = segments
+    .map((s) => (s.refundable || '').trim().toUpperCase())
+    .filter(Boolean);
+  if (!flags.length) return undefined;
+  return flags.every((f) => f === 'Y' || f === 'R');
+}
+
 const LegSummary = ({ segments, label }: LegSummaryProps) => {
   if (segments.length === 0) return null;
   const first = segments[0];
@@ -120,6 +133,14 @@ const LegSummary = ({ segments, label }: LegSummaryProps) => {
         <span>{stopText}</span>
         <span className="text-gray-300">|</span>
         <span>{cabin}</span>
+        {legRefundable(segments) !== undefined && (
+          <>
+            <span className="text-gray-300">|</span>
+            <span className={legRefundable(segments) ? 'text-emerald-700' : 'text-amber-700'}>
+              {legRefundable(segments) ? 'Partially Refundable' : 'Non-Refundable'}
+            </span>
+          </>
+        )}
       </div>
       <div className="mt-1 text-[12px] text-gray-600 flex items-center gap-1.5 flex-wrap">
         <span>{formatDateShort(first.departureTime)}</span>
@@ -161,7 +182,18 @@ const LegDetailed = ({ segments, label, refundable }: LegDetailedProps) => {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button type="button" className="text-[12px] font-medium text-sky-600 hover:underline">
+          <button
+            type="button"
+            onClick={() => {
+              // The rules accordion renders in both the mobile and desktop
+              // sidebars; scroll to whichever one is laid out.
+              const target = Array.from(
+                document.querySelectorAll<HTMLElement>('[data-fare-rules]'),
+              ).find((el) => el.offsetParent !== null);
+              target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className="text-[12px] font-medium text-sky-700 hover:underline"
+          >
             <span className="inline-flex items-center gap-1">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -197,8 +229,9 @@ const LegDetailed = ({ segments, label, refundable }: LegDetailedProps) => {
                   <div className="text-sm font-semibold text-gray-900 truncate leading-tight">
                     {seg.airline}
                   </div>
-                  <div className="text-[11px] text-gray-400 leading-tight">
+                  <div className="text-[11px] text-gray-500 leading-tight">
                     {seg.flightNo}
+                    {seg.operatingAirlineCode && <> · Operated by {seg.operatingAirlineCode}</>}
                   </div>
                 </div>
               </div>
@@ -213,6 +246,19 @@ const LegDetailed = ({ segments, label, refundable }: LegDetailedProps) => {
                   <div className="text-gray-400 uppercase tracking-wide">Travel Class</div>
                   <div className="text-gray-800 font-medium">{cabinLabel(seg.cabin)}</div>
                 </div>
+                {(seg.fareBrand || seg.fareClass) && (
+                  <div className="px-3 py-1.5 border-r border-gray-200">
+                    <div className="text-gray-400 uppercase tracking-wide">Fare Brand</div>
+                    <div className="text-gray-800 font-medium">
+                      {seg.fareBrand || '—'}
+                      {seg.fareClass && (
+                        <span className="block text-[10px] text-gray-400 font-normal normal-case">
+                          Fare basis {seg.fareClass}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {seg.baggage && (
                   <div className="px-3 py-1.5 border-r border-gray-200">
                     <div className="text-gray-400 uppercase tracking-wide">Check-In Baggage</div>
@@ -228,9 +274,11 @@ const LegDetailed = ({ segments, label, refundable }: LegDetailedProps) => {
                 )}
                 <div className="px-3 py-1.5">
                   <div className="text-gray-400 uppercase tracking-wide">Cabin Baggage</div>
-                  {/* Benzy exposes no cabin-allowance field - do not assert a
-                      weight the airline never gave us. */}
-                  <div className="text-gray-800 font-medium">As per airline policy</div>
+                  {/* Resolved server-side from the included-baggage text when
+                      the airline publishes it; never invented otherwise. */}
+                  <div className="text-gray-800 font-medium">
+                    {seg.cabinBaggage || 'As per airline policy'}
+                  </div>
                 </div>
                 {seg.mealsIncluded && (
                   <div className="px-3 py-1.5 border-l border-gray-200">
@@ -415,7 +463,7 @@ export const FlightSegments = ({ segments }: FlightSegmentsProps) => {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="inline-flex items-center gap-1 text-[12px] font-semibold text-sky-600 hover:underline"
+          className="inline-flex items-center gap-1 text-[12px] font-semibold text-sky-700 hover:underline"
         >
           <svg
             className={`w-3.5 h-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`}
@@ -432,8 +480,10 @@ export const FlightSegments = ({ segments }: FlightSegmentsProps) => {
       {/* Expanded per-leg details */}
       {expanded && (
         <div className="mt-3 space-y-4">
-          <LegDetailed segments={onward} label="Onward" />
-          {isRoundTrip && <LegDetailed segments={ret} label="Return" />}
+          <LegDetailed segments={onward} label="Onward" refundable={legRefundable(onward)} />
+          {isRoundTrip && (
+            <LegDetailed segments={ret} label="Return" refundable={legRefundable(ret)} />
+          )}
         </div>
       )}
     </div>

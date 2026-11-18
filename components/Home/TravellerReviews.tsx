@@ -171,7 +171,7 @@ function ReviewCard({ review, accent }: { review: Testimonial; accent: string })
     <figure className="relative flex w-[280px] shrink-0 flex-col overflow-hidden rounded-2xl bg-(--color-peace) p-6 shadow-sm ring-1 ring-(--color-tertiary-button) transition-all hover:-translate-y-1 hover:shadow-xl sm:w-[340px]">
       <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} aria-hidden="true" />
       <Quote className="absolute right-5 top-5 h-8 w-8 text-(--color-tertiary-button)" />
-      <div className="mb-3 flex gap-0.5" aria-label={`${review.rating} out of 5 stars`}>
+      <div className="mb-3 flex gap-0.5" role="img" aria-label={`${review.rating} out of 5 stars`}>
         {Array.from({ length: 5 }, (_, i) => (
           <Star
             key={i}

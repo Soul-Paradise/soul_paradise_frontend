@@ -22,7 +22,7 @@ export const fieldCell = (active = false) =>
 /** Main value line (a city, a destination, a count). */
 export const FIELD_VALUE = 'text-xl font-extrabold leading-tight text-gray-900';
 /** Same line when nothing is chosen yet. */
-export const FIELD_PLACEHOLDER = 'text-xl font-bold leading-tight text-gray-400';
+export const FIELD_PLACEHOLDER = 'text-xl font-bold leading-tight text-gray-500';
 /** Small grey line under the value. */
 export const FIELD_SUB = 'mt-1 truncate text-xs text-gray-500';
 

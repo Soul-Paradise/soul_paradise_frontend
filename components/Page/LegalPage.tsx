@@ -150,10 +150,12 @@ export function LegalPage({
             </div>
             <p className="relative mt-3 max-w-2xl leading-relaxed text-white/80">{help.text}</p>
             <div className="relative mt-5 flex flex-col gap-4 sm:flex-row sm:gap-8">
-              <a href={`mailto:${contact.email}`} className="flex items-center gap-2 font-semibold hover:underline">
-                <Mail className="h-5 w-5 text-sky-300" />
-
-              </a>
+              {contact.email && (
+                <a href={`mailto:${contact.email}`} className="flex items-center gap-2 font-semibold hover:underline">
+                  <Mail className="h-5 w-5 text-sky-300" aria-hidden="true" />
+                  {contact.email}
+                </a>
+              )}
               <span className="flex items-start gap-2 text-white/85">
                 <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-sky-300" />
                 <span>

@@ -77,7 +77,7 @@ export const FareRulesAccordion = ({ fareRules }: FareRulesAccordionProps) => {
               <span className="text-sm font-medium text-gray-800 flex items-center gap-2 text-left">
                 {rule.category}
                 {rule.sector && (
-                  <span className="text-[11px] font-normal text-gray-400">
+                  <span className="text-[11px] font-normal text-gray-500">
                     {rule.sector}
                   </span>
                 )}

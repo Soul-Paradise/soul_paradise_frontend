@@ -19,6 +19,7 @@ import { NoticeBanner } from '@/components/FlightResults/NoticeBanner';
 import { SortTabs, type SortOption } from '@/components/FlightResults/SortTabs';
 import {
   FilterSidebar,
+  fareTypeKey,
   getTimeRange,
   type FilterState,
 } from '@/components/FlightResults/FilterSidebar';
@@ -32,6 +33,7 @@ function createEmptyFilterState(maxPrice: number): FilterState {
     airlines: new Set(),
     priceRange: [0, maxPrice || 999999],
     connectingAirports: new Set(),
+    fareTypes: new Set(),
   };
 }
 
@@ -180,6 +182,12 @@ function FlightSearchResults() {
       });
     }
 
+    // Fare type (brand)
+    if (filterState.fareTypes && filterState.fareTypes.size > 0) {
+      const wanted = filterState.fareTypes;
+      flights = flights.filter((f) => wanted.has(fareTypeKey(f)));
+    }
+
     // Sort
     flights.sort((a, b) => {
       switch (sortBy) {
@@ -254,6 +262,7 @@ function FlightSearchResults() {
     filterState.arrivalTimeRanges.size > 0 ||
     filterState.airlines.size > 0 ||
     filterState.connectingAirports.size > 0 ||
+    (filterState.fareTypes?.size ?? 0) > 0 ||
     (allFlights.length > 0 &&
       filterState.priceRange[1] < Math.max(...allFlights.map((f) => f.grossFare)));
 
@@ -352,8 +361,9 @@ function FlightSearchResults() {
                       <h2 className="text-base font-bold text-gray-900">Filters</h2>
                       <button
                         type="button"
+                        aria-label="Close filters"
                         onClick={() => setShowMobileFilters(false)}
-                        className="p-1 text-gray-400 hover:text-gray-600"
+                        className="p-1 text-gray-500 hover:text-gray-700"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -421,7 +421,7 @@ export const SSRSelector = ({
                       {opt.description}
                     </span>
                     {opt.isFreeMeal && (
-                      <span className="text-[9px] font-bold uppercase text-emerald-600">
+                      <span className="text-[9px] font-bold uppercase text-emerald-700">
                         Included
                       </span>
                     )}
@@ -618,7 +618,7 @@ function MealGrid({
                 {opt.description}
               </p>
               {opt.isFreeMeal && (
-                <span className="inline-block mt-1 text-[9px] font-bold uppercase tracking-wide text-emerald-600 bg-emerald-50 rounded px-1 py-0.5">
+                <span className="inline-block mt-1 text-[9px] font-bold uppercase tracking-wide text-emerald-700 bg-emerald-50 rounded px-1 py-0.5">
                   Complimentary
                 </span>
               )}
@@ -704,7 +704,7 @@ function BaggageList({
               >
                 {opt.description}
                 {opt.isFreeMeal && (
-                  <span className="ml-1.5 text-[9px] font-bold uppercase tracking-wide text-emerald-600">
+                  <span className="ml-1.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700">
                     Included
                   </span>
                 )}

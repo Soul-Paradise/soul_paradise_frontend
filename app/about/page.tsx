@@ -229,7 +229,7 @@ function Reasons({ content }: { content: NonNullable<AboutSections['reasons']> }
               key={title}
               className="group flex gap-5 rounded-2xl bg-white/5 p-6 ring-1 ring-inset ring-white/10 backdrop-blur-sm transition hover:bg-white/10"
             >
-              <span className="text-4xl font-extrabold leading-none text-white/20 transition group-hover:text-sky-300/60">
+              <span aria-hidden="true" className="text-4xl font-extrabold leading-none text-white/20 transition group-hover:text-sky-300/60">
                 {String(i + 1).padStart(2, '0')}
               </span>
               <div>

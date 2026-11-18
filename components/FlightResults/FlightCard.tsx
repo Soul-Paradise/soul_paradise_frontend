@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import type { FlightResult } from '@/lib/flights-api';
+import { splitBaggage, type FlightResult } from '@/lib/flights-api';
 import { FlightDetails } from './FlightDetails';
 import { BookButton, RESULT_CARD } from '@/components/Results/ui';
 
@@ -60,6 +60,21 @@ function formatCurrency(amount: number, currency: string) {
   }).format(amount);
 }
 
+function formatDay(isoString: string) {
+  return new Date(isoString).toLocaleDateString('en-IN', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
+/** "1" -> "T1", "1D" -> "T1D"; empty when the airline published none. */
+function terminalLabel(t?: string | null) {
+  const v = (t || '').trim();
+  if (!v) return '';
+  return /^t/i.test(v) ? v.toUpperCase() : `T${v}`;
+}
+
 function isNextDay(departure: string, arrival: string): boolean {
   const dep = new Date(departure);
   const arr = new Date(arrival);
@@ -105,9 +120,20 @@ export const FlightCard = ({
 
   const nextDay = isNextDay(flight.departureTime, flight.arrivalTime);
 
-  const fromCity = (flight.fromName || flight.from).split('|')[0].trim();
-  const toCity = (flight.toName || flight.to).split('|')[0].trim();
+  // Benzy names read "Airport |City" (e.g. "Chhatrapati Shivaji |Mumbai");
+  // show the city, as Akbar does - the airport name is in the details panel.
+  const cityOf = (name: string) => {
+    const parts = name.split('|').map((p) => p.trim()).filter(Boolean);
+    return parts[parts.length - 1] || name;
+  };
+  const fromCity = cityOf(flight.fromName || flight.from);
+  const toCity = cityOf(flight.toName || flight.to);
   const flightCode = `${flight.airlineCode} - ${flight.flightNo.replace(flight.airlineCode, '').trim()}`;
+  const depTerminal = terminalLabel(flight.departureTerminal);
+  const arrTerminal = terminalLabel(flight.arrivalTerminal);
+  const bag = splitBaggage(flight.baggage);
+  const fareBrand = (flight.fareHead || '').trim();
+  const fareBasis = (flight.fareBasisCode || '').trim();
 
   return (
     <div
@@ -126,9 +152,12 @@ export const FlightCard = ({
       )}
 
       <div className={selectionMode ? 'px-3 py-2.5' : 'px-4 py-3'}>
-        {/* Main single-row layout */}
+        {/* One row from sm up; on phones it wraps into airline+seats /
+            times / price+action so nothing is pushed off-screen. */}
         <div
-          className={`flex items-center min-w-0 ${selectionMode ? 'gap-2' : 'gap-3 sm:gap-4'}`}
+          className={`flex flex-wrap sm:flex-nowrap items-center min-w-0 gap-y-2 ${
+            selectionMode ? 'gap-x-2' : 'gap-x-3 sm:gap-x-4'
+          }`}
         >
           {/* Radio (selection mode only) */}
           {selectionMode && (
@@ -143,8 +172,8 @@ export const FlightCard = ({
 
           {/* Airline */}
           <div
-            className={`flex items-center gap-2 min-w-0 flex-shrink ${
-              selectionMode ? 'basis-[110px]' : 'basis-[140px] sm:basis-[160px]'
+            className={`order-1 flex items-center gap-2 min-w-0 flex-1 sm:flex-none sm:flex-shrink ${
+              selectionMode ? 'sm:basis-[110px]' : 'sm:basis-[160px]'
             }`}
           >
             <div
@@ -158,12 +187,19 @@ export const FlightCard = ({
               <div className="text-[13px] font-semibold text-gray-900 truncate leading-tight">
                 {flight.airlineName.split('|')[0]}
               </div>
-              <div className="text-[11px] text-gray-400 leading-tight truncate">
+              <div className="text-[11px] text-gray-500 leading-tight truncate">
                 {flightCode}
               </div>
+              {flight.operatingAirlineCode && (
+                <div className="text-[10px] text-gray-500 leading-tight truncate">
+                  Operated by {flight.operatingAirlineCode}
+                </div>
+              )}
             </div>
           </div>
 
+          {/* Times: full-width row on phones, inline from sm up */}
+          <div className="order-3 sm:order-2 w-full sm:w-auto sm:flex-1 flex items-center gap-3 sm:gap-4 min-w-0">
           {/* Departure */}
           <div className="text-center flex-shrink-0 min-w-0">
             <div
@@ -177,6 +213,10 @@ export const FlightCard = ({
               }`}
             >
               {fromCity}
+            </div>
+            <div className="text-[10px] text-gray-500 leading-tight whitespace-nowrap">
+              {formatDay(flight.departureTime)}
+              {depTerminal && ` · ${depTerminal}`}
             </div>
           </div>
 
@@ -213,7 +253,7 @@ export const FlightCard = ({
             >
               {formatTime(flight.arrivalTime)}
               {nextDay && (
-                <span className="text-[9px] text-red-500 ml-0.5 align-top">
+                <span className="text-[9px] text-red-600 ml-0.5 align-top">
                   +1
                 </span>
               )}
@@ -225,11 +265,16 @@ export const FlightCard = ({
             >
               {toCity}
             </div>
+            <div className="text-[10px] text-gray-500 leading-tight whitespace-nowrap">
+              {formatDay(flight.arrivalTime)}
+              {arrTerminal && ` · ${arrTerminal}`}
+            </div>
+          </div>
           </div>
 
-          {/* Seats */}
+          {/* Seats: top-right on phones */}
           {flight.seats > 0 && (
-            <div className="flex flex-col items-center flex-shrink-0">
+            <div className="order-2 sm:order-3 flex flex-col items-center flex-shrink-0">
               <Image
                 src="/seat.png"
                 alt="Seat"
@@ -239,7 +284,7 @@ export const FlightCard = ({
               />
               <span
                 className={`text-[10px] font-semibold whitespace-nowrap ${
-                  flight.seats <= 9 ? 'text-red-500' : 'text-gray-600'
+                  flight.seats <= 9 ? 'text-red-600' : 'text-gray-600'
                 }`}
               >
                 {flight.seats} Left
@@ -247,8 +292,8 @@ export const FlightCard = ({
             </div>
           )}
 
-          {/* Price */}
-          <div className="text-right flex-shrink-0">
+          {/* Price: bottom-left on phones */}
+          <div className="order-4 mr-auto sm:mr-0 text-left sm:text-right flex-shrink-0">
             <div
               className={`${selectionMode ? 'text-base' : 'text-lg'} font-bold text-gray-900 leading-tight whitespace-nowrap`}
             >
@@ -258,7 +303,7 @@ export const FlightCard = ({
 
           {/* Action button */}
           {!selectionMode && (
-            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            <div className="order-5 flex flex-col items-end gap-1 flex-shrink-0">
               <span onClick={(e) => e.stopPropagation()}>
                 <BookButton onClick={handleBook}>View Fare</BookButton>
               </span>
@@ -276,9 +321,38 @@ export const FlightCard = ({
           )}
         </div>
 
+        {/* Fare identity + included baggage - lets two fares on the same
+            flight be told apart without opening details. */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px] text-gray-600">
+            {(fareBrand || fareBasis) && (
+              <span className="font-semibold text-gray-800 uppercase tracking-wide">
+                {fareBrand}
+                {fareBasis && (
+                  <span className="ml-1 font-normal normal-case text-gray-500">
+                    ({fareBasis})
+                  </span>
+                )}
+              </span>
+            )}
+            {bag.checkIn && (
+              <span className="inline-flex items-center gap-1 rounded border border-gray-200 px-1.5 py-0.5">
+                Check-in {bag.checkIn}
+              </span>
+            )}
+            {bag.cabin && (
+              <span className="inline-flex items-center gap-1 rounded border border-gray-200 px-1.5 py-0.5">
+                Cabin {bag.cabin}
+              </span>
+            )}
+            <span className={flight.refundable ? 'text-green-700 font-medium' : 'text-gray-500'}>
+              {/* Benzy "Y" = refundable subject to the airline's cancellation fee. */}
+              {flight.refundable ? 'Partially refundable' : 'Non-refundable'}
+            </span>
+        </div>
+
         {/* Footer: meal note + details */}
         <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
-          <div className="flex items-center gap-1 text-[11px] text-gray-400 min-w-0">
+          <div className="flex items-center gap-1 text-[11px] text-gray-500 min-w-0">
             <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -316,9 +390,6 @@ export const FlightCard = ({
               >
                 {showDetails ? '− Details' : '+ Details'}
               </button>
-            )}
-            {flight.refundable && (
-              <span className="text-[11px] font-bold text-green-600">R</span>
             )}
           </div>
         </div>

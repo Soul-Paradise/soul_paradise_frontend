@@ -188,6 +188,7 @@ export const InsuranceFilterSidebar = ({ data, filterState, onFilterChange }: Pr
         <FilterSection title="Price Range">
           <input
             type="range"
+            aria-label="Maximum premium"
             min={filterData.minPrice}
             max={filterData.maxPrice}
             value={Math.min(filterState.maxPrice, filterData.maxPrice)}

@@ -113,7 +113,7 @@ const LegCard = ({ segments, index }: { segments: SegmentDetail[]; index: number
       <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-4 flex-wrap min-w-0">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-lg font-bold text-gray-900">
-            <span className="text-[11px] font-bold text-sky-600 uppercase tracking-wide mr-1">
+            <span className="text-[11px] font-bold text-sky-700 uppercase tracking-wide mr-1">
               Flight {index + 1}
             </span>
             <span>{first.from}</span>

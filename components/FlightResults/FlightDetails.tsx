@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { getBaggage, getFareRules } from '@/lib/flights-api';
+import { getBaggage, getFareRules, splitBaggage } from '@/lib/flights-api';
 import type {
   BaggageLookupResponse,
   FareRule,
@@ -492,13 +492,16 @@ function FareSummaryTab({ flight, tui }: { flight: FlightResult; tui: string }) 
               </Row>
             )}
             <Row label="Check-in Baggage">
-              {flight.baggage || 'As per airline policy'}
+              {splitBaggage(flight.baggage).checkIn || 'As per airline policy'}
               {flight.pieceDescription && (
                 <span className="block text-xs text-gray-400 font-normal">
                   {flight.pieceDescription}
                 </span>
               )}
             </Row>
+            {splitBaggage(flight.baggage).cabin && (
+              <Row label="Cabin Baggage">{splitBaggage(flight.baggage).cabin}</Row>
+            )}
             {flight.promo && (
               <Row label="Promo Applied">
                 <span className="text-emerald-700">{flight.promo}</span>
@@ -613,7 +616,8 @@ function BaggageTab({ flight, tui }: { flight: FlightResult; tui: string }) {
           airlineCode: flight.airlineCode,
           from: flight.from,
           to: flight.to,
-          checkIn: flight.baggage,
+          checkIn: splitBaggage(flight.baggage).checkIn,
+          cabin: splitBaggage(flight.baggage).cabin,
           pieceDescription: flight.pieceDescription ?? null,
         },
       ];
@@ -663,11 +667,12 @@ function BaggageTab({ flight, tui }: { flight: FlightResult; tui: string }) {
                       </span>
                     )}
                   </td>
-                  {/* Benzy carries no cabin-baggage field at any stage -
-                      Inclusions.Baggage is check-in only. Printing a fixed
-                      weight here would be inventing airline policy. */}
+                  {/* Benzy has no dedicated cabin field; when the airline
+                      publishes it, it rides as the second weight of the
+                      included-baggage text (resolved server-side). Never
+                      invent a figure when it isn't published. */}
                   <td className="px-5 py-2.5 text-right font-medium text-gray-700 align-top">
-                    As per airline policy
+                    {a.cabin || 'As per airline policy'}
                   </td>
                 </tr>
               ))}

@@ -20,7 +20,7 @@ import { FareRulesAccordion } from '@/components/FlightBookingDetails/FareRulesA
 import { SSRSelector } from '@/components/FlightBookingDetails/SSRSelector';
 import { SeatSelector } from '@/components/FlightBookingDetails/SeatSelector';
 import { PassengerForm } from '@/components/FlightBookingDetails/PassengerForm';
-import { ContactInfoForm } from '@/components/FlightBookingDetails/ContactInfoForm';
+import { ContactInfoForm, validateGst } from '@/components/FlightBookingDetails/ContactInfoForm';
 import { BookingSummary } from '@/components/FlightBookingDetails/BookingSummary';
 import { BookingWizardStepper } from '@/components/FlightBookingDetails/BookingWizardStepper';
 
@@ -155,6 +155,10 @@ function FlightDetailsContent() {
 
     // Fare-level booking requirements (from Benzy pricing).
     const req = pricing?.bookingRequirements;
+
+    // GST: compulsory for some fares; when entered voluntarily it must be whole.
+    const gstErr = validateGst(contactInfo, !!req?.gstMandatory);
+    if (gstErr) return gstErr;
 
     // Validate travellers
     for (let i = 0; i < travellers.length; i++) {
@@ -399,6 +403,18 @@ function FlightDetailsContent() {
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Main Content */}
           <div className="flex-1 space-y-6">
+            {/* Airline repriced since search (Benzy GetSPricer Code 1500) */}
+            {pricing.fareChanged && (
+              <div role="status" className="bg-sky-50 border border-sky-200 rounded-lg px-4 py-3 text-sm text-sky-900">
+                <span className="font-semibold">The airline has updated this fare since your search.</span>{' '}
+                The current total is{' '}
+                <span className="font-semibold">
+                  {new Intl.NumberFormat('en-IN', { style: 'currency', currency: pricing.totalFare.currency || 'INR', maximumFractionDigits: 0 }).format(pricing.totalFare.gross)}
+                </span>
+                . Please review it before continuing.
+              </div>
+            )}
+
             {/* Fare notices (airline / fare-level advisories from Benzy) */}
             {!!pricing.fareNotices?.length && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-start gap-3">
@@ -456,6 +472,8 @@ function FlightDetailsContent() {
                 <ContactInfoForm
                   contactInfo={contactInfo}
                   onChange={setContactInfo}
+                  gstApplicable={!!pricing?.bookingRequirements?.gstApplicable}
+                  gstMandatory={!!pricing?.bookingRequirements?.gstMandatory}
                 />
               </>
             )}
@@ -466,6 +484,7 @@ function FlightDetailsContent() {
                 {pricing.seatMaps.length > 0 ? (
                   <SeatSelector
                     seatMaps={pricing.seatMaps}
+                    paxTypes={travellers.map((t) => t.paxType)}
                     segments={pricing.segments}
                     passengerCount={totalPaxCount}
                     selectedSeats={selectedSeats}
@@ -578,7 +597,9 @@ function FlightDetailsContent() {
             {/* Mobile-only sidebar */}
             <div className="lg:hidden">
               <div className="space-y-4">
-                <FareRulesAccordion fareRules={pricing.fareRules} />
+                <div data-fare-rules className="scroll-mt-4">
+                  <FareRulesAccordion fareRules={pricing.fareRules} />
+                </div>
                 <BookingSummary {...sidebarProps} />
               </div>
             </div>
@@ -591,7 +612,9 @@ function FlightDetailsContent() {
                 scrolls on its own so a long rules table is never cut off. */}
             <div className="sticky top-4 space-y-4 max-h-[calc(100vh-2rem)] overflow-y-auto">
               <BookingSummary {...sidebarProps} />
-              <FareRulesAccordion fareRules={pricing.fareRules} />
+              <div data-fare-rules>
+                <FareRulesAccordion fareRules={pricing.fareRules} />
+              </div>
             </div>
           </div>
         </div>

@@ -68,7 +68,7 @@ const FlightPane = ({ flight, label, currency }: PaneProps) => {
             {label}
           </span>
         </div>
-        <div className="text-sm text-gray-400 text-center mt-1">
+        <div className="text-sm text-gray-500 text-center mt-1">
           Select {label.toLowerCase()} flight
         </div>
       </div>
@@ -102,7 +102,7 @@ const FlightPane = ({ flight, label, currency }: PaneProps) => {
           <div className="text-sm font-semibold text-(--color-foreground) truncate leading-tight">
             {airline}
           </div>
-          <div className="text-[11px] text-gray-400 leading-tight truncate">
+          <div className="text-[11px] text-gray-500 leading-tight truncate">
             {flightCode}
           </div>
         </div>
@@ -172,7 +172,7 @@ export const SelectionBar = ({
         </div>
         <div className="flex items-center gap-4 flex-shrink-0">
           <div className="text-right">
-            <div className="text-[10px] uppercase tracking-wide text-gray-400 leading-tight">
+            <div className="text-[10px] uppercase tracking-wide text-gray-500 leading-tight">
               Total
             </div>
             <div className="text-xl font-bold text-(--color-foreground) leading-tight">
