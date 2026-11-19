@@ -13,6 +13,7 @@ import {
   StepHeader,
   StepState,
 } from '@/components/Results/ui';
+import { redirectToPayment } from '@/lib/safe-redirect';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -484,7 +485,7 @@ function HotelBookPageInner() {
       // Pay first: the hotel is booked once the bank confirms the payment, and
       // the voucher is shown on /booking/hotels/payment-result.
       try { sessionStorage.removeItem('hotelBookingContext'); } catch { /* ignore */ }
-      window.location.href = data.redirectUrl;
+      redirectToPayment(data.redirectUrl);
     } catch (e: unknown) {
       setSubmitError(e instanceof Error ? e.message : 'Could not start payment');
       setSubmitting(false);

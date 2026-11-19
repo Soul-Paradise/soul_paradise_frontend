@@ -22,6 +22,7 @@ import { PassengerForm } from '@/components/FlightBookingDetails/PassengerForm';
 import { ContactInfoForm, validateGst } from '@/components/FlightBookingDetails/ContactInfoForm';
 import { BookingSummary } from '@/components/FlightBookingDetails/BookingSummary';
 import { BookingWizardStepper } from '@/components/FlightBookingDetails/BookingWizardStepper';
+import { redirectToPayment } from '@/lib/safe-redirect';
 
 const WIZARD_STEPS = [
   { key: 'travellers', label: 'Travellers' },
@@ -279,7 +280,7 @@ function MultiCityDetailsContent() {
         },
       });
 
-      window.location.href = result.redirectUrl;
+      redirectToPayment(result.redirectUrl);
     } catch (err: any) {
       setBookingError(err.message || 'Booking failed. Please try again.');
       setIsSubmitting(false);

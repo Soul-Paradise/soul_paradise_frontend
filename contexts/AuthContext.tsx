@@ -12,6 +12,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useRouter, usePathname } from 'next/navigation';
 import { api, ApiError, type User, type LoginRequest, type RegisterRequest } from '@/lib/api';
 import { rememberLogin } from '@/lib/last-login';
+import { safeNextPath } from '@/lib/safe-redirect';
 
 /**
  * Extract a safe ?next= redirect target from the current URL.
@@ -20,9 +21,7 @@ import { rememberLogin } from '@/lib/last-login';
 function readSafeNext(): string | null {
   if (typeof window === 'undefined') return null;
   const next = new URLSearchParams(window.location.search).get('next');
-  if (!next) return null;
-  if (!next.startsWith('/') || next.startsWith('//')) return null;
-  return next;
+  return safeNextPath(next, window.location.origin);
 }
 
 // Authentication State Interface

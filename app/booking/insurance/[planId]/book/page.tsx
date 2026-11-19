@@ -23,6 +23,7 @@ import {
 } from '@/lib/insurance-api';
 import { ErrorCard, ProviderLogo, Spinner, TripSummaryBar, formatDay } from '@/components/Insurance/shared';
 import { BookButton } from '@/components/Results/ui';
+import { redirectToPayment } from '@/lib/safe-redirect';
 
 const TITLES: Title[] = ['Mr', 'Mrs', 'Ms', 'Master'];
 const NOMINEE_RELATIONS = ['Spouse', 'Father', 'Mother', 'Son', 'Daughter', 'Brother', 'Sister', 'Other'];
@@ -287,7 +288,7 @@ function BookingForm({ search, plan, tui }: { search: InsuranceSearch; plan: Ins
         ...(plan.requiresKyc ? { pan } : {}),
         ...(gstin ? { gstin } : {}),
       });
-      window.location.href = res.redirectUrl;
+      redirectToPayment(res.redirectUrl);
     } catch (e) {
       if (e instanceof PriceChangedError) {
         setPrice(e.amount);

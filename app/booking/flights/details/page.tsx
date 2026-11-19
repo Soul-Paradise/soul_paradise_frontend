@@ -23,6 +23,7 @@ import { PassengerForm } from '@/components/FlightBookingDetails/PassengerForm';
 import { ContactInfoForm, validateGst } from '@/components/FlightBookingDetails/ContactInfoForm';
 import { BookingSummary } from '@/components/FlightBookingDetails/BookingSummary';
 import { BookingWizardStepper } from '@/components/FlightBookingDetails/BookingWizardStepper';
+import { redirectToPayment } from '@/lib/safe-redirect';
 
 const WIZARD_STEPS = [
   { key: 'travellers', label: 'Travellers' },
@@ -324,7 +325,7 @@ function FlightDetailsContent() {
       // Hand off to the ICICI payment gateway. The ticket is issued by the
       // backend only after payment succeeds; the gateway will redirect the
       // customer to /booking/payment/result when done.
-      window.location.href = result.redirectUrl;
+      redirectToPayment(result.redirectUrl);
     } catch (err: any) {
       setBookingError(err.message || 'Booking failed. Please try again.');
       setIsSubmitting(false);
