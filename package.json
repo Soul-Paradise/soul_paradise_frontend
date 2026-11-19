@@ -6,7 +6,8 @@
     "dev": "NODE_OPTIONS='--no-deprecation' next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test lib/*.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
