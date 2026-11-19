@@ -71,10 +71,25 @@ const securityHeaders = [
   ...(IS_STAGING ? [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] : []),
 ];
 
+/**
+ * NEXT_PUBLIC_MEDIA_BUCKET: the GCS bucket the backend uploads CMS media to
+ * when it is not the prod one (staging: soul-paradise-staging-media). Accepts
+ * "name" or "gs://name"; anything that is not a valid bucket name is ignored.
+ */
+function mediaBucket(raw: string | undefined): string | null {
+  const name = (raw || "").trim().replace(/^gs:\/\//, "").replace(/\/+$/, "");
+  return /^[a-z0-9][a-z0-9._-]{1,220}[a-z0-9]$/.test(name) ? name : null;
+}
+
+const MEDIA_BUCKET = mediaBucket(process.env.NEXT_PUBLIC_MEDIA_BUCKET);
+
 // GCS buckets whose images go through next/image: the CMS media library
-// (customer_trip_images), legacy hero shots and stored airline logos.
+// (customer_trip_images, or NEXT_PUBLIC_MEDIA_BUCKET's bucket as well when set),
+// legacy hero shots and stored airline logos.
 // Videos (predefined_videos) and docs (guidelines-doc) never use the optimiser.
-const IMAGE_BUCKETS = ["customer_trip_images", "static_hero_images", "airline_logos"];
+const IMAGE_BUCKETS = [
+  ...new Set(["customer_trip_images", "static_hero_images", "airline_logos", ...(MEDIA_BUCKET ? [MEDIA_BUCKET] : [])]),
+];
 
 const assetHost = new URL(ASSET_ORIGIN);
 
