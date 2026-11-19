@@ -18,7 +18,7 @@ import {
 } from '@/components/Results/ui';
 import { useSearchParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { authHeaders } from '@/lib/api';
+import { authFetch } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
 import {
   Car, Trees, CigaretteOff, Waves, Wifi, Utensils, Dumbbell, Sparkles,
@@ -839,9 +839,9 @@ function HotelResults() {
       setError('');
       setResults(null);
       try {
-        const res = await fetch(`${API_URL}/hotels/search`, {
+        const res = await authFetch(`${API_URL}/hotels/search`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             locationId,
             locationName,

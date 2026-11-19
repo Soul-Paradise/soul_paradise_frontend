@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { authHeaders } from '@/lib/api';
+import { authFetch } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
 import { BookButton, SecondaryButton, StatusCard } from '@/components/Results/ui';
 import { BookingConfirmation, type BookingVoucher } from '@/components/HotelBooking/HotelVoucher';
@@ -26,9 +26,7 @@ interface HotelBookingStatus {
 }
 
 async function getHotelBookingStatus(merchantTxnNo: string): Promise<HotelBookingStatus> {
-  const res = await fetch(`${API_URL}/hotels/booking-status/${encodeURIComponent(merchantTxnNo)}`, {
-    headers: authHeaders(),
-  });
+  const res = await authFetch(`${API_URL}/hotels/booking-status/${encodeURIComponent(merchantTxnNo)}`);
   if (!res.ok) throw new Error('Could not load booking status');
   return res.json();
 }

@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { authHeaders } from '@/lib/api';
+import { authFetch } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
 import FreeCancellationBadge from '@/components/HotelResults/FreeCancellationBadge';
 import { AlertTriangle, BedDouble } from 'lucide-react';
@@ -24,7 +24,6 @@ interface RoomOption {
   roomName: string;
   roomDescription: string;
   providerName: string;
-  providerId: string;
   baseRate: number;
   totalRate: number;
   taxes: number;
@@ -1420,9 +1419,9 @@ function RoomsContent() {
     }
 
     setLoading(true);
-    fetch(`${API_URL}/hotels/rooms`, {
+    authFetch(`${API_URL}/hotels/rooms`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ searchId, hotelId, destinationCountryCode }),
     })
       .then(async (res) => {
@@ -1486,9 +1485,9 @@ function RoomsContent() {
     setPricingLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/hotels/price`, {
+      const res = await authFetch(`${API_URL}/hotels/price`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           searchId,
           hotelId,
@@ -1531,16 +1530,21 @@ function RoomsContent() {
       // fall through with default
     }
     try {
+      // Don't persist supplier identifiers the booking page doesn't need.
+      // (roomSlots[].supplierName stays: POST /hotels/book requires it.)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { providerName: _ctxProvider, ...ctxRest } = bookingContext;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { providerName: _priceProvider, ...pricingRest } = pricing;
       sessionStorage.setItem(
         'hotelBookingContext',
         JSON.stringify({
-          bookingContext: { ...bookingContext, hotelCode: hotelId, uiCheckIn: checkIn, uiCheckOut: checkOut },
-          pricing,
+          bookingContext: { ...ctxRest, hotelCode: hotelId, uiCheckIn: checkIn, uiCheckOut: checkOut },
+          pricing: pricingRest,
           hotelDetail: pricingHotelDetail || hotelDetail,
           selectedRoom: {
             roomId: selectedRoom.roomId,
             roomGroupId: selectedRoom.roomGroupId,
-            supplierName: selectedRoom.providerName,
           },
           occupancy,
         }),

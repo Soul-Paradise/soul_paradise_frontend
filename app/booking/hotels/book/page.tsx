@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { authHeaders } from '@/lib/api';
+import { authFetch } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
 import { formatDeadline } from '@/components/HotelResults/FreeCancellationBadge';
 import { AlertTriangle } from 'lucide-react';
@@ -13,7 +13,7 @@ import {
   StepHeader,
   StepState,
 } from '@/components/Results/ui';
-import { redirectToPayment } from '@/lib/safe-redirect';
+import { isAllowedPaymentRedirect, redirectToPayment } from '@/lib/safe-redirect';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
@@ -25,7 +25,6 @@ interface StashedBookingContext {
   searchId: string;
   hotelId: string;
   hotelCode: string;
-  providerName: string;
   recommendationId: string;
   priceId: string;
   destinationCountryCode: string | null;
@@ -84,7 +83,6 @@ interface StashedPricing {
 interface StashedSelectedRoom {
   roomId: string;
   roomGroupId: string;
-  supplierName: string;
 }
 
 interface StashedOccupancy {
@@ -475,15 +473,18 @@ function HotelBookPageInner() {
     };
 
     try {
-      const res = await fetch(`${API_URL}/hotels/book`, {
+      const res = await authFetch(`${API_URL}/hotels/book`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || 'Could not start payment. Please try again.');
       // Pay first: the hotel is booked once the bank confirms the payment, and
       // the voucher is shown on /booking/hotels/payment-result.
+      if (!isAllowedPaymentRedirect(data?.redirectUrl, window.location.origin)) {
+        throw new Error('Payment could not be started. Please try again or contact support.');
+      }
       try { sessionStorage.removeItem('hotelBookingContext'); } catch { /* ignore */ }
       redirectToPayment(data.redirectUrl);
     } catch (e: unknown) {
