@@ -14,6 +14,7 @@ import {
   type FlightSearchResponse,
 } from '@/lib/flights-api';
 import { useResultPage } from '@/lib/use-result-page';
+import { useResultPageSize } from '@/contexts/PreferencesContext';
 import { FlightCard } from '@/components/FlightResults/FlightCard';
 import { SearchSummary } from '@/components/FlightResults/SearchSummary';
 import { DateStrip } from '@/components/FlightResults/DateStrip';
@@ -119,12 +120,14 @@ function FlightSearchResults() {
 
   // Filters + sort are sent to the server; both legs share them.
   const query = useMemo(() => flightFilterQuery(filterState, sortBy), [filterState, sortBy]);
+  const perPage = useResultPageSize('flights');
   const onward = useResultPage<FlightResult, FlightFacets>({
     kind: 'flights',
     initial: results?.onward ?? null,
     query,
     fixed: ONWARD,
     onExpired: reSearch,
+    pageSize: perPage.pageSize,
   });
   const ret = useResultPage<FlightResult, FlightFacets>({
     kind: 'flights',
@@ -132,6 +135,7 @@ function FlightSearchResults() {
     query,
     fixed: RETURN,
     onExpired: reSearch,
+    pageSize: perPage.pageSize,
   });
 
   const onwardPage = onward.data;
@@ -393,6 +397,7 @@ function FlightSearchResults() {
                                 total={col.page.total}
                                 pageSize={col.page.pageSize}
                                 onPageChange={col.list.setPage}
+                                onPageSizeChange={perPage.setPageSize}
                                 noun="flights"
                                 scrollTargetId={`flights-${col.key}`}
                                 disabled={col.list.loading}
@@ -428,6 +433,7 @@ function FlightSearchResults() {
                       total={onwardPage.total}
                       pageSize={onwardPage.pageSize}
                       onPageChange={onward.setPage}
+                      onPageSizeChange={perPage.setPageSize}
                       noun="flights"
                       scrollTargetId="flights-list"
                       disabled={onward.loading}

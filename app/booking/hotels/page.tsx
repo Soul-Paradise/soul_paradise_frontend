@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, Suspense, useMemo } from 'react';
 import { Pagination, ResultsBusy } from '@/components/Results/Pagination';
 import type { ResultPage } from '@/lib/results-api';
 import { useResultPage } from '@/lib/use-result-page';
+import { useResultPageSize } from '@/contexts/PreferencesContext';
 import {
   BookButton,
   FilterCheckbox,
@@ -897,11 +898,13 @@ function HotelResults() {
     [sort, nameSearch, starFilter, minRating, priceRange, freeCancellation, breakfast, amenities, chainFilter, propertyTypeFilter],
   );
   const reSearch = useCallback(() => setSearchNonce((n) => n + 1), []);
+  const perPage = useResultPageSize('hotels');
   const list = useResultPage<Hotel, HotelFacets>({
     kind: 'hotels',
     initial: results?.page ?? null,
     query,
     onExpired: reSearch,
+    pageSize: perPage.pageSize,
   });
   // Map view: every matching hotel (pins), fetched only while the map is open.
   const map = useResultPage<Hotel, HotelFacets>({
@@ -1213,6 +1216,7 @@ function HotelResults() {
                   total={listPage.total}
                   pageSize={listPage.pageSize}
                   onPageChange={list.setPage}
+                  onPageSizeChange={perPage.setPageSize}
                   noun="hotels"
                   scrollTargetId="hotels-list"
                   disabled={list.loading}

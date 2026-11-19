@@ -15,6 +15,7 @@ import {
   type QuotesResponse,
 } from '@/lib/insurance-api';
 import { useResultPage } from '@/lib/use-result-page';
+import { useResultPageSize } from '@/contexts/PreferencesContext';
 import { Pagination, ResultsBusy } from '@/components/Results/Pagination';
 import { InsuranceSearchSummary } from '@/components/InsuranceResults/SearchSummary';
 import { InsuranceSortTabs, type InsuranceSortOption } from '@/components/InsuranceResults/SortTabs';
@@ -63,11 +64,13 @@ function InsuranceResults({ search }: { search: InsuranceSearch }) {
   }, [authLoading, isAuthenticated, search]);
 
   const query = useMemo(() => insuranceFilterQuery(filterState, sortBy), [filterState, sortBy]);
+  const perPage = useResultPageSize('insurance');
   const list = useResultPage<InsuranceQuote, InsuranceFacets>({
     kind: 'insurance',
     initial: results?.page ?? null,
     query,
     onExpired: doSearch,
+    pageSize: perPage.pageSize,
   });
   const page = list.data;
 
@@ -186,6 +189,7 @@ function InsuranceResults({ search }: { search: InsuranceSearch }) {
                       total={page.total}
                       pageSize={page.pageSize}
                       onPageChange={list.setPage}
+                      onPageSizeChange={perPage.setPageSize}
                       noun="plans"
                       scrollTargetId="insurance-list"
                       disabled={list.loading}

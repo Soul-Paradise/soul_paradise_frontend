@@ -27,6 +27,11 @@ interface Options<T, F> {
    * list page seeding the map view), so the first page is fetched too.
    */
   initialAnswers?: boolean;
+  /**
+   * Results per page (the user's saved choice). Undefined = keep the size the
+   * search returned. Changing it keeps the first visible item on screen.
+   */
+  pageSize?: number;
 }
 
 interface State<T, F> {
@@ -35,6 +40,7 @@ interface State<T, F> {
   page: number;
   queryKey: string;
   fixedKey: string;
+  size: number;
 }
 
 const DEBOUNCE_MS = 250;
@@ -54,22 +60,30 @@ export function useResultPage<T, F>({
   fixed,
   enabled = true,
   initialAnswers = true,
+  pageSize,
 }: Options<T, F>) {
   const queryKey = JSON.stringify(compactQuery(query));
   const fixedKey = JSON.stringify(compactQuery(fixed ?? {}));
+  // 0 = no search yet (nothing to fetch).
+  const size = pageSize ?? initial?.pageSize ?? 0;
 
-  const [state, setState] = useState<State<T, F>>({ initial, data: initial, page: 1, queryKey, fixedKey });
+  const [state, setState] = useState<State<T, F>>({ initial, data: initial, page: 1, queryKey, fixedKey, size });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   // Derived resets (during render, per React's "adjust state on prop change"):
-  // a new search starts at its own page 1; new filters go back to page 1.
+  // a new search starts at its own page 1; new filters go back to page 1; a new
+  // page size moves to the page holding the first item that was on screen.
   let current = state;
   if (state.initial !== initial || state.fixedKey !== fixedKey) {
-    current = { initial, data: initial, page: 1, queryKey, fixedKey };
+    current = { initial, data: initial, page: 1, queryKey, fixedKey, size };
     setState(current);
   } else if (state.queryKey !== queryKey) {
-    current = { ...state, page: 1, queryKey };
+    current = { ...state, page: 1, queryKey, size };
+    setState(current);
+  } else if (state.size !== size) {
+    const firstItem = state.size > 0 ? (state.page - 1) * state.size : 0;
+    current = { ...state, page: size > 0 ? Math.floor(firstItem / size) + 1 : 1, size };
     setState(current);
   }
   const { data, page } = current;
@@ -84,7 +98,9 @@ export function useResultPage<T, F>({
   const answered = useRef('');
   useEffect(() => {
     answered.current =
-      initial && initialAnswers ? JSON.stringify([initial.resultId, NO_FILTERS, fixedKey, 1]) : '';
+      initial && initialAnswers
+        ? JSON.stringify([initial.resultId, NO_FILTERS, fixedKey, 1, initial.pageSize])
+        : '';
   }, [initial, fixedKey, initialAnswers]);
 
   // Only the newest request may clear the loading state (an aborted one with no
@@ -93,7 +109,7 @@ export function useResultPage<T, F>({
 
   useEffect(() => {
     if (!resultId || !enabled) return;
-    const requestKey = JSON.stringify([resultId, queryKey, fixedKey, page]);
+    const requestKey = JSON.stringify([resultId, queryKey, fixedKey, page, size]);
     if (requestKey === answered.current) return;
 
     const controller = new AbortController();
@@ -105,10 +121,10 @@ export function useResultPage<T, F>({
         const next = await fetchResultPage<T, F>(
           kind,
           resultId,
-          { ...JSON.parse(fixedKey), ...JSON.parse(queryKey), page },
+          { ...JSON.parse(fixedKey), ...JSON.parse(queryKey), page, pageSize: size || undefined },
           controller.signal,
         );
-        answered.current = JSON.stringify([resultId, queryKey, fixedKey, next.page]);
+        answered.current = JSON.stringify([resultId, queryKey, fixedKey, next.page, size]);
         setState((s) => ({ ...s, data: next, page: next.page }));
       } catch (e) {
         if (controller.signal.aborted) return;
@@ -126,7 +142,7 @@ export function useResultPage<T, F>({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [kind, resultId, queryKey, fixedKey, page, enabled]);
+  }, [kind, resultId, queryKey, fixedKey, page, size, enabled]);
 
   const setPage = useCallback((p: number) => setState((s) => ({ ...s, page: Math.max(1, p) })), []);
 

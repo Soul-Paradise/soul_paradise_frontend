@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Nunito, Poppins } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { PreferencesProvider } from "@/contexts/PreferencesContext";
 import ConditionalNavbar from "@/components/ConditionalNavbar";
 import ConditionalFooter from "@/components/ConditionalFooter";
 import { SiteImagesProvider } from "@/components/SiteImages";
@@ -122,11 +123,13 @@ export default async function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} ${poppins.variable} antialiased`}>
         <AuthProvider>
-          <SiteImagesProvider images={global.images}>
-            <ConditionalNavbar />
-            {children}
-            <ConditionalFooter global={global} />
-          </SiteImagesProvider>
+          <PreferencesProvider>
+            <SiteImagesProvider images={global.images}>
+              <ConditionalNavbar />
+              {children}
+              <ConditionalFooter global={global} />
+            </SiteImagesProvider>
+          </PreferencesProvider>
         </AuthProvider>
         <Toaster
           position="bottom-right"

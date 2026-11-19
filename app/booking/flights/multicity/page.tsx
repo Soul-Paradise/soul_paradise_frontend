@@ -15,6 +15,7 @@ import {
 } from '@/lib/flights-api';
 import type { QueryParams } from '@/lib/results-api';
 import { useResultPage } from '@/lib/use-result-page';
+import { useResultPageSize } from '@/contexts/PreferencesContext';
 import { Pagination, ResultsBusy } from '@/components/Results/Pagination';
 import { FlightCard } from '@/components/FlightResults/FlightCard';
 import { NoticeBanner } from '@/components/FlightResults/NoticeBanner';
@@ -90,12 +91,14 @@ function MultiCityLegColumn({
   onClearFilters: () => void;
 }) {
   const fixed = useMemo(() => ({ leg: String(leg.legIndex) }), [leg.legIndex]);
+  const perPage = useResultPageSize('flights');
   const { data, setPage, loading, error } = useResultPage<FlightResult, FlightFacets>({
     kind: 'flights',
     initial: leg.page,
     query,
     fixed,
     onExpired,
+    pageSize: perPage.pageSize,
   });
   const page = data ?? leg.page;
 
@@ -160,6 +163,10 @@ function MultiCityLegColumn({
             noun="flights"
             scrollTargetId={columnId}
             disabled={loading}
+            onPageSizeChange={(n) => {
+              perPage.setPageSize(n);
+              document.getElementById(columnId)?.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
           />
         </ResultsBusy>
       ) : (
