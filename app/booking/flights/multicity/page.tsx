@@ -6,18 +6,26 @@ import Link from 'next/link';
 import { useRequireAuth } from '@/contexts/AuthContext';
 import {
   searchMultiCityFlights,
+  type FlightFacets,
   type FlightResult,
+  type MultiCityLeg,
   type MultiCitySearchParams,
   type MultiCitySearchResponse,
   type MultiCitySegmentInput,
 } from '@/lib/flights-api';
+import type { QueryParams } from '@/lib/results-api';
+import { useResultPage } from '@/lib/use-result-page';
+import { useResultPageSize } from '@/contexts/PreferencesContext';
+import { Pagination, ResultsBusy } from '@/components/Results/Pagination';
 import { FlightCard } from '@/components/FlightResults/FlightCard';
 import { NoticeBanner } from '@/components/FlightResults/NoticeBanner';
 import { MultiCitySelectionBar } from '@/components/FlightResults/MultiCitySelectionBar';
 import { SortTabs, type SortOption } from '@/components/FlightResults/SortTabs';
 import {
   FilterSidebar,
-  getTimeRange,
+  createEmptyFilterState,
+  flightFilterQuery,
+  hasActiveFlightFilters,
   type FilterState,
 } from '@/components/FlightResults/FilterSidebar';
 
@@ -27,29 +35,6 @@ const CABIN_LABELS: Record<string, string> = {
   B: 'Business',
   F: 'First Class',
 };
-
-function createEmptyFilterState(maxPrice: number): FilterState {
-  return {
-    stops: new Set(),
-    refundableOnly: false,
-    departureTimeRanges: new Set(),
-    arrivalTimeRanges: new Set(),
-    airlines: new Set(),
-    priceRange: [0, maxPrice || 999999],
-    connectingAirports: new Set(),
-  };
-}
-
-function parseDurationMinutes(d: string): number {
-  if (d.startsWith('PT')) {
-    const hours = parseInt(d.match(/(\d+)H/)?.[1] || '0', 10);
-    const mins = parseInt(d.match(/(\d+)M/)?.[1] || '0', 10);
-    return hours * 60 + mins;
-  }
-  const hours = parseInt(d.match(/(\d+)\s*h/)?.[1] || '0', 10);
-  const mins = parseInt(d.match(/(\d+)\s*m/)?.[1] || '0', 10);
-  return hours * 60 + mins;
-}
 
 function formatLegDate(iso: string) {
   const d = new Date(iso + 'T00:00:00');
@@ -78,6 +63,130 @@ function parseSegments(raw: string): MultiCitySegmentInput[] {
   }
 }
 
+/**
+ * One leg's column: its own server-side page of flights (shared filters and
+ * sort, its own page number). Hooks live here so the leg count can vary.
+ */
+function MultiCityLegColumn({
+  leg,
+  query,
+  currency,
+  tui,
+  selected,
+  onSelect,
+  onTotal,
+  onExpired,
+  hasActiveFilters,
+  onClearFilters,
+}: {
+  leg: MultiCityLeg;
+  query: QueryParams;
+  currency: string;
+  tui: string;
+  selected: FlightResult | null;
+  onSelect: (legIndex: number, flight: FlightResult) => void;
+  onTotal: (legIndex: number, total: number) => void;
+  onExpired: () => void;
+  hasActiveFilters: boolean;
+  onClearFilters: () => void;
+}) {
+  const fixed = useMemo(() => ({ leg: String(leg.legIndex) }), [leg.legIndex]);
+  const perPage = useResultPageSize('flights');
+  const { data, setPage, loading, error } = useResultPage<FlightResult, FlightFacets>({
+    kind: 'flights',
+    initial: leg.page,
+    query,
+    fixed,
+    onExpired,
+    pageSize: perPage.pageSize,
+  });
+  const page = data ?? leg.page;
+
+  // Default pick: the first flight of the current page, until the user chooses.
+  useEffect(() => {
+    if (!selected && page.items[0]) onSelect(leg.legIndex, page.items[0]);
+  }, [selected, page, leg.legIndex, onSelect]);
+
+  useEffect(() => {
+    onTotal(leg.legIndex, page.total);
+  }, [page.total, leg.legIndex, onTotal]);
+
+  const columnId = `mc-leg-${leg.legIndex}`;
+  return (
+    <section
+      id={columnId}
+      className="flex-shrink-0 w-[calc(50%-0.5rem)] min-w-[340px] max-h-[calc(100vh-15rem)] overflow-y-auto snap-start pr-1"
+    >
+      <div className="sticky top-0 z-10 bg-gray-100 pb-2">
+        <div className="bg-white border border-gray-200 rounded-md px-3 py-2 flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-gray-700 uppercase tracking-wide truncate">
+              Flight {leg.legIndex + 1} · {cityLabel(leg.fromName, leg.from)} → {cityLabel(leg.toName, leg.to)}
+            </div>
+            <div className="text-[11px] text-gray-500">{formatLegDate(leg.departDate)}</div>
+          </div>
+          <div className="text-[11px] text-gray-500 flex-shrink-0">{page.total} flights</div>
+        </div>
+      </div>
+
+      {error && (
+        <div role="alert" className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          {error}
+        </div>
+      )}
+
+      {page.total > 0 ? (
+        <ResultsBusy busy={loading}>
+          <div className="space-y-3">
+            {page.items.map((flight) => (
+              <FlightCard
+                key={`${leg.legIndex}-${flight.index}`}
+                flight={flight}
+                currency={currency}
+                tui={tui}
+                tripType="multicity"
+                selectionMode
+                selected={selected?.index === flight.index}
+                onSelect={(f) => onSelect(leg.legIndex, f)}
+              />
+            ))}
+          </div>
+          <Pagination
+            page={page.page}
+            totalPages={page.totalPages}
+            total={page.total}
+            pageSize={page.pageSize}
+            onPageChange={(p) => {
+              setPage(p);
+              document.getElementById(columnId)?.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            noun="flights"
+            scrollTargetId={columnId}
+            disabled={loading}
+            onPageSizeChange={(n) => {
+              perPage.setPageSize(n);
+              document.getElementById(columnId)?.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        </ResultsBusy>
+      ) : (
+        <div className="bg-white rounded-lg p-6 text-center text-sm text-gray-500">
+          {hasActiveFilters ? (
+            <>
+              No flights match your filters for this leg.{' '}
+              <button onClick={onClearFilters} className="text-(--color-links) hover:underline font-medium">
+                Clear filters
+              </button>
+            </>
+          ) : (
+            'No flights found for this leg. Try different dates or airports.'
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function MultiCityResults() {
   const { isAuthenticated, isLoading: authLoading } = useRequireAuth();
   const searchParams = useSearchParams();
@@ -88,10 +197,11 @@ function MultiCityResults() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('cheapest');
-  const [filterState, setFilterState] = useState<FilterState>(createEmptyFilterState(0));
+  const [filterState, setFilterState] = useState<FilterState>(createEmptyFilterState());
   const [showNotices, setShowNotices] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [selected, setSelected] = useState<Array<FlightResult | null>>([]);
+  const [legTotals, setLegTotals] = useState<Record<number, number>>({});
 
   const segmentsRaw = searchParams.get('segments') || '';
   const adults = parseInt(searchParams.get('adults') || '1', 10);
@@ -103,7 +213,8 @@ function MultiCityResults() {
   const nearbyAirports = searchParams.get('nearbyAirports') !== 'false';
   const totalPax = adults + children + infants;
 
-  const doSearch = useCallback(async () => {
+  /** One supplier search; filters/pages afterwards are answered server-side. */
+  const doSearch = useCallback(async (resetFilters = true) => {
     const segments = parseSegments(segmentsRaw);
     if (segments.length < 2) {
       setError('Invalid multi-city itinerary. Please start a new search.');
@@ -111,6 +222,7 @@ function MultiCityResults() {
       return;
     }
 
+    if (resetFilters) setFilterState(createEmptyFilterState());
     setLoading(true);
     setError('');
 
@@ -126,14 +238,10 @@ function MultiCityResults() {
         nearbyAirports,
       });
       setResults(data);
-      // Initialize filter price range across every leg's flights.
-      const allFlights = data.legs.flatMap((l) => l.flights);
-      if (allFlights.length > 0) {
-        const maxPrice = Math.max(...allFlights.map((f) => f.grossFare));
-        setFilterState(createEmptyFilterState(maxPrice));
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to search flights. Please try again.');
+      setSelected(data.legs.map(() => null));
+      setLegTotals({});
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to search flights. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -144,118 +252,24 @@ function MultiCityResults() {
     doSearch();
   }, [authLoading, isAuthenticated, doSearch]);
 
-  const applyFiltersAndSort = useCallback(
-    (source: FlightResult[]): FlightResult[] => {
-      let flights = [...source];
+  // Stored results expired: search again, keeping the user's filters.
+  const reSearch = useCallback(() => {
+    void doSearch(false);
+  }, [doSearch]);
 
-      if (filterState.stops.size > 0) {
-        flights = flights.filter((f) => filterState.stops.has(Math.min(f.stops, 2)));
-      }
-      if (filterState.refundableOnly) {
-        flights = flights.filter((f) => f.refundable);
-      }
-      if (filterState.departureTimeRanges.size > 0) {
-        flights = flights.filter((f) =>
-          filterState.departureTimeRanges.has(getTimeRange(f.departureTime)),
-        );
-      }
-      if (filterState.arrivalTimeRanges.size > 0) {
-        flights = flights.filter((f) =>
-          filterState.arrivalTimeRanges.has(getTimeRange(f.arrivalTime)),
-        );
-      }
-      if (filterState.airlines.size > 0) {
-        flights = flights.filter((f) => filterState.airlines.has(f.airlineCode));
-      }
-      flights = flights.filter(
-        (f) =>
-          f.grossFare >= filterState.priceRange[0] &&
-          f.grossFare <= filterState.priceRange[1],
-      );
-      if (filterState.connectingAirports.size > 0) {
-        flights = flights.filter((f) => {
-          if (f.stops === 0) return false;
-          return f.connections?.some((c) =>
-            filterState.connectingAirports.has(c.airport),
-          );
-        });
-      }
+  const query = useMemo(() => flightFilterQuery(filterState, sortBy), [filterState, sortBy]);
+  const filteredCount = Object.values(legTotals).reduce((n, t) => n + t, 0);
+  const totalAll = results ? results.legs.reduce((n, l) => n + l.page.totalAll, 0) : 0;
 
-      flights.sort((a, b) => {
-        switch (sortBy) {
-          case 'cheapest':
-            return a.grossFare - b.grossFare;
-          case 'fastest':
-            return parseDurationMinutes(a.duration) - parseDurationMinutes(b.duration);
-          case 'bestValue': {
-            const maxPrice = Math.max(...flights.map((f) => f.grossFare)) || 1;
-            const maxDur = Math.max(...flights.map((f) => parseDurationMinutes(f.duration))) || 1;
-            const scoreA =
-              0.5 * (a.grossFare / maxPrice) +
-              0.3 * (parseDurationMinutes(a.duration) / maxDur) +
-              0.2 * (a.recommended ? 0 : 1);
-            const scoreB =
-              0.5 * (b.grossFare / maxPrice) +
-              0.3 * (parseDurationMinutes(b.duration) / maxDur) +
-              0.2 * (b.recommended ? 0 : 1);
-            return scoreA - scoreB;
-          }
-          default:
-            return 0;
-        }
-      });
-
-      return flights;
-    },
-    [filterState, sortBy],
-  );
-
-  const filteredLegs = useMemo(
-    () => (results ? results.legs.map((leg) => applyFiltersAndSort(leg.flights)) : []),
-    [results, applyFiltersAndSort],
-  );
-
-  const filteredCount = filteredLegs.reduce((n, f) => n + f.length, 0);
-
-  const allFlights = useMemo(
-    () => (results ? results.legs.flatMap((l) => l.flights) : []),
-    [results],
-  );
-
-  // Keep one valid selection per leg - reselect the cheapest when the current
-  // pick is filtered out (or on first load).
-  useEffect(() => {
-    if (!results) return;
-    setSelected((prev) =>
-      results.legs.map((_, i) => {
-        const opts = filteredLegs[i] || [];
-        const cur = prev[i];
-        if (cur && opts.some((f) => f.index === cur.index)) return cur;
-        return opts[0] || null;
-      }),
-    );
-  }, [results, filteredLegs]);
-
-  const selectLeg = (legIndex: number, flight: FlightResult) => {
+  const selectLeg = useCallback((legIndex: number, flight: FlightResult) => {
     setSelected((prev) => prev.map((f, i) => (i === legIndex ? flight : f)));
-  };
+  }, []);
+  const setLegTotal = useCallback((legIndex: number, total: number) => {
+    setLegTotals((prev) => (prev[legIndex] === total ? prev : { ...prev, [legIndex]: total }));
+  }, []);
 
-  const hasActiveFilters =
-    filterState.stops.size > 0 ||
-    filterState.refundableOnly ||
-    filterState.departureTimeRanges.size > 0 ||
-    filterState.arrivalTimeRanges.size > 0 ||
-    filterState.airlines.size > 0 ||
-    filterState.connectingAirports.size > 0 ||
-    (allFlights.length > 0 &&
-      filterState.priceRange[1] < Math.max(...allFlights.map((f) => f.grossFare)));
-
-  const clearFilters = () => {
-    if (allFlights.length) {
-      const maxPrice = Math.max(...allFlights.map((f) => f.grossFare));
-      setFilterState(createEmptyFilterState(maxPrice));
-    }
-  };
+  const hasActiveFilters = hasActiveFlightFilters(filterState);
+  const clearFilters = () => setFilterState(createEmptyFilterState());
 
   const handleNearbyAirportsChange = useCallback(
     (value: boolean) => {
@@ -374,7 +388,7 @@ function MultiCityResults() {
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Search Failed</h3>
             <p className="text-sm text-gray-500 mb-4">{error}</p>
             <button
-              onClick={doSearch}
+              onClick={reSearch}
               className="px-6 py-2 bg-(--color-links) text-white text-sm font-semibold rounded-md hover:opacity-90 transition-opacity"
             >
               Try Again
@@ -392,16 +406,15 @@ function MultiCityResults() {
             </div>
           )}
 
-          {allFlights.length > 0 ? (
+          {totalAll > 0 ? (
             <div className="flex gap-5">
               {/* Filter Sidebar - Desktop */}
               <div className="hidden lg:block w-[280px] flex-shrink-0">
                 <div className="sticky top-[85px] max-h-[calc(100vh-100px)] overflow-y-auto pr-1">
                   <FilterSidebar
-                    flights={allFlights}
+                    facets={results.facets}
                     filterState={filterState}
                     onFilterChange={setFilterState}
-                    currency={results.currency}
                     nearbyAirports={nearbyAirports}
                     onNearbyAirportsChange={handleNearbyAirportsChange}
                   />
@@ -429,10 +442,9 @@ function MultiCityResults() {
                       </button>
                     </div>
                     <FilterSidebar
-                      flights={allFlights}
+                      facets={results.facets}
                       filterState={filterState}
                       onFilterChange={setFilterState}
-                      currency={results.currency}
                       nearbyAirports={nearbyAirports}
                       onNearbyAirportsChange={handleNearbyAirportsChange}
                     />
@@ -447,7 +459,7 @@ function MultiCityResults() {
                   <SortTabs
                     activeSort={sortBy}
                     onSortChange={setSortBy}
-                    totalResults={results.totalResults}
+                    totalResults={totalAll}
                     filteredCount={filteredCount}
                   />
                 </div>
@@ -471,61 +483,21 @@ function MultiCityResults() {
                     3+ legs keep ~50% and the board scrolls horizontally. Each
                     column scrolls vertically on its own. */}
                 <div className="flex gap-4 overflow-x-auto pb-2 snap-x">
-                  {results.legs.map((leg, legIndex) => {
-                    const legFlights = filteredLegs[legIndex] || [];
-                    return (
-                      <section
-                        key={leg.legIndex}
-                        className="flex-shrink-0 w-[calc(50%-0.5rem)] min-w-[340px] max-h-[calc(100vh-15rem)] overflow-y-auto snap-start pr-1"
-                      >
-                        <div className="sticky top-0 z-10 bg-gray-100 pb-2">
-                          <div className="bg-white border border-gray-200 rounded-md px-3 py-2 flex items-center justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="text-xs font-semibold text-gray-700 uppercase tracking-wide truncate">
-                                Flight {leg.legIndex + 1} · {cityLabel(leg.fromName, leg.from)} → {cityLabel(leg.toName, leg.to)}
-                              </div>
-                              <div className="text-[11px] text-gray-500">
-                                {formatLegDate(leg.departDate)}
-                              </div>
-                            </div>
-                            <div className="text-[11px] text-gray-500 flex-shrink-0">
-                              {legFlights.length} flights
-                            </div>
-                          </div>
-                        </div>
-
-                        {legFlights.length > 0 ? (
-                          <div className="space-y-3">
-                            {legFlights.map((flight) => (
-                              <FlightCard
-                                key={`${leg.legIndex}-${flight.index}`}
-                                flight={flight}
-                                currency={results.currency}
-                                tui={results.tui}
-                                tripType="multicity"
-                                selectionMode
-                                selected={selected[leg.legIndex]?.index === flight.index}
-                                onSelect={(f) => selectLeg(leg.legIndex, f)}
-                              />
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="bg-white rounded-lg p-6 text-center text-sm text-gray-500">
-                            {hasActiveFilters ? (
-                              <>
-                                No flights match your filters for this leg.{' '}
-                                <button onClick={clearFilters} className="text-(--color-links) hover:underline font-medium">
-                                  Clear filters
-                                </button>
-                              </>
-                            ) : (
-                              'No flights found for this leg. Try different dates or airports.'
-                            )}
-                          </div>
-                        )}
-                      </section>
-                    );
-                  })}
+                  {results.legs.map((leg) => (
+                    <MultiCityLegColumn
+                      key={`${results.resultId}-${leg.legIndex}`}
+                      leg={leg}
+                      query={query}
+                      currency={results.currency}
+                      tui={results.tui}
+                      selected={selected[leg.legIndex] ?? null}
+                      onSelect={selectLeg}
+                      onTotal={setLegTotal}
+                      onExpired={reSearch}
+                      hasActiveFilters={hasActiveFilters}
+                      onClearFilters={clearFilters}
+                    />
+                  ))}
                 </div>
               </div>
             </div>

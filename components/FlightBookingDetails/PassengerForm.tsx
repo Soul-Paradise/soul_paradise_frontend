@@ -1,5 +1,7 @@
 'use client';
 
+import { useId } from 'react';
+
 import type {
   TravellerInfo,
   TravelChecklist,
@@ -63,6 +65,8 @@ export const PassengerForm = ({
   bookingRequirements,
   fnuLnuSettings,
 }: PassengerFormProps) => {
+  // Links each visible label to its control (screen readers, click-to-focus).
+  const fieldId = useId();
   const update = (field: keyof TravellerInfo, value: string) => {
     onChange({ ...traveller, [field]: value });
   };
@@ -100,10 +104,10 @@ export const PassengerForm = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Title */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label htmlFor={`${fieldId}-0`} className="block text-xs font-medium text-gray-700 mb-1">
               Title <span className="text-red-500">*</span>
             </label>
-            <select
+            <select id={`${fieldId}-0`}
               value={traveller.title}
               onChange={(e) => update('title', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links)"
@@ -119,10 +123,10 @@ export const PassengerForm = ({
 
           {/* First Name */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label htmlFor={`${fieldId}-1`} className="block text-xs font-medium text-gray-700 mb-1">
               First Name <span className="text-red-500">*</span>
             </label>
-            <input
+            <input id={`${fieldId}-1`}
               type="text"
               value={traveller.firstName}
               onChange={(e) => update('firstName', e.target.value)}
@@ -133,10 +137,10 @@ export const PassengerForm = ({
 
           {/* Last Name */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label htmlFor={`${fieldId}-2`} className="block text-xs font-medium text-gray-700 mb-1">
               Last Name <span className="text-red-500">*</span>
             </label>
-            <input
+            <input id={`${fieldId}-2`}
               type="text"
               value={traveller.lastName}
               onChange={(e) => update('lastName', e.target.value)}
@@ -204,10 +208,10 @@ export const PassengerForm = ({
 
           {/* Gender */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label htmlFor={`${fieldId}-3`} className="block text-xs font-medium text-gray-700 mb-1">
               Gender <span className="text-red-500">*</span>
             </label>
-            <select
+            <select id={`${fieldId}-3`}
               value={traveller.gender}
               onChange={(e) => update('gender', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links)"
@@ -220,10 +224,10 @@ export const PassengerForm = ({
 
           {/* Date of Birth */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label htmlFor={`${fieldId}-4`} className="block text-xs font-medium text-gray-700 mb-1">
               Date of Birth <span className="text-red-500">*</span>
             </label>
-            <input
+            <input id={`${fieldId}-4`}
               type="date"
               value={traveller.dob}
               onChange={(e) => update('dob', e.target.value)}
@@ -234,10 +238,10 @@ export const PassengerForm = ({
           {/* Email (required for first adult) */}
           {paxType === 'ADT' && index === 0 && (
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label htmlFor={`${fieldId}-5`} className="block text-xs font-medium text-gray-700 mb-1">
                 Email <span className="text-red-500">*</span>
               </label>
-              <input
+              <input id={`${fieldId}-5`}
                 type="email"
                 value={traveller.email || ''}
                 onChange={(e) => update('email', e.target.value)}
@@ -250,10 +254,10 @@ export const PassengerForm = ({
           {/* Nationality */}
           {travelChecklist.nationality && (
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label htmlFor={`${fieldId}-6`} className="block text-xs font-medium text-gray-700 mb-1">
                 Nationality <span className="text-red-500">*</span>
               </label>
-              <input
+              <input id={`${fieldId}-6`}
                 type="text"
                 value={traveller.nationality || ''}
                 onChange={(e) => update('nationality', e.target.value)}
@@ -266,10 +270,10 @@ export const PassengerForm = ({
           {/* Passport Number */}
           {travelChecklist.passportNo && (
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label htmlFor={`${fieldId}-7`} className="block text-xs font-medium text-gray-700 mb-1">
                 Passport Number <span className="text-red-500">*</span>
               </label>
-              <input
+              <input id={`${fieldId}-7`}
                 type="text"
                 value={traveller.passportNo || ''}
                 onChange={(e) => update('passportNo', e.target.value)}
@@ -282,10 +286,10 @@ export const PassengerForm = ({
           {/* Passport Expiry */}
           {travelChecklist.passportExpiry && (
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label htmlFor={`${fieldId}-8`} className="block text-xs font-medium text-gray-700 mb-1">
                 Passport Expiry <span className="text-red-500">*</span>
               </label>
-              <input
+              <input id={`${fieldId}-8`}
                 type="date"
                 value={traveller.passportExpiry || ''}
                 onChange={(e) => update('passportExpiry', e.target.value)}
@@ -297,10 +301,10 @@ export const PassengerForm = ({
           {/* Passport Place of Issue */}
           {travelChecklist.passportPlaceOfIssue && (
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label htmlFor={`${fieldId}-9`} className="block text-xs font-medium text-gray-700 mb-1">
                 Place of Issue <span className="text-red-500">*</span>
               </label>
-              <input
+              <input id={`${fieldId}-9`}
                 type="text"
                 value={traveller.passportPlaceOfIssue || ''}
                 onChange={(e) => update('passportPlaceOfIssue', e.target.value)}
@@ -313,10 +317,10 @@ export const PassengerForm = ({
           {/* Passport Date of Issue */}
           {travelChecklist.passportDateOfIssue && (
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label htmlFor={`${fieldId}-10`} className="block text-xs font-medium text-gray-700 mb-1">
                 Date of Issue <span className="text-red-500">*</span>
               </label>
-              <input
+              <input id={`${fieldId}-10`}
                 type="date"
                 value={traveller.passportDateOfIssue || ''}
                 onChange={(e) => update('passportDateOfIssue', e.target.value)}
@@ -328,10 +332,10 @@ export const PassengerForm = ({
           {/* Visa Type */}
           {travelChecklist.visaType && (
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label htmlFor={`${fieldId}-11`} className="block text-xs font-medium text-gray-700 mb-1">
                 Visa Type <span className="text-red-500">*</span>
               </label>
-              <input
+              <input id={`${fieldId}-11`}
                 type="text"
                 value={traveller.visaType || ''}
                 onChange={(e) => update('visaType', e.target.value)}
@@ -344,21 +348,42 @@ export const PassengerForm = ({
           {/* PAN Number */}
           {panVisible && (
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label htmlFor={`${fieldId}-12`} className="block text-xs font-medium text-gray-700 mb-1">
                 PAN Number{' '}
                 {panMandatory ? (
                   <span className="text-red-500">*</span>
                 ) : (
-                  <span className="text-gray-400 font-normal">(Optional)</span>
+                  <span className="text-gray-500 font-normal">(Optional)</span>
                 )}
               </label>
-              <input
+              <input id={`${fieldId}-12`}
                 type="text"
                 value={traveller.panNo || ''}
                 onChange={(e) => update('panNo', e.target.value)}
                 placeholder="ABCDE1234F"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links)"
               />
+            </div>
+          )}
+
+          {/* Emigration check (GetTravelCheckList EmigCheck = 1) - sent to the
+              airline as CreateItinerary Travellers.EmigrationCheck. */}
+          {travelChecklist.emigrationCheck && (
+            <div className="sm:col-span-2 lg:col-span-3">
+              <label className="flex items-start gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={!!traveller.emigrationCheck}
+                  onChange={(e) => onChange({ ...traveller, emigrationCheck: e.target.checked })}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300"
+                />
+                <span>
+                  This passport is <span className="font-semibold">ECR</span> (Emigration Check Required)
+                  <span className="block text-xs text-gray-500">
+                    The airline needs this for this route. Leave unticked for ECNR passports.
+                  </span>
+                </span>
+              </label>
             </div>
           )}
         </div>

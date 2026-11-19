@@ -1,5 +1,6 @@
 'use client';
 
+import { AirlineLogo } from '@/components/AirlineLogo';
 import type { SegmentDetail } from '@/lib/flights-api';
 
 interface MultiCitySegmentsProps {
@@ -113,7 +114,7 @@ const LegCard = ({ segments, index }: { segments: SegmentDetail[]; index: number
       <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-4 flex-wrap min-w-0">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-lg font-bold text-gray-900">
-            <span className="text-[11px] font-bold text-sky-600 uppercase tracking-wide mr-1">
+            <span className="text-[11px] font-bold text-sky-700 uppercase tracking-wide mr-1">
               Flight {index + 1}
             </span>
             <span>{first.from}</span>
@@ -134,9 +135,16 @@ const LegCard = ({ segments, index }: { segments: SegmentDetail[]; index: number
           <div className="px-5 pt-4 min-w-0">
             <div className="flex items-center gap-3 flex-wrap min-w-0">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-9 h-9 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-700 flex-shrink-0">
-                  {seg.airlineCode}
-                </div>
+                <AirlineLogo
+                  code={seg.airlineCode}
+                  name={seg.airline}
+                  size={36}
+                  fallback={
+                    <div className="w-9 h-9 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-700 flex-shrink-0">
+                      {seg.airlineCode}
+                    </div>
+                  }
+                />
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-gray-900 truncate leading-tight">
                     {seg.airline}

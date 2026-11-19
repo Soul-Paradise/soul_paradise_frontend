@@ -51,9 +51,12 @@ export const FareRulesAccordion = ({ fareRules }: FareRulesAccordionProps) => {
   const allCharges = fareRules.flatMap((r) => r.charges);
   const showChild = allCharges.some((c) => hasValue(c.childAmount));
   const showInfant = allCharges.some((c) => hasValue(c.infantAmount));
+  // Footnote only when a "-" is actually on screen (hidden columns don't count).
   const anyOmitted = allCharges.some(
     (c) =>
-      !hasValue(c.childAmount) || !hasValue(c.infantAmount) || !hasValue(c.adultAmount),
+      !hasValue(c.adultAmount) ||
+      (showChild && !hasValue(c.childAmount)) ||
+      (showInfant && !hasValue(c.infantAmount)),
   );
 
   return (
@@ -62,8 +65,10 @@ export const FareRulesAccordion = ({ fareRules }: FareRulesAccordionProps) => {
         <h2 className="text-base font-bold text-(--color-foreground)">
           Fare Rules
         </h2>
+        {/* No "per journey"/"per sector" claim - that wording comes from the
+            airline's own rule headings when it applies. */}
         <p className="mt-0.5 text-[11px] text-gray-500">
-          Charges below are levied by the airline per passenger, per journey.
+          Cancellation and change charges as published by the airline for this fare.
         </p>
       </div>
       <div className="divide-y divide-gray-100">
@@ -77,7 +82,7 @@ export const FareRulesAccordion = ({ fareRules }: FareRulesAccordionProps) => {
               <span className="text-sm font-medium text-gray-800 flex items-center gap-2 text-left">
                 {rule.category}
                 {rule.sector && (
-                  <span className="text-[11px] font-normal text-gray-400">
+                  <span className="text-[11px] font-normal text-gray-500">
                     {rule.sector}
                   </span>
                 )}
@@ -152,8 +157,7 @@ export const FareRulesAccordion = ({ fareRules }: FareRulesAccordionProps) => {
       </div>
       {anyOmitted && (
         <div className="px-5 py-2.5 bg-gray-50 border-t border-gray-100 text-[11px] text-gray-500">
-          - the airline has not published a separate amount for that
-          passenger type; the adult charge normally applies.
+          - the airline has not published an amount for this passenger type.
         </div>
       )}
     </div>

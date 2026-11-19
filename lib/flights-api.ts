@@ -1,4 +1,5 @@
 import { authFetch } from './api';
+import type { ResultPage } from './results-api';
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
@@ -65,16 +66,37 @@ export interface FlightResult {
   notice?: string; // per-flight travel/visa advisory
   noticeLink?: string; // source link backing the advisory
   isBusStation?: boolean; // surface/bus segment
+  /** Codeshare: the operating carrier when it isn't the marketing one. */
+  operatingAirlineCode?: string;
 }
 
+/** Sidebar options for one leg, computed server-side from the whole search. */
+export interface FlightFacets {
+  stops: Array<{ stops: number; cheapest: number }>;
+  airlines: Array<{ code: string; name: string; count: number; cheapest: number }>;
+  connectingAirports: Array<{ code: string; name: string; count: number }>;
+  minPrice: number;
+  maxPrice: number;
+  fromLabel: string;
+  toLabel: string;
+}
+
+export type FlightResultPage = ResultPage<FlightResult, FlightFacets>;
+
+/**
+ * Search response: page 1 of each leg. Further pages, filters and sorting come
+ * from GET /flights/results/:resultId (see lib/results-api.ts) - the browser
+ * never receives or filters the full flight list.
+ */
 export interface FlightSearchResponse {
+  resultId: string;
   tui: string;
   completed: boolean;
   currency: string;
-  flights: FlightResult[];
-  returnFlights?: FlightResult[];
   notices: Array<{ notice: string; link: string }>;
   totalResults: number;
+  onward: FlightResultPage;
+  return?: FlightResultPage;
 }
 
 export interface FlightSearchParams {
@@ -121,10 +143,12 @@ export interface MultiCityLeg {
   // The search-session TUI this leg belongs to (DM: unique per leg; IM: shared).
   // Echoed back per-leg at pricing time.
   tui: string;
-  flights: FlightResult[];
+  /** Page 1 of this leg; more via GET /flights/results/:resultId?leg=<legIndex>. */
+  page: FlightResultPage;
 }
 
 export interface MultiCitySearchResponse {
+  resultId: string;
   tui: string;
   // Benzy multi-city FareType used ('DM' domestic / 'IM' international);
   // echoed back at pricing time as the SmartPricer TripType.
@@ -132,6 +156,8 @@ export interface MultiCitySearchResponse {
   completed: boolean;
   currency: string;
   legs: MultiCityLeg[];
+  /** Sidebar options across every leg (server-side). */
+  facets: FlightFacets;
   notices: Array<{ notice: string; link: string }>;
   totalResults: number;
 }
@@ -163,10 +189,12 @@ export interface SegmentDetail {
   fareClass: string;
   rbd?: string;
   stops: number;
-  baggage?: string | null;
+  baggage?: string | null; // check-in allowance
+  cabinBaggage?: string | null; // cabin allowance when published
   mealsIncluded?: string | null;
   pieceDescription?: string | null;
   refundable?: string;
+  operatingAirlineCode?: string; // codeshare operator, when different
   amenities?: string;
   equipmentType?: string;
   seatsAvailable?: number;
@@ -276,6 +304,9 @@ export interface FnuLnuSetting {
 
 export interface BookingRequirements {
   baggageMandatory: boolean;
+  /** Airline accepts GST details - offer the optional GST section. */
+  gstApplicable?: boolean;
+  /** GST details are compulsory for this fare (e.g. IndiGo SME/corporate). */
   gstMandatory: boolean;
   // PAN can be collected for this itinerary - shown as an optional field unless
   // panMandatory is also set.
@@ -317,6 +348,8 @@ export interface FlightPricingResponse {
   freeSSRs: FreeSSR[];
   // Multi-city only: number of separately-ticketed legs (DM: N, IM: 1).
   multiCityLegCount?: number;
+  /** The airline changed the fare since search (Benzy GetSPricer Code 1500). */
+  fareChanged?: boolean;
 }
 
 export interface ContactInfo {
@@ -430,8 +463,13 @@ export interface BookingFlightDetail {
   duration: string;
   stops?: string;
   baggage?: string | null;
-  pnr: string;
+  cabinBaggage?: string | null;
+  pnr: string; // airline PNR when known, else the CRS reference
+  airlinePnr?: string;
   crsPnr?: string;
+  /** Operating carrier when it differs from the marketing one (codeshare). */
+  operatingAirlineCode?: string;
+  hops?: Array<{ code: string; name: string; duration: string }>;
   webCheckinUrl: string;
   airlineContact?: string;
   refundable?: boolean;
@@ -442,6 +480,8 @@ export interface BookingPassenger {
   paxType: string;
   ticketNumber: string;
   ticketStatus?: string;
+  tickets?: Array<{ flight: string; ticketNumber: string; status: string }>;
+  addOns?: Array<{ type: string; item: string; flight: string }>;
   gender: string;
   age?: number;
   nationality?: string;
@@ -476,13 +516,19 @@ export interface BookingJourneySummary {
 export interface BookingDetailsResponse {
   bookingId: string;
   transactionId: string;
-  status: string;
+  status: string; // raw supplier code - display statusLabel instead
+  statusLabel?: string;
+  statusState?: 'confirmed' | 'partial' | 'failed' | 'pending' | 'held' | 'cancelled';
   paymentStatus?: string;
   sectorType?: 'DOMESTIC' | 'INTERNATIONAL' | '';
   invoice?: string;
+  cancelled?: boolean;
   cancellationId?: string;
-  refundAmount?: number;
-  cancellationCharge?: number;
+  refundAmount?: number | null;
+  cancellationCharge?: number | null;
+  fareRules?: FareRule[];
+  gstCompanyName?: string;
+  gstTin?: string;
   bookingDate?: string;
   flights: BookingFlightDetail[];
   journeys?: BookingJourneySummary[];
@@ -500,8 +546,8 @@ export interface CancelFlightResponse {
   cancellationId: string;
   status: string;
   message: string;
-  refundAmount: number;
-  cancellationCharge: number;
+  refundAmount: number | null;
+  cancellationCharge: number | null;
 }
 
 // ========== API Functions ==========
@@ -581,7 +627,7 @@ export async function getFareRules(
   return res.json();
 }
 
-/** Free check-in allowance included in the fare, for one flown sector. */
+/** Free baggage allowance included in the fare, for one flown sector. */
 export interface BaggageAllowance {
   fuid: number;
   flightNo: string;
@@ -589,7 +635,30 @@ export interface BaggageAllowance {
   from: string;
   to: string;
   checkIn: string | null;
+  /** Cabin allowance when the airline publishes it; null = not published. */
+  cabin?: string | null;
   pieceDescription: string | null;
+}
+
+/**
+ * Split a search-level Inclusions.Baggage string into check-in and cabin.
+ * Benzy carries cabin, when published, as the second weight: "15 Kg,7 Kg".
+ */
+export function splitBaggage(text: string | null | undefined): {
+  checkIn: string | null;
+  cabin: string | null;
+} {
+  // "07 Kg" / "15Kg" -> "7 Kg" / "15 Kg"; anything else stays verbatim.
+  const tidy = (v: string) => {
+    const m = v.trim().match(/^0*(\d+(?:\.\d+)?)\s*(kg|kgs)$/i);
+    return m ? `${m[1]} Kg` : v.trim();
+  };
+  const parts = (text || '').split(',').map((p) => p.trim()).filter(Boolean);
+  if (!parts.length) return { checkIn: null, cabin: null };
+  if (parts.length === 2 && /^\d+(\.\d+)?\s*(kg|kgs)\b/i.test(parts[1])) {
+    return { checkIn: tidy(parts[0]), cabin: tidy(parts[1]) };
+  }
+  return { checkIn: parts.length === 1 ? tidy(parts[0]) : (text || '').trim(), cabin: null };
 }
 
 /** Purchasable extra baggage for one sector of the itinerary. */

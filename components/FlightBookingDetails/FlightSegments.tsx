@@ -1,5 +1,6 @@
 'use client';
 
+import { AirlineLogo } from '@/components/AirlineLogo';
 import { useState } from 'react';
 import type { SegmentDetail } from '@/lib/flights-api';
 
@@ -100,6 +101,9 @@ interface LegSummaryProps {
   label: 'Onward' | 'Return';
 }
 
+// No refundability label here: Benzy's yes/no Refundable flag can contradict
+// the airline's fare rules, which the sidebar shows in full.
+
 const LegSummary = ({ segments, label }: LegSummaryProps) => {
   if (segments.length === 0) return null;
   const first = segments[0];
@@ -133,10 +137,9 @@ const LegSummary = ({ segments, label }: LegSummaryProps) => {
 interface LegDetailedProps {
   segments: SegmentDetail[];
   label: 'Onward' | 'Return';
-  refundable?: boolean;
 }
 
-const LegDetailed = ({ segments, label, refundable }: LegDetailedProps) => {
+const LegDetailed = ({ segments, label }: LegDetailedProps) => {
   if (segments.length === 0) return null;
   const first = segments[0];
   const last = segments[segments.length - 1];
@@ -161,7 +164,18 @@ const LegDetailed = ({ segments, label, refundable }: LegDetailedProps) => {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button type="button" className="text-[12px] font-medium text-sky-600 hover:underline">
+          <button
+            type="button"
+            onClick={() => {
+              // The rules accordion renders in both the mobile and desktop
+              // sidebars; scroll to whichever one is laid out.
+              const target = Array.from(
+                document.querySelectorAll<HTMLElement>('[data-fare-rules]'),
+              ).find((el) => el.offsetParent !== null);
+              target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className="text-[12px] font-medium text-sky-700 hover:underline"
+          >
             <span className="inline-flex items-center gap-1">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -169,17 +183,6 @@ const LegDetailed = ({ segments, label, refundable }: LegDetailedProps) => {
               Fare Rules
             </span>
           </button>
-          {refundable !== undefined && (
-            <span
-              className={`text-[11px] font-semibold px-3 py-1 rounded-full border ${
-                refundable
-                  ? 'border-emerald-300 text-emerald-700 bg-emerald-50'
-                  : 'border-amber-300 text-amber-700 bg-amber-50'
-              }`}
-            >
-              {refundable ? 'Partially Refundable' : 'Non-Refundable'}
-            </span>
-          )}
         </div>
       </div>
 
@@ -190,15 +193,23 @@ const LegDetailed = ({ segments, label, refundable }: LegDetailedProps) => {
             {/* Airline + meta */}
             <div className="flex items-center gap-3 flex-wrap min-w-0">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-9 h-9 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-700 flex-shrink-0">
-                  {seg.airlineCode}
-                </div>
+                <AirlineLogo
+                  code={seg.airlineCode}
+                  name={seg.airline}
+                  size={36}
+                  fallback={
+                    <div className="w-9 h-9 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-700 flex-shrink-0">
+                      {seg.airlineCode}
+                    </div>
+                  }
+                />
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-gray-900 truncate leading-tight">
                     {seg.airline}
                   </div>
-                  <div className="text-[11px] text-gray-400 leading-tight">
+                  <div className="text-[11px] text-gray-500 leading-tight">
                     {seg.flightNo}
+                    {seg.operatingAirlineCode && <> · Operated by {seg.operatingAirlineCode}</>}
                   </div>
                 </div>
               </div>
@@ -228,9 +239,11 @@ const LegDetailed = ({ segments, label, refundable }: LegDetailedProps) => {
                 )}
                 <div className="px-3 py-1.5">
                   <div className="text-gray-400 uppercase tracking-wide">Cabin Baggage</div>
-                  {/* Benzy exposes no cabin-allowance field - do not assert a
-                      weight the airline never gave us. */}
-                  <div className="text-gray-800 font-medium">As per airline policy</div>
+                  {/* Resolved server-side from the included-baggage text when
+                      the airline publishes it; never invented otherwise. */}
+                  <div className="text-gray-800 font-medium">
+                    {seg.cabinBaggage || 'As per airline policy'}
+                  </div>
                 </div>
                 {seg.mealsIncluded && (
                   <div className="px-3 py-1.5 border-l border-gray-200">
@@ -349,13 +362,9 @@ const LegDetailed = ({ segments, label, refundable }: LegDetailedProps) => {
         </div>
       ))}
 
-      {/* Footer note */}
-      <div className="px-5 py-2.5 bg-sky-50/40 border-t border-gray-100 text-[11px] text-gray-500 flex items-center gap-1.5">
-        <svg className="w-3.5 h-3.5 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        Meal, Seat are chargeable.
-      </div>
+      {/* No static "Meal, Seat are chargeable" footer: each segment shows
+          "Meal included" when the API says so, and seat prices come from the
+          live seat map. */}
     </div>
   );
 };
@@ -415,7 +424,7 @@ export const FlightSegments = ({ segments }: FlightSegmentsProps) => {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="inline-flex items-center gap-1 text-[12px] font-semibold text-sky-600 hover:underline"
+          className="inline-flex items-center gap-1 text-[12px] font-semibold text-sky-700 hover:underline"
         >
           <svg
             className={`w-3.5 h-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`}

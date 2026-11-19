@@ -195,7 +195,7 @@ export const PromoCodeSection = ({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-gray-900">{promo.code}</span>
-                          <span className="text-xs font-semibold text-green-600">
+                          <span className="text-xs font-semibold text-green-700">
                             Save {estimateSavings(promo)}
                           </span>
                         </div>

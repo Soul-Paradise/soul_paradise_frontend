@@ -298,7 +298,7 @@ function Testimonials({ heading, accents }: { heading: NonNullable<HallOfFameSec
                 >
                   <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} aria-hidden="true" />
                   <Quote className="absolute right-5 top-5 h-10 w-10 text-(--color-tertiary-button)" />
-                  <div className="mb-4 flex gap-0.5" aria-label={`${testimonial.rating} out of 5 stars`}>
+                  <div className="mb-4 flex gap-0.5" role="img" aria-label={`${testimonial.rating} out of 5 stars`}>
                     {Array.from({ length: 5 }, (_, s) => (
                       <Star
                         key={s}

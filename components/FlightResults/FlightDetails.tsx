@@ -1,7 +1,8 @@
 'use client';
 
+import { AirlineLogo } from '@/components/AirlineLogo';
 import { useCallback, useEffect, useState } from 'react';
-import { getBaggage, getFareRules } from '@/lib/flights-api';
+import { getBaggage, getFareRules, splitBaggage } from '@/lib/flights-api';
 import type {
   BaggageLookupResponse,
   FareRule,
@@ -289,11 +290,18 @@ function FlightInfoTab({
           {/* Airline + Aircraft info */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded ${colors.bg} ${colors.border} border flex items-center justify-center`}
-              >
-                <span className={`text-xs font-bold ${colors.text}`}>{flight.airlineCode}</span>
-              </div>
+              <AirlineLogo
+                code={flight.airlineCode}
+                name={flight.airlineName}
+                size={40}
+                fallback={
+                  <div
+                    className={`w-10 h-10 rounded ${colors.bg} ${colors.border} border flex items-center justify-center`}
+                  >
+                    <span className={`text-xs font-bold ${colors.text}`}>{flight.airlineCode}</span>
+                  </div>
+                }
+              />
               <div>
                 <span className="text-sm font-semibold text-gray-900">{flight.airlineName}</span>
                 <span className="text-sm text-gray-400 ml-2">{flight.flightNo}</span>
@@ -361,13 +369,20 @@ function FlightInfoTab({
                     {/* Flight leg to the next stop */}
                     {!last && (
                       <div className="mt-3 flex items-center gap-2 text-[11px] text-gray-500">
-                        <div
-                          className={`w-6 h-6 rounded ${colors.bg} ${colors.border} border flex items-center justify-center flex-shrink-0`}
-                        >
-                          <span className={`text-[9px] font-bold ${colors.text}`}>
-                            {flight.airlineCode}
-                          </span>
-                        </div>
+                        <AirlineLogo
+                          code={flight.airlineCode}
+                          name={airline}
+                          size={24}
+                          fallback={
+                            <div
+                              className={`w-6 h-6 rounded ${colors.bg} ${colors.border} border flex items-center justify-center flex-shrink-0`}
+                            >
+                              <span className={`text-[9px] font-bold ${colors.text}`}>
+                                {flight.airlineCode}
+                              </span>
+                            </div>
+                          }
+                        />
                         <span className="font-medium text-gray-700">{airline}</span>
                         <span className="text-gray-300">·</span>
                         <span>{cabin}</span>
@@ -382,15 +397,17 @@ function FlightInfoTab({
 
         {/* Inclusions + advisories, divided off from the itinerary */}
         <div className="border-t border-gray-100 px-5 py-3 space-y-2">
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="bg-blue-100 text-(--color-secondary-button) px-2 py-0.5 rounded text-[10px] font-bold uppercase">
-              Info
-            </span>
-            <span className="text-gray-500">
-              {flight.mealsIncluded ? 'Meal included' : 'Meal, Seat are chargeable.'}
-              {flight.pieceDescription ? ` · ${flight.pieceDescription}` : ''}
-            </span>
-          </div>
+          {/* API inclusions only - no assumed "chargeable" wording. */}
+          {(flight.mealsIncluded || flight.pieceDescription) && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="bg-blue-100 text-(--color-secondary-button) px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+                Info
+              </span>
+              <span className="text-gray-500">
+                {[flight.mealsIncluded ? 'Meal included' : '', flight.pieceDescription || ''].filter(Boolean).join(' · ')}
+              </span>
+            </div>
+          )}
 
           {flight.notice && (
             <div className="flex items-start gap-1.5 text-xs">
@@ -427,17 +444,6 @@ function FlightInfoTab({
 
 /* ─── Fare Summary & Rules Tab ─── */
 
-/** Decode Benzy's HoldInfo ("E|01:00|1.00|SE|EE") into its hold duration. */
-function holdDuration(holdInfo?: string | null): string | null {
-  if (!holdInfo) return null;
-  const parts = holdInfo.split('|');
-  const hhmm = parts[1]?.trim();
-  if (!hhmm || !/^\d{1,2}:\d{2}$/.test(hhmm)) return null;
-  const [h, m] = hhmm.split(':').map(Number);
-  if (!h && !m) return null;
-  return [h ? `${h} hr` : '', m ? `${m} min` : ''].filter(Boolean).join(' ');
-}
-
 function FareSummaryTab({ flight, tui }: { flight: FlightResult; tui: string }) {
   const [rules, setRules] = useState<FareRule[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -465,60 +471,27 @@ function FareSummaryTab({ flight, tui }: { flight: FlightResult; tui: string }) 
     void load();
   }, [load]);
 
-  const hold = holdDuration(flight.holdInfo);
-
   return (
     <div className="space-y-4">
       <Panel title="Fare Summary" subtitle={`${flight.from} - ${flight.to}`}>
         <table className="w-full text-sm">
           <tbody>
-            <Row label="Travel Class">
-              {getCabinName(flight.cabin)}
-              {flight.rbd && (
-                <span className="text-xs text-gray-400 font-normal">
-                  {' '}
-                  · Booking class {flight.rbd}
-                </span>
-              )}
-            </Row>
-            {(flight.fareHead || flight.fareBasisCode) && (
-              <Row label="Fare Type">
-                {flight.fareHead || '-'}
-                {flight.fareBasisCode && (
-                  <span className="block text-xs text-gray-400 font-normal">
-                    Fare basis {flight.fareBasisCode}
-                  </span>
-                )}
-              </Row>
-            )}
+            {/* Customer-facing only: no supplier codes (RBD, fare basis) or fare brand. */}
+            <Row label="Travel Class">{getCabinName(flight.cabin)}</Row>
             <Row label="Check-in Baggage">
-              {flight.baggage || 'As per airline policy'}
+              {splitBaggage(flight.baggage).checkIn || 'As per airline policy'}
               {flight.pieceDescription && (
                 <span className="block text-xs text-gray-400 font-normal">
                   {flight.pieceDescription}
                 </span>
               )}
             </Row>
-            {flight.promo && (
-              <Row label="Promo Applied">
-                <span className="text-emerald-700">{flight.promo}</span>
-              </Row>
+            {splitBaggage(flight.baggage).cabin && (
+              <Row label="Cabin Baggage">{splitBaggage(flight.baggage).cabin}</Row>
             )}
-            {hold && <Row label="Hold Available">Up to {hold}</Row>}
-            <Row label="Refundable">
-              {/* Benzy's flag only says whether the fare is refundable at
-                  all - refundable fares still carry a cancellation penalty,
-                  so never present this as a full refund. */}
-              <span
-                className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                  flight.refundable
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'bg-red-100 text-red-600'
-                }`}
-              >
-                {flight.refundable ? 'Refundable with penalty' : 'Non-Refundable'}
-              </span>
-            </Row>
+            {/* Not shown: Benzy's Promo (supplier deal code), HoldInfo (agent
+                hold) and the yes/no Refundable flag, which can contradict the
+                airline's fare rules shown right below. */}
           </tbody>
         </table>
       </Panel>
@@ -558,7 +531,8 @@ function FareSummaryTab({ flight, tui }: { flight: FlightResult; tui: string }) 
 
       <Notes
         items={[
-          'Charges are levied by the airline per passenger, per journey, and are in addition to the ticket fare.',
+          // No "per passenger, per journey" claim - airlines publish that in
+          // their own rule headings when it applies.
           'Fare rules are subject to change by the airline. The amounts confirmed at the time of booking apply.',
         ]}
       />
@@ -613,7 +587,8 @@ function BaggageTab({ flight, tui }: { flight: FlightResult; tui: string }) {
           airlineCode: flight.airlineCode,
           from: flight.from,
           to: flight.to,
-          checkIn: flight.baggage,
+          checkIn: splitBaggage(flight.baggage).checkIn,
+          cabin: splitBaggage(flight.baggage).cabin,
           pieceDescription: flight.pieceDescription ?? null,
         },
       ];
@@ -663,11 +638,12 @@ function BaggageTab({ flight, tui }: { flight: FlightResult; tui: string }) {
                       </span>
                     )}
                   </td>
-                  {/* Benzy carries no cabin-baggage field at any stage -
-                      Inclusions.Baggage is check-in only. Printing a fixed
-                      weight here would be inventing airline policy. */}
+                  {/* Benzy has no dedicated cabin field; when the airline
+                      publishes it, it rides as the second weight of the
+                      included-baggage text (resolved server-side). Never
+                      invent a figure when it isn't published. */}
                   <td className="px-5 py-2.5 text-right font-medium text-gray-700 align-top">
-                    As per airline policy
+                    {a.cabin || 'As per airline policy'}
                   </td>
                 </tr>
               ))}

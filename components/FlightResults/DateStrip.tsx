@@ -107,7 +107,7 @@ export const DateStrip = ({
     // For roundtrip context fire a single RT search per alt date (never ON);
     // for the depart strip we vary depart, for the return strip we vary
     // return. Backend splits onward vs return by from/to.
-    for (const dateStr of surroundingDates) {
+    const lookup = (dateStr: string) => {
       const isReturn = mode === 'return';
       const rtForReturn = sp.tripType === 'roundtrip' && isReturn && !!onwardDate;
       const rtForDepart = sp.tripType === 'roundtrip' && !isReturn && !!pairedReturnDate;
@@ -140,15 +140,14 @@ export const DateStrip = ({
             refundableOnly: sp.refundableOnly,
             nearbyAirports: sp.nearbyAirports,
           };
-      searchFlights(params)
+      return searchFlights(params)
         .then((res) => {
           if (cancelled) return;
-          const flights = rtForReturn
-            ? (res.returnFlights ?? [])
-            : res.flights;
-          if (flights.length > 0) {
-            const cheapest = Math.min(...flights.map((f) => f.grossFare));
-            setDatePrices((prev) => ({ ...prev, [dateStr]: cheapest }));
+          // Cheapest fare for that date, from the server-side facets (the
+          // response carries one page, not the whole list).
+          const leg = rtForReturn ? res.return : res.onward;
+          if (leg && leg.totalAll > 0) {
+            setDatePrices((prev) => ({ ...prev, [dateStr]: leg.facets.minPrice }));
           } else {
             setDatePrices((prev) => ({ ...prev, [dateStr]: null }));
           }
@@ -157,7 +156,18 @@ export const DateStrip = ({
           if (cancelled) return;
           setDatePrices((prev) => ({ ...prev, [dateStr]: null }));
         });
-    }
+    };
+
+    // At most 2 lookups in flight per strip: the browser allows ~6 connections
+    // per host, and result pages / filters must not queue behind these.
+    let next = 0;
+    const worker = async () => {
+      while (!cancelled && next < surroundingDates.length) {
+        await lookup(surroundingDates[next++]);
+      }
+    };
+    void worker();
+    void worker();
 
     return () => {
       cancelled = true;
@@ -213,6 +223,7 @@ export const DateStrip = ({
       <button
         type="button"
         onClick={() => scroll('left')}
+        aria-label="Earlier dates"
         className="px-2 py-4 text-(--color-links) hover:bg-(--color-primary-tint) flex-shrink-0 border-r border-(--color-tertiary-button)"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -254,6 +265,7 @@ export const DateStrip = ({
       <button
         type="button"
         onClick={() => scroll('right')}
+        aria-label="Later dates"
         className="px-2 py-4 text-(--color-links) hover:bg-(--color-primary-tint) flex-shrink-0 border-l border-(--color-tertiary-button)"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

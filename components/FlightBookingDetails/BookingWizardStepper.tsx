@@ -58,7 +58,7 @@ export const BookingWizardStepper = ({
                     isCurrent
                       ? 'text-(--color-links)'
                       : isCompleted
-                        ? 'text-green-600'
+                        ? 'text-green-700'
                         : 'text-gray-400'
                   }`}
                 >

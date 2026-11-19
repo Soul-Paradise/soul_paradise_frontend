@@ -1,6 +1,10 @@
 'use client';
 
-import { useEffect, useState, Suspense, useMemo } from 'react';
+import { useCallback, useEffect, useState, Suspense, useMemo } from 'react';
+import { Pagination, ResultsBusy } from '@/components/Results/Pagination';
+import type { ResultPage } from '@/lib/results-api';
+import { useResultPage } from '@/lib/use-result-page';
+import { useResultPageSize } from '@/contexts/PreferencesContext';
 import {
   BookButton,
   FilterCheckbox,
@@ -35,7 +39,7 @@ import {
 const HotelMap = dynamic(() => import('@/components/HotelMap/HotelMap'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-sm">
+    <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-500 text-sm">
       Loading map…
     </div>
   ),
@@ -97,22 +101,34 @@ interface Hotel {
   propertyType: string;
 }
 
-interface FilterData {
-  name: string;
-  category: string;
-  type: string;
-  options: Array<{ min?: number; max?: number; value?: string; label: string; count: number }> | null;
+interface HotelOption {
+  label: string;
+  value: string;
+  count: number;
 }
 
+/** Sidebar options, computed by the server from the whole result list. */
+interface HotelFacets {
+  starCounts: Record<number, number>;
+  amenities: HotelOption[];
+  chains: HotelOption[];
+  propertyTypes: HotelOption[];
+  /** max -1 = no upper bound */
+  priceBands: Array<{ min: number; max: number; label: string; count: number }>;
+}
+
+type HotelResultPage = ResultPage<Hotel, HotelFacets>;
+
 interface SearchResponse {
+  resultId: string;
   searchId: string; // Benzy searchId
   searchTracingKey: string; // Benzy TUI
   destinationCountryCode: string;
   checkIn: string; // MM/DD/YYYY (Benzy format)
   checkOut: string;
   locationName: string;
-  hotels: Hotel[];
-  filters: FilterData[];
+  /** Page 1; filters/sort/pages come from GET /hotels/results/:resultId. */
+  page: HotelResultPage;
   total: number;
   currency: string;
 }
@@ -129,11 +145,13 @@ function ratingLabel(r: number): string {
   return 'Poor';
 }
 
+// Rating badges carry white text, so each tier is dark enough for 4.5:1
+// (the old 500/600 shades were 2.2-3.2:1 and hard to read).
 function ratingColor(r: number): string {
-  if (r >= 4.0) return 'bg-green-600';
-  if (r >= 3.5) return 'bg-green-500';
-  if (r >= 3.0) return 'bg-yellow-500';
-  return 'bg-orange-500';
+  if (r >= 4.0) return 'bg-green-800';
+  if (r >= 3.5) return 'bg-green-700';
+  if (r >= 3.0) return 'bg-amber-700';
+  return 'bg-orange-700';
 }
 
 function fmt(amount: number, currency = 'INR'): string {
@@ -321,7 +339,7 @@ function HotelCard({
           </div>
 
           {/* Stay info */}
-          <p className="text-xs text-gray-400 mt-2">
+          <p className="text-xs text-gray-500 mt-2">
             {formatDate(checkIn)} – {formatDate(checkOut)} · {nights} Night{nights !== 1 ? 's' : ''} · 1 Room
           </p>
         </div>
@@ -334,7 +352,7 @@ function HotelCard({
               <div className="flex items-center gap-1.5">
                 <div className="text-right">
                   <div className="text-xs font-semibold text-gray-700">{ratingLabel(hotel.userReview.rating)}</div>
-                  <div className="text-xs text-gray-400">{hotel.userReview.count.toLocaleString()} ratings</div>
+                  <div className="text-xs text-gray-500">{hotel.userReview.count.toLocaleString()} ratings</div>
                 </div>
                 <div className={`w-9 h-9 rounded flex items-center justify-center text-white font-bold text-sm ${ratingColor(hotel.userReview.rating)}`}>
                   {hotel.userReview.rating.toFixed(1)}
@@ -348,13 +366,13 @@ function HotelCard({
             {hotel.rate ? (
               <>
                 {hasSavings && (
-                  <div className="text-xs text-gray-400 line-through">{fmt(baseRate, currency)}</div>
+                  <div className="text-xs text-gray-500 line-through">{fmt(baseRate, currency)}</div>
                 )}
                 <div className="text-2xl font-bold text-gray-900">{fmt(total, currency)}</div>
                 <div className="text-xs text-gray-500">+ {fmt(taxAmount, currency)} Tax and Fees</div>
                 {hasSavings && (
                   <div className="flex items-center justify-end gap-1 mt-0.5">
-                    <span className="text-xs text-green-600 font-semibold">You Saved {fmt(savings, currency)}</span>
+                    <span className="text-xs text-green-700 font-semibold">You Saved {fmt(savings, currency)}</span>
                     <svg className="w-3.5 h-3.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
@@ -374,7 +392,7 @@ function HotelCard({
               </>
             ) : (
               <div className="flex flex-col items-end gap-2">
-                <span className="text-sm text-gray-400 italic">Price unavailable</span>
+                <span className="text-sm text-gray-500 italic">Price unavailable</span>
                 <BookButton onClick={goToRooms} disabled={hotel.isSoldOut}>
                   {hotel.isSoldOut ? 'Sold Out' : 'Check Rooms'}
                 </BookButton>
@@ -458,11 +476,11 @@ function CompactHotelCard({
             {hotel.rate && (
               <div className="mt-0.5">
                 {hasSavings && (
-                  <span className="text-[10px] text-gray-400 line-through mr-1">{fmt(baseRate, currency)}</span>
+                  <span className="text-[10px] text-gray-500 line-through mr-1">{fmt(baseRate, currency)}</span>
                 )}
                 <span className="text-sm font-bold text-gray-900">{fmt(total, currency)}</span>
                 {hasSavings && (
-                  <div className="text-[10px] text-green-600 font-semibold">Saved {fmt(savings, currency)}</div>
+                  <div className="text-[10px] text-green-700 font-semibold">Saved {fmt(savings, currency)}</div>
                 )}
               </div>
             )}
@@ -482,8 +500,7 @@ function CompactHotelCard({
 
 // ── Sidebar ──
 function Sidebar({
-  hotels,
-  filters,
+  facets,
   onShowMap,
   starFilter, setStarFilter,
   minRating, setMinRating,
@@ -495,8 +512,7 @@ function Sidebar({
   breakfast, setBreakfast,
   nameSearch, setNameSearch,
 }: {
-  hotels: Hotel[];
-  filters: FilterData[];
+  facets: HotelFacets;
   onShowMap: () => void;
   starFilter: number[];
   setStarFilter: (v: number[]) => void;
@@ -517,69 +533,14 @@ function Sidebar({
   nameSearch: string;
   setNameSearch: (v: string) => void;
 }) {
-  // Compute star counts
-  const starCounts = useMemo(() => {
-    const map: Record<number, number> = {};
-    for (const h of hotels) {
-      const s = Math.round(h.starRating);
-      map[s] = (map[s] || 0) + 1;
-    }
-    return map;
-  }, [hotels]);
-
-  // Amenity options from filter API (Benzy returns "Facilities") or derive from hotels
+  // Options come from the server (facets of the whole result list); the
+  // selection goes back to it as query params.
   const [showAllAmenities, setShowAllAmenities] = useState(false);
-  const amenityOptions = useMemo(() => {
-    const apiFilter = filters.find(f => f.category === 'Facilities');
-    if (apiFilter?.options) {
-      // API sends `value` as the facility id; we match by label since hotel.facilities has name
-      return apiFilter.options
-        .map(o => ({ label: o.label, value: o.label, count: o.count }))
-        .sort((a, b) => b.count - a.count);
-    }
-    // Fallback: derive top amenities from hotel facilities
-    const map = new Map<string, number>();
-    for (const h of hotels) {
-      for (const f of (h.facilities || [])) {
-        map.set(f.name, (map.get(f.name) || 0) + 1);
-      }
-    }
-    return Array.from(map.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, count]) => ({ label: name, value: name, count }));
-  }, [filters, hotels]);
-
-  // Hotel chain options from API (sorted by count desc)
-  const chainOptions = useMemo(() => {
-    const apiFilter = filters.find(f => f.category === 'HotelChain');
-    if (!apiFilter?.options) return [];
-    return apiFilter.options
-      .filter(o => o.value && o.count > 0)
-      .map(o => ({ label: o.label, value: o.value as string, count: o.count }))
-      .sort((a, b) => b.count - a.count);
-  }, [filters]);
-
-  // Property type options from API
-  const propertyTypeOptions = useMemo(() => {
-    const apiFilter = filters.find(f => f.category === 'PropertyType');
-    if (!apiFilter?.options) return [];
-    return apiFilter.options
-      .filter(o => o.value && o.count > 0)
-      .map(o => ({ label: o.label, value: o.value as string, count: o.count }))
-      .sort((a, b) => b.count - a.count);
-  }, [filters]);
-
-  // Price range options from API filter or default
-  const priceOptions = useMemo(() => {
-    const apiFilter = filters.find(f => f.category === 'PriceGroup');
-    if (apiFilter?.options) return apiFilter.options;
-    return [
-      { min: 0, max: 3000, label: 'Upto ₹3,000', count: 0 },
-      { min: 3000, max: 7000, label: '₹3,000 to ₹7,000', count: 0 },
-      { min: 7000, max: 15000, label: '₹7,000 to ₹15,000', count: 0 },
-      { min: 15000, max: -1, label: '₹15,000 & More', count: 0 },
-    ];
-  }, [filters]);
+  const starCounts = facets.starCounts;
+  const amenityOptions = facets.amenities;
+  const chainOptions = facets.chains;
+  const propertyTypeOptions = facets.propertyTypes;
+  const priceOptions = facets.priceBands;
 
   function toggleStar(s: number) {
     setStarFilter(starFilter.includes(s) ? starFilter.filter(x => x !== s) : [...starFilter, s]);
@@ -807,6 +768,8 @@ function Sidebar({
   );
 }
 
+const MAP_VIEW = { view: 'map' } as const;
+
 const HOTEL_SORTS = [
   { key: 'featured', label: 'Featured', icon: Sparkles },
   { key: 'rating', label: 'Top Rated', icon: Star },
@@ -844,7 +807,10 @@ function HotelResults() {
   const [breakfast, setBreakfast] = useState(false);
   const [sort, setSort] = useState<SortType>('featured');
   const [showMap, setShowMap] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [selectedHotelId, setSelectedHotelId] = useState<string | null>(null);
+  // Bumped to re-run the search when the stored results expire.
+  const [searchNonce, setSearchNonce] = useState(0);
 
   const nights = checkIn && checkOut
     ? Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000))
@@ -911,72 +877,49 @@ function HotelResults() {
       cancelled = true;
       controller.abort();
     };
-  }, [authLoading, isAuthenticated, locationId, lat, long, checkIn, checkOut, roomsParam, locationName, destinationCountryCode]);
+  }, [authLoading, isAuthenticated, locationId, lat, long, checkIn, checkOut, roomsParam, locationName, destinationCountryCode, searchNonce]);
 
-  // Filtered + sorted hotels
-  const displayed = useMemo(() => {
-    if (!results) return [];
-    let list = [...results.hotels];
-
-    if (nameSearch) {
-      const q = nameSearch.toLowerCase();
-      list = list.filter(h => h.name.toLowerCase().includes(q));
-    }
-    if (starFilter.length > 0) {
-      list = list.filter(h => starFilter.includes(Math.round(h.starRating)));
-    }
-    if (minRating > 0) {
-      list = list.filter(h => (h.userReview?.rating ?? 0) >= minRating);
-    }
-    if (priceRange) {
-      const [min, max] = priceRange;
-      list = list.filter(h => {
-        const p = h.rate?.total ?? 0;
-        return p >= min && (max === -1 || p <= max);
-      });
-    }
-    if (freeCancellation) list = list.filter(h => h.freeCancellation);
-    if (breakfast) list = list.filter(h => h.freeBreakfast);
-    if (amenities.length > 0) {
-      list = list.filter(h =>
-        amenities.every(a =>
-          (h.facilities || []).some(f => f.name === a)
-        )
-      );
-    }
-    if (chainFilter.length > 0) {
-      list = list.filter(h => h.chainName && chainFilter.includes(h.chainName));
-    }
-    if (propertyTypeFilter.length > 0) {
-      list = list.filter(h => h.propertyType && propertyTypeFilter.includes(h.propertyType.toLowerCase()));
-    }
-
-    if (sort === 'price') {
-      list.sort((a, b) => {
-        if (a.rate && b.rate) return a.rate.total - b.rate.total;
-        if (a.rate) return -1;
-        if (b.rate) return 1;
-        return 0;
-      });
-    } else if (sort === 'rating') {
-      list.sort((a, b) => (b.userReview?.rating ?? 0) - (a.userReview?.rating ?? 0));
-    } else {
-      // featured: priced first, then by savings desc
-      list.sort((a, b) => {
-        const aHasRate = a.rate !== null ? 1 : 0;
-        const bHasRate = b.rate !== null ? 1 : 0;
-        if (aHasRate !== bHasRate) return bHasRate - aHasRate;
-        if (a.rate && b.rate) {
-          const aSave = a.rate.baseRate - a.rate.total;
-          const bSave = b.rate.baseRate - b.rate.total;
-          return bSave - aSave;
-        }
-        return 0;
-      });
-    }
-
-    return list;
-  }, [results, nameSearch, starFilter, minRating, priceRange, freeCancellation, breakfast, amenities, chainFilter, propertyTypeFilter, sort]);
+  // Filters + sort go to the server (defaults left out); the list and map are
+  // answered from the stored search, never by re-searching.
+  const query = useMemo(
+    () => ({
+      sort: sort === 'featured' ? undefined : sort,
+      name: nameSearch.trim() || undefined,
+      stars: starFilter,
+      minRating: minRating || undefined,
+      priceMin: priceRange ? priceRange[0] : undefined,
+      priceMax: priceRange ? priceRange[1] : undefined,
+      freeCancellation,
+      breakfast,
+      amenities,
+      chains: chainFilter,
+      propertyTypes: propertyTypeFilter,
+    }),
+    [sort, nameSearch, starFilter, minRating, priceRange, freeCancellation, breakfast, amenities, chainFilter, propertyTypeFilter],
+  );
+  const reSearch = useCallback(() => setSearchNonce((n) => n + 1), []);
+  const perPage = useResultPageSize('hotels');
+  const list = useResultPage<Hotel, HotelFacets>({
+    kind: 'hotels',
+    initial: results?.page ?? null,
+    query,
+    onExpired: reSearch,
+    pageSize: perPage.pageSize,
+  });
+  // Map view: every matching hotel (pins), fetched only while the map is open.
+  const map = useResultPage<Hotel, HotelFacets>({
+    kind: 'hotels',
+    initial: results?.page ?? null,
+    query,
+    fixed: MAP_VIEW,
+    enabled: showMap,
+    initialAnswers: false,
+    onExpired: reSearch,
+  });
+  const listPage = list.data;
+  const displayed = (showMap ? map.data?.items : listPage?.items) ?? [];
+  const matching = (showMap ? map.data?.total : listPage?.total) ?? 0;
+  const listError = showMap ? map.error : list.error;
 
   const hasActiveFilters = nameSearch || starFilter.length > 0 || minRating > 0 || priceRange || freeCancellation || breakfast || amenities.length > 0 || chainFilter.length > 0 || propertyTypeFilter.length > 0;
 
@@ -1007,6 +950,26 @@ function HotelResults() {
     });
     router.push(`/booking/hotels/rooms?${params.toString()}`);
   }
+
+  // Rendered in the desktop column and in the mobile drawer.
+  const sidebar = listPage ? (
+    <Sidebar
+      facets={listPage.facets}
+      onShowMap={() => {
+        setShowMobileFilters(false);
+        setShowMap(true);
+      }}
+      starFilter={starFilter} setStarFilter={setStarFilter}
+      minRating={minRating} setMinRating={setMinRating}
+      priceRange={priceRange} setPriceRange={setPriceRange}
+      amenities={amenities} setAmenities={setAmenities}
+      chainFilter={chainFilter} setChainFilter={setChainFilter}
+      propertyTypeFilter={propertyTypeFilter} setPropertyTypeFilter={setPropertyTypeFilter}
+      freeCancellation={freeCancellation} setFreeCancellation={setFreeCancellation}
+      breakfast={breakfast} setBreakfast={setBreakfast}
+      nameSearch={nameSearch} setNameSearch={setNameSearch}
+    />
+  ) : null;
 
   return (
     <div className="min-h-screen bg-(--color-background)">
@@ -1056,7 +1019,7 @@ function HotelResults() {
         )}
 
         {/* Results */}
-        {!loading && !error && results && results.hotels.length === 0 && (
+        {!loading && !error && results && results.page.totalAll === 0 && (
           <ResultsEmpty
             icon={Building2}
             title="No hotels found"
@@ -1065,43 +1028,74 @@ function HotelResults() {
           />
         )}
 
-        {!loading && !error && results && results.hotels.length > 0 && (
+        {!loading && !error && results && listPage && results.page.totalAll > 0 && (
           <div className="flex gap-5">
-            {/* Sidebar (hidden in map view) - independently scrollable (sticky) */}
+            {/* Sidebar (hidden in map view) - independently scrollable (sticky).
+                Desktop only: on phones a fixed 280px column left the results
+                ~58px wide, so filters open in a drawer there instead. */}
             {!showMap && (
-              <div className="w-[280px] flex-shrink-0">
+              <div className="hidden lg:block w-[280px] flex-shrink-0">
                 <div className="sticky top-36 max-h-[calc(100vh-160px)] overflow-y-auto pr-1 scrollbar-hide">
-                  <Sidebar
-                    hotels={results.hotels}
-                    filters={results.filters || []}
-                    onShowMap={() => setShowMap(true)}
-                    starFilter={starFilter} setStarFilter={setStarFilter}
-                    minRating={minRating} setMinRating={setMinRating}
-                    priceRange={priceRange} setPriceRange={setPriceRange}
-                    amenities={amenities} setAmenities={setAmenities}
-                    chainFilter={chainFilter} setChainFilter={setChainFilter}
-                    propertyTypeFilter={propertyTypeFilter} setPropertyTypeFilter={setPropertyTypeFilter}
-                    freeCancellation={freeCancellation} setFreeCancellation={setFreeCancellation}
-                    breakfast={breakfast} setBreakfast={setBreakfast}
-                    nameSearch={nameSearch} setNameSearch={setNameSearch}
-                  />
+                  {sidebar}
+                </div>
+              </div>
+            )}
+
+            {showMobileFilters && !showMap && (
+              <div className="lg:hidden fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-label="Filters">
+                <div className="absolute inset-0 bg-black/40" onClick={() => setShowMobileFilters(false)} />
+                <div className="relative w-[300px] max-w-[85vw] bg-(--color-background) overflow-y-auto">
+                  <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between z-10">
+                    <h2 className="text-base font-bold text-gray-900">Filters</h2>
+                    <button
+                      type="button"
+                      aria-label="Close filters"
+                      onClick={() => setShowMobileFilters(false)}
+                      className="p-1 text-gray-500 hover:text-gray-700"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="p-3">{sidebar}</div>
                 </div>
               </div>
             )}
 
             {/* Main */}
             <div className="flex-1 min-w-0">
+              {!showMap && (
+                <div className="lg:hidden mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileFilters(true)}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-white border border-(--color-tertiary-button) rounded-full text-sm font-semibold text-(--color-foreground) hover:border-(--color-links) hover:text-(--color-links)"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    Filters
+                  </button>
+                </div>
+              )}
               {/* Result count + sort */}
               <div className="mb-4">
                 <SortTabs
                   options={HOTEL_SORTS}
                   active={sort}
                   onChange={setSort}
-                  shown={displayed.length}
-                  total={results.total}
+                  shown={matching}
+                  total={listPage.totalAll}
                   noun="Hotels"
                 />
               </div>
+
+              {listError && (
+                <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+                  {listError}
+                </div>
+              )}
 
               {/* Active filter pills */}
               {hasActiveFilters && (
@@ -1135,7 +1129,7 @@ function HotelResults() {
               )}
 
               {/* Hotel cards */}
-              {displayed.length === 0 ? (
+              {matching === 0 && !(showMap ? map.loading : list.loading) ? (
                 <ResultsEmpty
                   icon={SlidersHorizontal}
                   title="No hotels match your filters"
@@ -1144,7 +1138,11 @@ function HotelResults() {
                 />
               ) : showMap ? (
                 // ── Map view: compact list + map ──
-                <div className="flex gap-3" style={{ height: 'calc(100vh - 180px)' }}>
+                <div
+                  className={`flex gap-3 transition-opacity ${map.loading ? 'opacity-60' : ''}`}
+                  aria-busy={map.loading}
+                  style={{ height: 'calc(100vh - 180px)' }}
+                >
                   {/* Compact list */}
                   <div className="w-[380px] flex-shrink-0 flex flex-col gap-2 overflow-y-auto pr-1">
                     <button
@@ -1193,8 +1191,9 @@ function HotelResults() {
                   </div>
                 </div>
               ) : (
+                <ResultsBusy busy={list.loading} id="hotels-list">
                 <div className="space-y-3">
-                  {displayed.map((hotel) => (
+                  {listPage.items.map((hotel) => (
                     <HotelCard
                       key={hotel.id}
                       hotel={hotel}
@@ -1211,6 +1210,18 @@ function HotelResults() {
                     />
                   ))}
                 </div>
+                <Pagination
+                  page={listPage.page}
+                  totalPages={listPage.totalPages}
+                  total={listPage.total}
+                  pageSize={listPage.pageSize}
+                  onPageChange={list.setPage}
+                  onPageSizeChange={perPage.setPageSize}
+                  noun="hotels"
+                  scrollTargetId="hotels-list"
+                  disabled={list.loading}
+                />
+                </ResultsBusy>
               )}
             </div>
           </div>

@@ -143,10 +143,10 @@ export const BookingSummary = ({
         {/* Promo Discount */}
         {appliedPromo?.valid && promoDiscount > 0 && (
           <div className="flex justify-between text-sm">
-            <span className="text-green-600">
+            <span className="text-green-700">
               Promo Discount Applied
             </span>
-            <span className="text-green-600 font-medium">
+            <span className="text-green-700 font-medium">
               - {formatCurrency(promoDiscount, totalFare.currency)}
             </span>
           </div>

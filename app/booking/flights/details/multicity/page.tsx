@@ -19,7 +19,7 @@ import { FareRulesAccordion } from '@/components/FlightBookingDetails/FareRulesA
 import { SSRSelector } from '@/components/FlightBookingDetails/SSRSelector';
 import { SeatSelector } from '@/components/FlightBookingDetails/SeatSelector';
 import { PassengerForm } from '@/components/FlightBookingDetails/PassengerForm';
-import { ContactInfoForm } from '@/components/FlightBookingDetails/ContactInfoForm';
+import { ContactInfoForm, validateGst } from '@/components/FlightBookingDetails/ContactInfoForm';
 import { BookingSummary } from '@/components/FlightBookingDetails/BookingSummary';
 import { BookingWizardStepper } from '@/components/FlightBookingDetails/BookingWizardStepper';
 
@@ -139,6 +139,9 @@ function MultiCityDetailsContent() {
 
     // Fare-level booking requirements (from Benzy pricing).
     const req = pricing?.bookingRequirements;
+
+    const gstErr = validateGst(contactInfo, !!req?.gstMandatory);
+    if (gstErr) return gstErr;
 
     for (let i = 0; i < travellers.length; i++) {
       const t = travellers[i];
@@ -413,6 +416,8 @@ function MultiCityDetailsContent() {
                 <ContactInfoForm
                   contactInfo={contactInfo}
                   onChange={setContactInfo}
+                  gstApplicable={!!pricing.bookingRequirements?.gstApplicable}
+                  gstMandatory={!!pricing.bookingRequirements?.gstMandatory}
                 />
               </>
             )}
@@ -422,6 +427,7 @@ function MultiCityDetailsContent() {
                 {pricing.seatMaps.length > 0 ? (
                   <SeatSelector
                     seatMaps={pricing.seatMaps}
+                    paxTypes={travellers.map((t) => t.paxType)}
                     segments={pricing.segments}
                     passengerCount={totalPaxCount}
                     selectedSeats={selectedSeats}
