@@ -413,22 +413,35 @@ function Urgent({ content, contact }: { content: NonNullable<ContactSections['ur
   );
 }
 
+/** The map URL is CMS-editable; only allow Google Maps embed URLs in the iframe. */
+function isGoogleMapsEmbed(src: string | null | undefined): src is string {
+  return (
+    typeof src === 'string' &&
+    (src.startsWith('https://www.google.com/maps/embed') ||
+      src.startsWith('https://maps.google.com/maps/embed') ||
+      /^https:\/\/maps\.google\.com\/maps\?[^#]*output=embed/.test(src))
+  );
+}
+
 function MapBlock({ content, contact }: { content: NonNullable<ContactSections['map']>; contact: ContactContent }) {
   const [firstLine, ...restLines] = contact.addressLines;
   return (
     <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 md:pb-20 lg:px-8">
       <div className="relative overflow-hidden rounded-2xl shadow-xl ring-1 ring-(--color-tertiary-button)">
         <div className="h-[380px] bg-(--color-tertiary-button) md:h-[460px]">
-          <iframe
-            src={contact.mapEmbedUrl}
-            width="100%"
-            height="100%"
-            style={{ border: 0 }}
-            allowFullScreen
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            title={content.mapTitle}
-          />
+          {isGoogleMapsEmbed(contact.mapEmbedUrl) && (
+            <iframe
+              src={contact.mapEmbedUrl}
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
+              sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+              title={content.mapTitle}
+            />
+          )}
         </div>
         <div className="border-t border-(--color-tertiary-button) bg-(--color-peace) p-5 md:absolute md:bottom-5 md:left-5 md:max-w-sm md:rounded-2xl md:border-0 md:shadow-2xl">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-(--color-links)">

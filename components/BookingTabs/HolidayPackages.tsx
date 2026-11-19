@@ -300,14 +300,7 @@ export const HolidayPackages = () => {
   function handleSearch() {
     if (!destination) { setActivePanel('destination'); return; }
     if (!departure) { setActivePanel('departure'); return; }
-    console.log('Search holiday packages', {
-      packageType,
-      destination: { name: destination.shortName, lat: destination.lat, lon: destination.lon },
-      departure: { name: departure.shortName, lat: departure.lat, lon: departure.lon },
-      checkIn: checkIn.toISOString().split('T')[0],
-      checkOut: checkOut.toISOString().split('T')[0],
-      rooms,
-    });
+    // TODO: wire up holiday package search once the backend endpoint exists.
   }
 
   const nights = diffNights(checkIn, checkOut);

@@ -82,9 +82,10 @@ const baseMetadata: Metadata = {
     canonical: "https://soulparadisetravels.com/",
   },
   category: "Travel & Tourism",
-  verification: {
-    google: "your-google-verification-code-here",
-  },
+  // Only emit the Search Console meta tag when a real code is configured.
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } }
+    : {}),
   other: {
     "contact:phone_number": "+91-987-681-6688",
     "contact:email": "soulparadise21@gmail.com",
