@@ -1,5 +1,6 @@
 'use client';
 
+import { AirlineLogo } from '@/components/AirlineLogo';
 import { useEffect, useState, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
@@ -332,9 +333,16 @@ function ConfirmationContent() {
           {booking.flights.map((flight, i) => (
             <div key={i} className="p-5 sm:p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-(--color-primary-tint) flex items-center justify-center text-xs font-bold text-(--color-links)">
-                  {flight.airlineCode}
-                </div>
+                <AirlineLogo
+                  code={flight.airlineCode}
+                  name={flight.airline}
+                  size={40}
+                  fallback={
+                    <div className="w-10 h-10 rounded-xl bg-(--color-primary-tint) flex items-center justify-center text-xs font-bold text-(--color-links)">
+                      {flight.airlineCode}
+                    </div>
+                  }
+                />
                 <div>
                   <div className="text-sm font-bold text-(--color-foreground)">{flight.airline}</div>
                   <div className="text-xs text-(--color-inactive)">

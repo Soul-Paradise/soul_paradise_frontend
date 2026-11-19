@@ -1,5 +1,6 @@
 'use client';
 
+import { AirlineLogo } from '@/components/AirlineLogo';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -174,13 +175,21 @@ export const FlightCard = ({
               selectionMode ? 'sm:basis-[110px]' : 'sm:basis-[160px]'
             }`}
           >
-            <div
-              className={`${selectionMode ? 'w-8 h-8' : 'w-9 h-9'} rounded ${colors.bg} ${colors.border} border flex items-center justify-center flex-shrink-0`}
-            >
-              <span className={`text-[10px] font-bold ${colors.text}`}>
-                {flight.airlineCode}
-              </span>
-            </div>
+            <AirlineLogo
+              code={flight.airlineCode}
+              name={flight.airlineName.split('|')[0]}
+              size={selectionMode ? 32 : 36}
+              maxAspect={selectionMode ? 1.6 : 2.25}
+              fallback={
+                <div
+                  className={`${selectionMode ? 'w-8 h-8' : 'w-9 h-9'} rounded ${colors.bg} ${colors.border} border flex items-center justify-center flex-shrink-0`}
+                >
+                  <span className={`text-[10px] font-bold ${colors.text}`}>
+                    {flight.airlineCode}
+                  </span>
+                </div>
+              }
+            />
             <div className="min-w-0">
               <div className="text-[13px] font-semibold text-gray-900 truncate leading-tight">
                 {flight.airlineName.split('|')[0]}

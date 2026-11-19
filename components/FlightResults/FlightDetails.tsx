@@ -1,5 +1,6 @@
 'use client';
 
+import { AirlineLogo } from '@/components/AirlineLogo';
 import { useCallback, useEffect, useState } from 'react';
 import { getBaggage, getFareRules, splitBaggage } from '@/lib/flights-api';
 import type {
@@ -289,11 +290,18 @@ function FlightInfoTab({
           {/* Airline + Aircraft info */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded ${colors.bg} ${colors.border} border flex items-center justify-center`}
-              >
-                <span className={`text-xs font-bold ${colors.text}`}>{flight.airlineCode}</span>
-              </div>
+              <AirlineLogo
+                code={flight.airlineCode}
+                name={flight.airlineName}
+                size={40}
+                fallback={
+                  <div
+                    className={`w-10 h-10 rounded ${colors.bg} ${colors.border} border flex items-center justify-center`}
+                  >
+                    <span className={`text-xs font-bold ${colors.text}`}>{flight.airlineCode}</span>
+                  </div>
+                }
+              />
               <div>
                 <span className="text-sm font-semibold text-gray-900">{flight.airlineName}</span>
                 <span className="text-sm text-gray-400 ml-2">{flight.flightNo}</span>
@@ -361,13 +369,20 @@ function FlightInfoTab({
                     {/* Flight leg to the next stop */}
                     {!last && (
                       <div className="mt-3 flex items-center gap-2 text-[11px] text-gray-500">
-                        <div
-                          className={`w-6 h-6 rounded ${colors.bg} ${colors.border} border flex items-center justify-center flex-shrink-0`}
-                        >
-                          <span className={`text-[9px] font-bold ${colors.text}`}>
-                            {flight.airlineCode}
-                          </span>
-                        </div>
+                        <AirlineLogo
+                          code={flight.airlineCode}
+                          name={airline}
+                          size={24}
+                          fallback={
+                            <div
+                              className={`w-6 h-6 rounded ${colors.bg} ${colors.border} border flex items-center justify-center flex-shrink-0`}
+                            >
+                              <span className={`text-[9px] font-bold ${colors.text}`}>
+                                {flight.airlineCode}
+                              </span>
+                            </div>
+                          }
+                        />
                         <span className="font-medium text-gray-700">{airline}</span>
                         <span className="text-gray-300">·</span>
                         <span>{cabin}</span>

@@ -1,5 +1,6 @@
 'use client';
 
+import { AirlineLogo } from '@/components/AirlineLogo';
 import { useState } from 'react';
 import type { SegmentDetail } from '@/lib/flights-api';
 
@@ -192,9 +193,16 @@ const LegDetailed = ({ segments, label }: LegDetailedProps) => {
             {/* Airline + meta */}
             <div className="flex items-center gap-3 flex-wrap min-w-0">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-9 h-9 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-700 flex-shrink-0">
-                  {seg.airlineCode}
-                </div>
+                <AirlineLogo
+                  code={seg.airlineCode}
+                  name={seg.airline}
+                  size={36}
+                  fallback={
+                    <div className="w-9 h-9 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-700 flex-shrink-0">
+                      {seg.airlineCode}
+                    </div>
+                  }
+                />
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-gray-900 truncate leading-tight">
                     {seg.airline}
