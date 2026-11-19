@@ -410,7 +410,7 @@ function MultiCityResults() {
             <div className="flex gap-5">
               {/* Filter Sidebar - Desktop */}
               <div className="hidden lg:block w-[280px] flex-shrink-0">
-                <div className="sticky top-[85px] max-h-[calc(100vh-100px)] overflow-y-auto pr-1">
+                <div className="sticky top-[calc(85px+var(--staging-h))] max-h-[calc(100vh-100px-var(--staging-h))] overflow-y-auto pr-1">
                   <FilterSidebar
                     facets={results.facets}
                     filterState={filterState}

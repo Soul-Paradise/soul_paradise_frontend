@@ -63,7 +63,7 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
   return (
     <nav
       className={`
-        fixed top-0 left-0 right-0 z-50
+        fixed top-(--staging-h) left-0 right-0 z-50
         bg-(--color-peace) border-b border-(--color-tertiary-button)
         ${className}
       `}
@@ -210,13 +210,13 @@ export const Navbar = ({ items, className = '' }: NavbarProps) => {
         <>
           {/* Backdrop with blur effect - starts below navbar */}
           <div
-            className="fixed top-16 left-0 right-0 bottom-0 bg-black/1 backdrop-blur-sm md:hidden z-40"
+            className="fixed top-[calc(4rem+var(--staging-h))] left-0 right-0 bottom-0 bg-black/1 backdrop-blur-sm md:hidden z-40"
             onClick={() => setIsMobileMenuOpen(false)}
             aria-hidden="true"
           />
 
           {/* Mobile Menu */}
-          <div className="md:hidden fixed top-16 left-0 right-0 border-t border-(--color-tertiary-button) bg-(--color-peace) z-50 shadow-lg max-h-[calc(100vh-4rem)] overflow-y-auto">
+          <div className="md:hidden fixed top-[calc(4rem+var(--staging-h))] left-0 right-0 border-t border-(--color-tertiary-button) bg-(--color-peace) z-50 shadow-lg max-h-[calc(100vh-4rem-var(--staging-h))] overflow-y-auto">
             <div className="px-4 pt-2 pb-4 space-y-1">
               {/* Mobile Navigation Links */}
               {items.map((item) => {

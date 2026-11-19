@@ -84,8 +84,17 @@ body {
   color: var(--color-foreground);
 }
 
+/*
+ * Room for the staging banner. app/layout.tsx sets --staging-h on <html> for
+ * staging builds only; the navbar and sticky bars add it to their offsets.
+ */
+html {
+  --staging-h: 0px;
+}
+
 body {
   @apply bg-background text-foreground font-nunito;
+  padding-top: var(--staging-h);
 }
 
 @keyframes slide-in {

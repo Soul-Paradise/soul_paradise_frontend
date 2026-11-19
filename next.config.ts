@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
+// Same check as lib/app-env.ts IS_STAGING (kept inline: this file runs before the app is compiled).
+const IS_STAGING = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() === "staging";
 
 function originOf(url: string | undefined, fallback: string): string {
   try {
@@ -64,6 +66,9 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(self)" },
+  // The staging copy is public but must stay out of search engines (see also
+  // the robots meta in app/layout.tsx and app/robots.ts; lib/app-env.ts).
+  ...(IS_STAGING ? [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] : []),
 ];
 
 // GCS buckets whose images go through next/image: the CMS media library

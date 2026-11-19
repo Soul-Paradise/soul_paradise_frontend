@@ -52,7 +52,7 @@ export function SummaryBar({
   backHref?: string;
 }) {
   return (
-    <div className="sticky top-16 z-30 border-b border-(--color-tertiary-button) bg-white/95 shadow-sm backdrop-blur">
+    <div className="sticky top-[calc(4rem+var(--staging-h))] z-30 border-b border-(--color-tertiary-button) bg-white/95 shadow-sm backdrop-blur">
       <div className={`${RESULTS_CONTAINER} flex items-center justify-between gap-4 py-3`}>
         {backHref && (
           <Link
@@ -326,7 +326,7 @@ export function StepHeader({
   const backClass =
     'shrink-0 rounded-full border border-(--color-tertiary-button) p-2 text-(--color-inactive) transition-colors hover:border-(--color-links) hover:bg-(--color-primary-tint) hover:text-(--color-links)';
   return (
-    <div className="sticky top-16 z-30 border-b border-(--color-tertiary-button) bg-white/95 shadow-sm backdrop-blur">
+    <div className="sticky top-[calc(4rem+var(--staging-h))] z-30 border-b border-(--color-tertiary-button) bg-white/95 shadow-sm backdrop-blur">
       <div className={`${RESULTS_CONTAINER} flex min-h-[68px] items-center gap-3 py-3`}>
         {backHref ? (
           <Link href={backHref} aria-label="Back" className={backClass}>

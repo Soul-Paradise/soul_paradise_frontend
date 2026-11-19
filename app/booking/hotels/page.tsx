@@ -1035,7 +1035,7 @@ function HotelResults() {
                 ~58px wide, so filters open in a drawer there instead. */}
             {!showMap && (
               <div className="hidden lg:block w-[280px] flex-shrink-0">
-                <div className="sticky top-36 max-h-[calc(100vh-160px)] overflow-y-auto pr-1 scrollbar-hide">
+                <div className="sticky top-[calc(9rem+var(--staging-h))] max-h-[calc(100vh-160px-var(--staging-h))] overflow-y-auto pr-1 scrollbar-hide">
                   {sidebar}
                 </div>
               </div>

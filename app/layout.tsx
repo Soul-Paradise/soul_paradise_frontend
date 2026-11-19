@@ -8,6 +8,8 @@ import ConditionalFooter from "@/components/ConditionalFooter";
 import { SiteImagesProvider } from "@/components/SiteImages";
 import { getSiteContent, hasImage } from "@/lib/site-content";
 import { Toaster } from "react-hot-toast";
+import StagingBanner from "@/components/StagingBanner";
+import { IS_STAGING, SITE_URL, STAGING_BANNER_HEIGHT } from "@/lib/app-env";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,21 +56,26 @@ const baseMetadata: Metadata = {
   authors: [{ name: "Soul Paradise Travels" }],
   creator: "Soul Paradise Travels",
   publisher: "Soul Paradise Travels",
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
+  metadataBase: new URL(SITE_URL),
+  // The staging copy must never be indexed (next.config.ts also sends
+  // X-Robots-Tag and app/robots.ts disallows everything there).
+  robots: IS_STAGING
+    ? { index: false, follow: false, googleBot: { index: false, follow: false } }
+    : {
+        index: true,
+        follow: true,
+        googleBot: {
+          index: true,
+          follow: true,
+          'max-video-preview': -1,
+          'max-image-preview': 'large',
+          'max-snippet': -1,
+        },
+      },
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: "https://soulparadisetravels.com/",
+    url: `${SITE_URL}/`,
     siteName: "Soul Paradise Travels",
     title: "Soul Paradise Travels - Fuel Your Soul with Travel | Best Travel Agency in Jalandhar",
     description: "No matter where in the world you want to go, we can help get you there. Expert travel services including flights, tours, hotels, visa & insurance. 24/7 support available.",
@@ -79,7 +86,7 @@ const baseMetadata: Metadata = {
     description: "Affordable flight bookings, holiday packages, hotel reservations & visa services. 24/7 customer support. Book your dream vacation today!",
   },
   alternates: {
-    canonical: "https://soulparadisetravels.com/",
+    canonical: `${SITE_URL}/`,
   },
   category: "Travel & Tourism",
   // Only emit the Search Console meta tag when a real code is configured.
@@ -118,11 +125,15 @@ export default async function RootLayout({
   // Site-wide footer copy + contact details (admin panel → Site Content).
   const { global } = await getSiteContent("global");
   return (
-    <html lang="en">
+    <html
+      lang="en"
+      style={IS_STAGING ? ({ "--staging-h": STAGING_BANNER_HEIGHT } as React.CSSProperties) : undefined}
+    >
       <head>
         <script src="https://accounts.google.com/gsi/client" async defer></script>
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} ${poppins.variable} antialiased`}>
+        <StagingBanner />
         <AuthProvider>
           <PreferencesProvider>
             <SiteImagesProvider images={global.images}>
