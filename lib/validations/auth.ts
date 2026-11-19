@@ -3,7 +3,7 @@
  * Using Zod for type-safe runtime validation
  */
 
-import { z } from 'zod';
+import { z } from './zod';
 
 /**
  * Password validation regex matching backend requirements:
