@@ -23,6 +23,7 @@ import { ContactInfoForm, validateGst } from '@/components/FlightBookingDetails/
 import { BookingSummary } from '@/components/FlightBookingDetails/BookingSummary';
 import { BookingWizardStepper } from '@/components/FlightBookingDetails/BookingWizardStepper';
 import { redirectToPayment } from '@/lib/safe-redirect';
+import { FareChangeNotice } from '@/components/FlightBookingDetails/FareChangeNotice';
 
 const WIZARD_STEPS = [
   { key: 'travellers', label: 'Travellers' },
@@ -38,6 +39,9 @@ function createEmptyTraveller(paxType: 'ADT' | 'CHD' | 'INF'): TravellerInfo {
     dob: '',
     gender: '' as any,
     paxType,
+    // Most passengers are Indian; the dropdowns let them change it.
+    nationality: 'IN',
+    passportPlaceOfIssue: 'IN',
   };
 }
 
@@ -82,6 +86,7 @@ function MultiCityDetailsContent() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState('');
+  const [fareChangeAccepted, setFareChangeAccepted] = useState(false);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
@@ -235,6 +240,14 @@ function MultiCityDetailsContent() {
       setBookingError(validationError);
       return;
     }
+
+    // The airline repriced: the customer must confirm the new total first
+    // (the server refuses checkout without it, too).
+    if (pricing?.fareChanged && !fareChangeAccepted) {
+      setBookingError('The airline has changed this fare. Please confirm the new price to continue.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     if (!pricing) return;
 
     setIsSubmitting(true);
@@ -265,6 +278,7 @@ function MultiCityDetailsContent() {
         tui: pricing.tui,
         payableAmount,
         promoCode: appliedPromo?.valid ? appliedPromo.code : undefined,
+        acceptFareChange: pricing.fareChanged ? fareChangeAccepted : undefined,
         contactInfo: finalContactInfo,
         travellers,
         selectedSSR: allSelections,
@@ -364,6 +378,15 @@ function MultiCityDetailsContent() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1 space-y-6">
+            {/* Airline repriced a leg since search (Benzy GetSPricer Code 1500) */}
+            {pricing.fareChanged && (
+              <FareChangeNotice
+                total={pricing.totalFare.gross}
+                currency={pricing.totalFare.currency || 'INR'}
+                accepted={fareChangeAccepted}
+                onAcceptedChange={setFareChangeAccepted}
+              />
+            )}
             {/* Fare notices (airline / fare-level advisories from Benzy) */}
             {!!pricing.fareNotices?.length && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-start gap-3">

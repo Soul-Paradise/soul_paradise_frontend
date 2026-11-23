@@ -400,6 +400,8 @@ export interface BookingRequest {
   payableAmount: number;
   // Coupon applied in the summary; the server re-validates it.
   promoCode?: string;
+  // The customer confirmed the new price after an airline fare change.
+  acceptFareChange?: boolean;
   contactInfo: ContactInfo;
   travellers: TravellerInfo[];
   selectedSSR: SSRSelection[];
