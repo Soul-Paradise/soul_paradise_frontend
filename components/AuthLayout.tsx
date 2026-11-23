@@ -27,7 +27,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen max-h-screen bg-(--color-background)">
+    <div className="flex h-[calc(100vh-var(--staging-h))] max-h-[calc(100vh-var(--staging-h))] bg-(--color-background)">
       {/* Video, dimmed evenly so the logo reads clearly on any frame */}
       <div className="relative hidden overflow-hidden lg:flex lg:flex-3">
         <BackgroundVideo src={video} />

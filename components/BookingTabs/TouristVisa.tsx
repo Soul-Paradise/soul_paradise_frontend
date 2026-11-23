@@ -13,15 +13,7 @@ export const TouristVisa = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Visa application submitted...', {
-      country,
-      nationality,
-      travelDate,
-      visaType,
-      fullName,
-      email,
-      phone,
-    });
+    // TODO: submit to the backend once the visa endpoint exists.
   };
 
   const popularVisas = [

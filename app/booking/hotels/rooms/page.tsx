@@ -2,9 +2,10 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { authHeaders } from '@/lib/api';
+import { authFetch } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
 import FreeCancellationBadge from '@/components/HotelResults/FreeCancellationBadge';
+import HotelStars from '@/components/HotelResults/HotelStars';
 import { AlertTriangle, BedDouble } from 'lucide-react';
 import { BookButton, ResultsEmpty, ResultsLoader, StepHeader, StepState } from '@/components/Results/ui';
 
@@ -24,7 +25,6 @@ interface RoomOption {
   roomName: string;
   roomDescription: string;
   providerName: string;
-  providerId: string;
   baseRate: number;
   totalRate: number;
   taxes: number;
@@ -38,6 +38,9 @@ interface RoomOption {
   cancellationPolicies: CancellationPolicy[];
   freeCancellationUntil: string | null;
   facilities: RoomFacility[];
+  inclusions?: string[];
+  views?: string[];
+  panRequired?: boolean;
   images: string[];
   beds: unknown | null;
   smokingAllowed: boolean;
@@ -101,6 +104,9 @@ interface HotelPricingDetail {
   freeCancellationUntil: string | null;
   currency: string;
   availability: number;
+  inclusions?: string[];
+  panRequired?: boolean;
+  detailChanges?: Array<{ field: string; from: string; to: string }>;
 }
 
 interface HotelDetailImage {
@@ -138,6 +144,9 @@ interface HotelDetailInfo {
   facilityGroups?: RoomFacility[];
   images?: HotelDetailImage[];
   reviews?: HotelDetailReview[];
+  reviewCategories?: Array<{ label: string; rating: number }>;
+  fees?: string[];
+  fullAddress?: string;
   nearByAttractions?: HotelDetailNearby[];
   descriptions?: HotelDetailDescription[];
   checkinInfo?: {
@@ -224,16 +233,9 @@ function nightsBetween(checkIn: string, checkOut: string): number {
   return Math.max(1, Math.round(diff / (1000 * 60 * 60 * 24)));
 }
 
-function Stars({ count }: { count: number }) {
-  return (
-    <span className="flex gap-0.5">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <svg key={i} className={`w-3.5 h-3.5 ${i < count ? 'text-yellow-400' : 'text-gray-300'}`} fill="currentColor" viewBox="0 0 20 20">
-          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-        </svg>
-      ))}
-    </span>
-  );
+/** Stars follow the guest rating shown beside them (see HotelStars). */
+function Stars({ rating }: { rating: number | null | undefined }) {
+  return <HotelStars rating={rating} />;
 }
 
 // ── Amenity icon mapping ──
@@ -519,7 +521,7 @@ function HotelHero({
         <div className="min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{hotel.name}</h1>
-            <Stars count={hotel.starRating} />
+            <Stars rating={review?.rating} />
             {review && review.rating > 0 && (
               <div className="flex items-center gap-1.5">
                 <span className="bg-green-600 text-white text-xs font-bold rounded px-1.5 py-0.5">
@@ -534,7 +536,9 @@ function HotelHero({
             <svg className="w-4 h-4 text-(--color-links)" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
             </svg>
-            <span className="truncate">{[hotel.address, hotel.city].filter(Boolean).join(', ')}</span>
+            <span className="truncate" title={hotel.fullAddress || undefined}>
+              {hotel.fullAddress || [hotel.address, hotel.city].filter(Boolean).join(', ')}
+            </span>
           </div>
         </div>
       </div>
@@ -690,6 +694,24 @@ function HotelHero({
                   </div>
                 </div>
               )}
+
+              {/* Guest scores by category, straight from the supplier's reviews */}
+              {(hotel.reviewCategories?.length ?? 0) > 0 && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <p className="text-[10px] uppercase tracking-wide text-gray-500 font-semibold mb-2">Guest ratings</p>
+                  <div className="space-y-1.5">
+                    {hotel.reviewCategories!.slice(0, 5).map((c) => (
+                      <div key={c.label} className="flex items-center gap-2 text-xs text-gray-700">
+                        <span className="w-24 flex-shrink-0 truncate">{c.label}</span>
+                        <span className="flex-1 h-1.5 rounded-full bg-gray-200 overflow-hidden" aria-hidden="true">
+                          <span className="block h-full bg-green-600 rounded-full" style={{ width: `${(c.rating / 5) * 100}%` }} />
+                        </span>
+                        <span className="w-7 text-right font-semibold">{c.rating.toFixed(1)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
         </div>
       </div>
@@ -786,15 +808,29 @@ function RoomCard({
               )}
             </div>
 
+            {/* Room view */}
+            {(room.views?.length ?? 0) > 0 && (
+              <p className="text-xs text-gray-600 mt-1.5">{room.views!.join(' · ')}</p>
+            )}
+
+            {/* What the rate includes (supplier's own words) */}
+            {(room.inclusions?.length ?? 0) > 0 && (
+              <RoomInclusions items={room.inclusions!} />
+            )}
+
             {/* Facilities */}
             {topFacilities.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
-                {topFacilities.map((f) => (
-                  <span key={f.id} className="text-xs text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">
+                {topFacilities.map((f, i) => (
+                  <span key={`${f.id}-${f.name}-${i}`} className="text-xs text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">
                     {f.name}
                   </span>
                 ))}
               </div>
+            )}
+
+            {room.panRequired && (
+              <p className="text-xs text-gray-500 mt-2">PAN card needed at booking for this rate</p>
             )}
 
             {/* Cancellation policy */}
@@ -844,6 +880,63 @@ function RoomCard({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** "14:00:00" -> "2:00 PM"; words like "2:00 PM" / "midnight" pass through. */
+function hotelTime(t: string | null | undefined): string {
+  const s = (t || '').trim();
+  const m = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (!m || Number(m[1]) > 23) return s;
+  const h = Number(m[1]);
+  return `${h % 12 || 12}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
+}
+
+// ── Room inclusions ("Free Wi-Fi", "10% off on F&B") ──
+
+function RoomInclusions({ items, initial = 3 }: { items: string[]; initial?: number }) {
+  const [open, setOpen] = useState(false);
+  const shown = open ? items : items.slice(0, initial);
+  return (
+    <ul className="mt-2 space-y-0.5">
+      {shown.map((t, i) => (
+        <li key={`${i}-${t.slice(0, 24)}`} className="flex items-start gap-1.5 text-xs text-green-800">
+          <svg className="w-3.5 h-3.5 mt-px flex-shrink-0 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+          </svg>
+          <span>{t}</span>
+        </li>
+      ))}
+      {items.length > initial && (
+        <li>
+          <button type="button" onClick={() => setOpen((v) => !v)} className="text-xs font-semibold text-(--color-links) hover:underline">
+            {open ? 'Show less' : `+${items.length - initial} more inclusion${items.length - initial !== 1 ? 's' : ''}`}
+          </button>
+        </li>
+      )}
+    </ul>
+  );
+}
+
+// ── Charges the hotel collects itself (from hotel content `fees`) ──
+
+function HotelFees({ fees }: { fees: string[] }) {
+  const [open, setOpen] = useState(false);
+  if (!fees.length) return null;
+  const shown = open ? fees : fees.slice(0, 2);
+  return (
+    <div className="mt-3 p-2 bg-gray-50 rounded text-xs text-gray-600">
+      <p className="font-semibold text-gray-700 mb-1">Payable at the hotel</p>
+      <p className="text-gray-500 mb-1">Not included in this price. The hotel may charge these directly.</p>
+      <ul className="list-disc pl-4 space-y-0.5">
+        {shown.map((f, i) => <li key={`${i}-${f.slice(0, 24)}`}>{f}</li>)}
+      </ul>
+      {fees.length > 2 && (
+        <button type="button" onClick={() => setOpen((v) => !v)} className="mt-1 font-semibold text-(--color-links) hover:underline">
+          {open ? 'Show less' : `Show all (${fees.length})`}
+        </button>
+      )}
     </div>
   );
 }
@@ -1027,6 +1120,13 @@ function PricingPanel({
         )}
       </div>
 
+      {(pricing.inclusions?.length ?? 0) > 0 && (
+        <div className="mt-3">
+          <p className="text-xs font-semibold text-gray-700">Included with this room</p>
+          <RoomInclusions items={pricing.inclusions!} initial={4} />
+        </div>
+      )}
+
       {/* Cancellation policies */}
       {pricing.cancellationPolicies.length > 0 && pricing.cancellationPolicies[0].text && (
         <div className="mt-3 p-2 bg-gray-50 rounded text-xs text-gray-600">
@@ -1041,10 +1141,10 @@ function PricingPanel({
           <p className="font-semibold text-gray-700 mb-1">Check-in info</p>
           <div className="space-y-0.5">
             {hotelDetail.checkinInfo.beginTime && (
-              <p>From <span className="font-medium text-gray-800">{hotelDetail.checkinInfo.beginTime}</span></p>
+              <p>From <span className="font-medium text-gray-800">{hotelTime(hotelDetail.checkinInfo.beginTime)}</span></p>
             )}
             {hotelDetail.checkoutInfo?.time && (
-              <p>Checkout by <span className="font-medium text-gray-800">{hotelDetail.checkoutInfo.time}</span></p>
+              <p>Checkout by <span className="font-medium text-gray-800">{hotelTime(hotelDetail.checkoutInfo.time)}</span></p>
             )}
             {(hotelDetail.checkinInfo.minAge ?? 0) > 0 && (
               <p>Minimum age <span className="font-medium text-gray-800">{hotelDetail.checkinInfo.minAge}</span></p>
@@ -1059,13 +1159,17 @@ function PricingPanel({
         knowBefore={hotelDetail?.checkinInfo?.instructions ?? null}
       />
 
+      <HotelFees fees={hotelDetail?.fees ?? []} />
 
       <div className="mt-4">
         <BookButton block onClick={onBook}>
           Proceed to Book
         </BookButton>
       </div>
-      <p className="text-xs text-gray-400 text-center mt-2">No hidden charges</p>
+      {/* Only claim "no hidden charges" when the hotel lists no charges of its own. */}
+      {!(hotelDetail?.fees?.length) && (
+        <p className="text-xs text-gray-400 text-center mt-2">No hidden charges</p>
+      )}
     </div>
   );
 }
@@ -1420,9 +1524,9 @@ function RoomsContent() {
     }
 
     setLoading(true);
-    fetch(`${API_URL}/hotels/rooms`, {
+    authFetch(`${API_URL}/hotels/rooms`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ searchId, hotelId, destinationCountryCode }),
     })
       .then(async (res) => {
@@ -1486,9 +1590,9 @@ function RoomsContent() {
     setPricingLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/hotels/price`, {
+      const res = await authFetch(`${API_URL}/hotels/price`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           searchId,
           hotelId,
@@ -1531,16 +1635,31 @@ function RoomsContent() {
       // fall through with default
     }
     try {
+      // Don't persist supplier identifiers the booking page doesn't need.
+      // (roomSlots[].supplierName stays: POST /hotels/book requires it.)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { providerName: _ctxProvider, ...ctxRest } = bookingContext;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { providerName: _priceProvider, ...pricingRest } = pricing;
       sessionStorage.setItem(
         'hotelBookingContext',
         JSON.stringify({
-          bookingContext: { ...bookingContext, hotelCode: hotelId, uiCheckIn: checkIn, uiCheckOut: checkOut },
-          pricing,
-          hotelDetail: pricingHotelDetail || hotelDetail,
+          bookingContext: { ...ctxRest, hotelCode: hotelId, uiCheckIn: checkIn, uiCheckOut: checkOut },
+          pricing: pricingRest,
+          // Pricing content is provider-specific and often has no photos; borrow the
+          // hotel's photos from the rooms-page content so the summary card isn't blank.
+          hotelDetail: pricingHotelDetail
+            ? {
+                ...pricingHotelDetail,
+                heroImage: pricingHotelDetail.heroImage || hotelDetail?.heroImage || null,
+                images: pricingHotelDetail.images?.length ? pricingHotelDetail.images : hotelDetail?.images,
+                fees: pricingHotelDetail.fees?.length ? pricingHotelDetail.fees : hotelDetail?.fees,
+                reviews: pricingHotelDetail.reviews?.length ? pricingHotelDetail.reviews : hotelDetail?.reviews,
+              }
+            : hotelDetail,
           selectedRoom: {
             roomId: selectedRoom.roomId,
             roomGroupId: selectedRoom.roomGroupId,
-            supplierName: selectedRoom.providerName,
           },
           occupancy,
         }),
@@ -1699,7 +1818,11 @@ function RoomsContent() {
               {pricing && !pricingLoading && (
                 <PricingPanel
                   pricing={pricing}
-                  hotelDetail={pricingHotelDetail}
+                  hotelDetail={
+                    pricingHotelDetail && !pricingHotelDetail.fees?.length && hotelDetail?.fees?.length
+                      ? { ...pricingHotelDetail, fees: hotelDetail.fees }
+                      : pricingHotelDetail
+                  }
                   checkIn={checkIn}
                   checkOut={checkOut}
                   nights={nights}

@@ -65,7 +65,7 @@ export function LegalPage({
 
       <div className="relative z-10 mx-auto -mt-16 grid max-w-7xl grid-cols-1 gap-6 px-4 pb-16 sm:px-6 md:pb-20 lg:grid-cols-[280px_1fr] lg:gap-8 lg:px-8">
         {/* Sidebar: collapsible on mobile, sticky on desktop */}
-        <aside className="lg:sticky lg:top-24 lg:self-start">
+        <aside className="lg:sticky lg:top-[calc(6rem+var(--staging-h))] lg:self-start">
           <div className="rounded-2xl bg-(--color-peace) p-4 shadow-xl ring-1 ring-(--color-tertiary-button)">
             <details className="group lg:hidden">
               <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold text-(--color-foreground)">

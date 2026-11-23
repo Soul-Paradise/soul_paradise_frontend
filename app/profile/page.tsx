@@ -11,6 +11,7 @@ import {
   Clock,
   CreditCard,
   Headphones,
+  Heart,
   KeyRound,
   Loader2,
   LogOut,
@@ -245,6 +246,7 @@ export default function ProfilePage() {
             <nav className="-mx-2 flex flex-col">
               <QuickLink href="/orders" icon={Receipt} label="My Orders" />
               <QuickLink href="/orders?tab=payments" icon={CreditCard} label="Custom Payments" />
+              <QuickLink href="/shortlist" icon={Heart} label="My Shortlist" />
               <QuickLink href="/contact" icon={Headphones} label="Contact Support" />
             </nav>
           </Card>

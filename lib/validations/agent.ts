@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod';
 
 /**
  * Verhoeff checksum - the same algorithm UIDAI uses for the last Aadhaar digit.

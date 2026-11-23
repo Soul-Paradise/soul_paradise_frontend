@@ -400,6 +400,8 @@ export interface BookingRequest {
   payableAmount: number;
   // Coupon applied in the summary; the server re-validates it.
   promoCode?: string;
+  // The customer confirmed the new price after an airline fare change.
+  acceptFareChange?: boolean;
   contactInfo: ContactInfo;
   travellers: TravellerInfo[];
   selectedSSR: SSRSelection[];
@@ -778,7 +780,7 @@ export async function getBookingStatusByTxn(
 export async function getBookingDetails(
   transactionId: string,
 ): Promise<BookingDetailsResponse> {
-  const res = await authFetch(`${API_BASE}/flights/booking/${transactionId}`);
+  const res = await authFetch(`${API_BASE}/flights/booking/${encodeURIComponent(transactionId)}`);
   if (!res.ok) {
     const err = await res
       .json()
@@ -793,7 +795,7 @@ export async function cancelBooking(
   remarks?: string,
 ): Promise<CancelFlightResponse> {
   const res = await authFetch(
-    `${API_BASE}/flights/booking/${transactionId}/cancel`,
+    `${API_BASE}/flights/booking/${encodeURIComponent(transactionId)}/cancel`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -811,7 +813,7 @@ export async function cancelBooking(
 
 export async function downloadTicketPdf(transactionId: string): Promise<void> {
   const res = await authFetch(
-    `${API_BASE}/flights/booking/${transactionId}/ticket.pdf`,
+    `${API_BASE}/flights/booking/${encodeURIComponent(transactionId)}/ticket.pdf`,
   );
   if (!res.ok) {
     const err = await res
@@ -857,7 +859,7 @@ export interface PromoValidationResult {
 export async function getPromoCodes(
   serviceType?: string,
 ): Promise<PromoCodeListItem[]> {
-  const params = serviceType ? `?serviceType=${serviceType}` : '';
+  const params = serviceType ? `?serviceType=${encodeURIComponent(serviceType)}` : '';
   const res = await fetch(`${API_BASE}/promo-codes${params}`);
   if (!res.ok) throw new Error('Failed to fetch promo codes');
   return res.json();

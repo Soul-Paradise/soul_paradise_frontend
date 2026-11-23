@@ -16,6 +16,7 @@ import { AlertCircle, CheckCircle2, Clock, IndianRupee, Landmark, Wallet, XCircl
 import { api, type CustomPayment as CustomPaymentEntry, type PaymentStatus } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { ActionButton, ActionRow, FIELD_GROUP, FIELD_SUB, FIELD_VALUE, FieldLabel, TabHeader, fieldCell } from './ui';
+import { redirectToPayment } from '@/lib/safe-redirect';
 
 /** Statuses where the bank hasn't told us the outcome yet. */
 const PENDING: PaymentStatus[] = ['INITIATED', 'REDIRECTED'];
@@ -112,7 +113,7 @@ export const CustomPayment = () => {
     try {
       const { redirectUrl } = await api.createCustomPayment(amount);
       // Hand the browser to ICICI's hosted page; it returns to this tab.
-      window.location.href = redirectUrl;
+      redirectToPayment(redirectUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not start the payment');
       setSubmitting(false);

@@ -18,8 +18,10 @@ import {
 } from '@/components/Results/ui';
 import { useSearchParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { authHeaders } from '@/lib/api';
+import { authFetch } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
+import HotelStars from '@/components/HotelResults/HotelStars';
+import { useHotelShortlist } from '@/lib/hotel-shortlist';
 import {
   Car, Trees, CigaretteOff, Waves, Wifi, Utensils, Dumbbell, Sparkles,
   Wind, Coffee, Bath, Tv, Bell, Briefcase, Baby, Dog, Accessibility,
@@ -115,6 +117,8 @@ interface HotelFacets {
   propertyTypes: HotelOption[];
   /** max -1 = no upper bound */
   priceBands: Array<{ min: number; max: number; label: string; count: number }>;
+  /** Hotels of this search on the user's shortlist. */
+  shortlisted?: number;
 }
 
 type HotelResultPage = ResultPage<Hotel, HotelFacets>;
@@ -171,17 +175,9 @@ function formatDate(d: string): string {
   });
 }
 
-// ── Star Rating ──
-function Stars({ count }: { count: number }) {
-  return (
-    <span className="flex gap-0.5 items-center">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <svg key={i} className={`w-3 h-3 ${i < count ? 'text-yellow-400' : 'text-gray-300'}`} fill="currentColor" viewBox="0 0 20 20">
-          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-        </svg>
-      ))}
-    </span>
-  );
+// ── Stars follow the guest rating (whole point = full star, .1-.9 = half; see HotelStars) ──
+function Stars({ rating }: { rating: number | null | undefined }) {
+  return <HotelStars rating={rating} size="xs" />;
 }
 
 // ── Sidebar Checkbox / Filter Section: the shared Results kit ──
@@ -218,7 +214,11 @@ function HotelCard({
   checkOut,
   nights,
   roomsParam,
+  shortlisted,
+  onToggleShortlist,
 }: {
+  shortlisted: boolean;
+  onToggleShortlist: () => void;
   hotel: Hotel;
   currency: string;
   searchId: string;
@@ -237,8 +237,11 @@ function HotelCard({
   // baseRate is the MRP (published/original), total is the after-discount price
   const hasSavings = baseRate > total && total > 0;
   const savings = hasSavings ? baseRate - total : 0;
-  // Approximate tax as 10% of total for display (actual tax is in rooms step)
-  const taxAmount = total > 0 ? Math.round(total * 0.1) : 0;
+  // Benzy's rate.total is the whole stay for all rooms, taxes included.
+  const perNight = total > 0 && nights > 0 ? Math.round(total / nights) : 0;
+  const roomCount = (() => {
+    try { const r = JSON.parse(roomsParam); return Array.isArray(r) && r.length > 0 ? r.length : 1; } catch { return 1; }
+  })();
 
   const topFacilities = (hotel.facilities || []).slice(0, 5);
 
@@ -289,7 +292,7 @@ function HotelCard({
           {/* Name + stars */}
           <div className="flex items-start gap-2 flex-wrap">
             <h3 className="font-bold text-gray-900 text-base leading-tight">{hotel.name}</h3>
-            <Stars count={hotel.starRating} />
+            <Stars rating={hotel.userReview?.rating} />
           </div>
 
           {/* Address */}
@@ -308,10 +311,10 @@ function HotelCard({
           {/* Facilities */}
           {topFacilities.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
-              {topFacilities.map((f) => {
+              {topFacilities.map((f, i) => {
                 const Icon = getFacilityIcon(f.name);
                 return (
-                  <span key={f.id} className="flex items-center gap-1 text-xs text-gray-600 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded">
+                  <span key={`${f.id}-${f.name}-${i}`} className="flex items-center gap-1 text-xs text-gray-600 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded">
                     <Icon className="w-3 h-3" />
                     {f.name}
                   </span>
@@ -340,7 +343,7 @@ function HotelCard({
 
           {/* Stay info */}
           <p className="text-xs text-gray-500 mt-2">
-            {formatDate(checkIn)} – {formatDate(checkOut)} · {nights} Night{nights !== 1 ? 's' : ''} · 1 Room
+            {formatDate(checkIn)} – {formatDate(checkOut)} · {nights} Night{nights !== 1 ? 's' : ''} · {roomCount} Room{roomCount !== 1 ? 's' : ''}
           </p>
         </div>
 
@@ -369,7 +372,12 @@ function HotelCard({
                   <div className="text-xs text-gray-500 line-through">{fmt(baseRate, currency)}</div>
                 )}
                 <div className="text-2xl font-bold text-gray-900">{fmt(total, currency)}</div>
-                <div className="text-xs text-gray-500">+ {fmt(taxAmount, currency)} Tax and Fees</div>
+                <div className="text-xs text-gray-500">
+                  for {nights} night{nights !== 1 ? 's' : ''}{roomCount > 1 ? `, ${roomCount} rooms` : ''} · incl. taxes
+                </div>
+                {nights > 1 && perNight > 0 && (
+                  <div className="text-xs text-gray-400">{fmt(perNight, currency)} per night</div>
+                )}
                 {hasSavings && (
                   <div className="flex items-center justify-end gap-1 mt-0.5">
                     <span className="text-xs text-green-700 font-semibold">You Saved {fmt(savings, currency)}</span>
@@ -383,11 +391,19 @@ function HotelCard({
                     {hotel.isSoldOut ? 'Sold Out' : 'Select Room'}
                   </BookButton>
                 </div>
-                <button className="mt-1.5 w-full flex items-center justify-center gap-1 text-xs text-gray-500 hover:text-red-500 transition-colors py-1">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button
+                  type="button"
+                  onClick={onToggleShortlist}
+                  aria-pressed={shortlisted}
+                  aria-label={shortlisted ? `Remove ${hotel.name} from your shortlist` : `Add ${hotel.name} to your shortlist`}
+                  className={`mt-1.5 w-full flex items-center justify-center gap-1 text-xs transition-colors py-1 ${
+                    shortlisted ? 'text-red-600 font-semibold hover:text-red-700' : 'text-gray-500 hover:text-red-500'
+                  }`}
+                >
+                  <svg className="w-3.5 h-3.5" fill={shortlisted ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                   </svg>
-                  Shortlist
+                  {shortlisted ? 'Shortlisted' : 'Shortlist'}
                 </button>
               </>
             ) : (
@@ -459,7 +475,7 @@ function CompactHotelCard({
       <div className="flex-1 p-2 min-w-0 flex flex-col">
         <div className="flex items-start gap-1 flex-wrap">
           <h3 className="font-bold text-gray-900 text-xs leading-tight line-clamp-1">{hotel.name}</h3>
-          <Stars count={hotel.starRating} />
+          <Stars rating={hotel.userReview?.rating} />
         </div>
         <p className="text-[11px] text-gray-500 line-clamp-1 mt-0.5">{hotel.address}</p>
 
@@ -511,7 +527,13 @@ function Sidebar({
   freeCancellation, setFreeCancellation,
   breakfast, setBreakfast,
   nameSearch, setNameSearch,
+  shortlistedOnly, setShortlistedOnly,
+  hasShortlist,
 }: {
+  /** The user has shortlisted at least one hotel (anywhere). */
+  hasShortlist: boolean;
+  shortlistedOnly: boolean;
+  setShortlistedOnly: (v: boolean) => void;
   facets: HotelFacets;
   onShowMap: () => void;
   starFilter: number[];
@@ -665,6 +687,15 @@ function Sidebar({
 
         {/* Popular Filters */}
         <FilterSection title="Popular Filter">
+          {/* Shown once a hotel in this search is shortlisted (or the filter is on). */}
+          {(hasShortlist || (facets.shortlisted ?? 0) > 0 || shortlistedOnly) && (
+            <Checkbox
+              checked={shortlistedOnly}
+              onChange={() => setShortlistedOnly(!shortlistedOnly)}
+              label="Shortlisted"
+              count={(facets.shortlisted ?? 0) > 0 ? facets.shortlisted : undefined}
+            />
+          )}
           <Checkbox checked={freeCancellation} onChange={() => setFreeCancellation(!freeCancellation)} label="Free Cancellation" />
           <Checkbox checked={breakfast} onChange={() => setBreakfast(!breakfast)} label="Breakfast Available" />
         </FilterSection>
@@ -681,14 +712,14 @@ function Sidebar({
           ))}
         </FilterSection>
 
-        {/* Star Rating */}
+        {/* Star Rating - same stars as the cards: full stars of the guest rating (4.3 = 4 stars) */}
         <FilterSection title="Star Rating">
           {[5, 4, 3, 2, 1].map(s => (
             <FilterCheckbox
               key={s}
               checked={starFilter.includes(s)}
               onChange={() => toggleStar(s)}
-              label={<Stars count={s} />}
+              label={<Stars rating={s} />}
               meta={`(${starCounts[s] || 0})`}
             />
           ))}
@@ -805,6 +836,8 @@ function HotelResults() {
   const [propertyTypeFilter, setPropertyTypeFilter] = useState<string[]>([]);
   const [freeCancellation, setFreeCancellation] = useState(false);
   const [breakfast, setBreakfast] = useState(false);
+  const [shortlistedOnly, setShortlistedOnly] = useState(false);
+  const shortlist = useHotelShortlist();
   const [sort, setSort] = useState<SortType>('featured');
   const [showMap, setShowMap] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -839,9 +872,9 @@ function HotelResults() {
       setError('');
       setResults(null);
       try {
-        const res = await fetch(`${API_URL}/hotels/search`, {
+        const res = await authFetch(`${API_URL}/hotels/search`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             locationId,
             locationName,
@@ -894,8 +927,11 @@ function HotelResults() {
       amenities,
       chains: chainFilter,
       propertyTypes: propertyTypeFilter,
+      // The server reads the saved shortlist itself (shortlisted first under
+      // "featured"), so a Shortlist click doesn't reshuffle the page under the cursor.
+      shortlistedOnly,
     }),
-    [sort, nameSearch, starFilter, minRating, priceRange, freeCancellation, breakfast, amenities, chainFilter, propertyTypeFilter],
+    [sort, nameSearch, starFilter, minRating, priceRange, freeCancellation, breakfast, amenities, chainFilter, propertyTypeFilter, shortlistedOnly],
   );
   const reSearch = useCallback(() => setSearchNonce((n) => n + 1), []);
   const perPage = useResultPageSize('hotels');
@@ -921,9 +957,10 @@ function HotelResults() {
   const matching = (showMap ? map.data?.total : listPage?.total) ?? 0;
   const listError = showMap ? map.error : list.error;
 
-  const hasActiveFilters = nameSearch || starFilter.length > 0 || minRating > 0 || priceRange || freeCancellation || breakfast || amenities.length > 0 || chainFilter.length > 0 || propertyTypeFilter.length > 0;
+  const hasActiveFilters = nameSearch || starFilter.length > 0 || minRating > 0 || priceRange || freeCancellation || breakfast || amenities.length > 0 || chainFilter.length > 0 || propertyTypeFilter.length > 0 || shortlistedOnly;
 
   function clearFilters() {
+    setShortlistedOnly(false);
     setNameSearch('');
     setStarFilter([]);
     setMinRating(0);
@@ -968,6 +1005,8 @@ function HotelResults() {
       freeCancellation={freeCancellation} setFreeCancellation={setFreeCancellation}
       breakfast={breakfast} setBreakfast={setBreakfast}
       nameSearch={nameSearch} setNameSearch={setNameSearch}
+      shortlistedOnly={shortlistedOnly} setShortlistedOnly={setShortlistedOnly}
+      hasShortlist={shortlist.ids.length > 0}
     />
   ) : null;
 
@@ -1035,7 +1074,7 @@ function HotelResults() {
                 ~58px wide, so filters open in a drawer there instead. */}
             {!showMap && (
               <div className="hidden lg:block w-[280px] flex-shrink-0">
-                <div className="sticky top-36 max-h-[calc(100vh-160px)] overflow-y-auto pr-1 scrollbar-hide">
+                <div className="sticky top-[calc(9rem+var(--staging-h))] max-h-[calc(100vh-160px-var(--staging-h))] overflow-y-auto pr-1 scrollbar-hide">
                   {sidebar}
                 </div>
               </div>
@@ -1104,6 +1143,12 @@ function HotelResults() {
                     <span className="flex items-center gap-1 bg-(--color-primary-tint) text-(--color-links) text-xs font-semibold px-2.5 py-1 rounded-full">
                       "{nameSearch}"
                       <button onClick={() => setNameSearch('')} className="hover:text-(--color-secondary-button)">×</button>
+                    </span>
+                  )}
+                  {shortlistedOnly && (
+                    <span className="flex items-center gap-1 bg-(--color-primary-tint) text-(--color-links) text-xs font-semibold px-2.5 py-1 rounded-full">
+                      Shortlisted
+                      <button onClick={() => setShortlistedOnly(false)} aria-label="Show all hotels, not just shortlisted" className="hover:text-(--color-secondary-button)">×</button>
                     </span>
                   )}
                   {freeCancellation && (
@@ -1207,6 +1252,8 @@ function HotelResults() {
                       checkOut={checkOut}
                       nights={nights}
                       roomsParam={roomsParam}
+                      shortlisted={shortlist.isShortlisted(hotel.id)}
+                      onToggleShortlist={() => shortlist.toggle(hotel)}
                     />
                   ))}
                 </div>

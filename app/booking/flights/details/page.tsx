@@ -23,6 +23,8 @@ import { PassengerForm } from '@/components/FlightBookingDetails/PassengerForm';
 import { ContactInfoForm, validateGst } from '@/components/FlightBookingDetails/ContactInfoForm';
 import { BookingSummary } from '@/components/FlightBookingDetails/BookingSummary';
 import { BookingWizardStepper } from '@/components/FlightBookingDetails/BookingWizardStepper';
+import { redirectToPayment } from '@/lib/safe-redirect';
+import { FareChangeNotice } from '@/components/FlightBookingDetails/FareChangeNotice';
 
 const WIZARD_STEPS = [
   { key: 'travellers', label: 'Travellers' },
@@ -38,6 +40,9 @@ function createEmptyTraveller(paxType: 'ADT' | 'CHD' | 'INF'): TravellerInfo {
     dob: '',
     gender: '' as any,
     paxType,
+    // Most passengers are Indian; the dropdowns let them change it.
+    nationality: 'IN',
+    passportPlaceOfIssue: 'IN',
   };
 }
 
@@ -71,6 +76,7 @@ function FlightDetailsContent() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState('');
+  const [fareChangeAccepted, setFareChangeAccepted] = useState(false);
 
   // Wizard state
   const [currentStep, setCurrentStep] = useState(0);
@@ -271,6 +277,14 @@ function FlightDetailsContent() {
       return;
     }
 
+    // The airline repriced: the customer must confirm the new total first
+    // (the server refuses checkout without it, too).
+    if (pricing?.fareChanged && !fareChangeAccepted) {
+      setBookingError('The airline has changed this fare. Please confirm the new price to continue.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     if (!pricing) return;
 
     setIsSubmitting(true);
@@ -306,6 +320,7 @@ function FlightDetailsContent() {
         tui: pricing.tui,
         payableAmount,
         promoCode: appliedPromo?.valid ? appliedPromo.code : undefined,
+        acceptFareChange: pricing.fareChanged ? fareChangeAccepted : undefined,
         contactInfo: finalContactInfo,
         travellers,
         selectedSSR: allSelections,
@@ -324,7 +339,7 @@ function FlightDetailsContent() {
       // Hand off to the ICICI payment gateway. The ticket is issued by the
       // backend only after payment succeeds; the gateway will redirect the
       // customer to /booking/payment/result when done.
-      window.location.href = result.redirectUrl;
+      redirectToPayment(result.redirectUrl);
     } catch (err: any) {
       setBookingError(err.message || 'Booking failed. Please try again.');
       setIsSubmitting(false);
@@ -405,14 +420,12 @@ function FlightDetailsContent() {
           <div className="flex-1 space-y-6">
             {/* Airline repriced since search (Benzy GetSPricer Code 1500) */}
             {pricing.fareChanged && (
-              <div role="status" className="bg-sky-50 border border-sky-200 rounded-lg px-4 py-3 text-sm text-sky-900">
-                <span className="font-semibold">The airline has updated this fare since your search.</span>{' '}
-                The current total is{' '}
-                <span className="font-semibold">
-                  {new Intl.NumberFormat('en-IN', { style: 'currency', currency: pricing.totalFare.currency || 'INR', maximumFractionDigits: 0 }).format(pricing.totalFare.gross)}
-                </span>
-                . Please review it before continuing.
-              </div>
+              <FareChangeNotice
+                total={pricing.totalFare.gross}
+                currency={pricing.totalFare.currency || 'INR'}
+                accepted={fareChangeAccepted}
+                onAcceptedChange={setFareChangeAccepted}
+              />
             )}
 
             {/* Fare notices (airline / fare-level advisories from Benzy) */}

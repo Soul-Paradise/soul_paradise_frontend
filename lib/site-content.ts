@@ -52,7 +52,7 @@ function fallbackContent<P extends SitePage>(page: P): SiteContent<P> {
 
 export async function getSiteContent<P extends SitePage>(page: P): Promise<SiteContent<P>> {
   try {
-    const res = await fetch(`${API_BASE}/site-content/${page}`, FETCH_OPTS);
+    const res = await fetch(`${API_BASE}/site-content/${encodeURIComponent(page)}`, FETCH_OPTS);
     if (res.ok) {
       const data = (await res.json()) as SiteContent<P>;
       return { ...data, global: data.global ?? {}, order: data.order ?? Object.keys(data.sections ?? {}) };
