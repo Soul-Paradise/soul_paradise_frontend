@@ -15,7 +15,10 @@ import {
 const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 90000;
 
-const NON_TERMINAL = new Set(['PENDING_PAYMENT', 'TICKETING']);
+// TICKETING_PENDING: Benzy has the booking but hasn't confirmed the ticket yet.
+// The Benzy transaction id is already set in these states (it is saved before
+// payment to Benzy), so a transaction id alone never means "ticket issued".
+const NON_TERMINAL = new Set(['PENDING_PAYMENT', 'TICKETING', 'TICKETING_PENDING']);
 
 type View = 'verifying' | 'ticketing' | 'failed_payment' | 'failed_ticket' | 'slow';
 
