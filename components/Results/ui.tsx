@@ -140,9 +140,19 @@ export function SortTabs<T extends string>({
           );
         })}
       </div>
-      <p className="text-sm text-(--color-inactive)">
-        Showing <span className="font-bold text-(--color-foreground)">{shown}</span> of{' '}
-        <span className="font-bold text-(--color-foreground)">{total}</span> {noun} found
+      {/* The page range ("Showing 1-20 of N") lives in the pagination bar; up
+          here only the size of the result set, and how far filters narrowed it. */}
+      <p className="text-sm text-(--color-inactive)" aria-live="polite">
+        {shown < total ? (
+          <>
+            <span className="font-bold text-(--color-foreground)">{shown.toLocaleString('en-IN')}</span> of{' '}
+            {total.toLocaleString('en-IN')} {noun.toLowerCase()} match your filters
+          </>
+        ) : (
+          <>
+            <span className="font-bold text-(--color-foreground)">{total.toLocaleString('en-IN')}</span> {noun.toLowerCase()} found
+          </>
+        )}
       </p>
     </div>
   );

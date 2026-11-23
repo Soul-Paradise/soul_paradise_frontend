@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { authFetch } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
 import { formatDeadline } from '@/components/HotelResults/FreeCancellationBadge';
+import HotelStars from '@/components/HotelResults/HotelStars';
 import { AlertTriangle } from 'lucide-react';
 import {
   BookButton,
@@ -78,6 +79,10 @@ interface StashedPricing {
   // ISO 8601 (+05:30) instant free cancellation stops; null when the supplier
   // gave no parseable deadline.
   freeCancellationUntil?: string | null;
+  inclusions?: string[];
+  panRequired?: boolean;
+  // Hotel name/address as the supplier lists it now, when it differs from the search.
+  detailChanges?: Array<{ field: string; from: string; to: string }>;
 }
 
 interface StashedSelectedRoom {
@@ -107,6 +112,24 @@ interface StashedHotelDetail {
     minAge: number;
   };
   checkoutInfo?: { time: string | null };
+  fees?: string[];
+  fullAddress?: string;
+  reviews?: Array<{ provider: string; count: number; rating: number }>;
+}
+
+const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+
+/** "14:00:00" / "2:00 PM" / "midnight" -> "2:00 PM" style; null when unknown. */
+function hotelTime(t: string | null | undefined): string | null {
+  const s = (t || '').trim();
+  if (!s) return null;
+  const m = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (m) {
+    const h = Number(m[1]);
+    if (h > 23) return null;
+    return `${h % 12 || 12}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
+  }
+  return s.length <= 20 ? s : null;
 }
 
 interface Stash {
@@ -220,16 +243,9 @@ function flattenPolicy(items: (string | null | undefined)[]): string[] {
   return items.flatMap((s) => htmlToLines(s));
 }
 
-function Stars({ count }: { count: number }) {
-  return (
-    <span className="inline-flex gap-0.5 align-middle">
-      {Array.from({ length: Math.max(0, count) }).map((_, i) => (
-        <svg key={i} className="w-3.5 h-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-        </svg>
-      ))}
-    </span>
-  );
+/** Stars follow the guest rating (see HotelStars). */
+function Stars({ rating }: { rating: number | null | undefined }) {
+  return <HotelStars rating={rating} />;
 }
 
 // Expandable disclosure used by fare summary rows
@@ -326,6 +342,8 @@ function HotelBookPageInner() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Guest must accept supplier name/address changes before paying (as Akbar does).
+  const [changesAccepted, setChangesAccepted] = useState(false);
 
   useEffect(() => {
     if (stash) setGuestsByRoom(buildRooms(stash.occupancy));
@@ -333,6 +351,8 @@ function HotelBookPageInner() {
 
   const showAllGuests = pricing?.allGuestsInfoRequired ?? false;
   const showSpecial = pricing?.specialRequestSupported ?? false;
+  const panRequired = pricing?.panRequired === true;
+  const detailChanges = pricing?.detailChanges ?? [];
 
   const totalGuests = useMemo(
     () => guestsByRoom.reduce((sum, r) => sum + r.length, 0),
@@ -354,9 +374,12 @@ function HotelBookPageInner() {
     hotelDetail?.images?.[0]?.url ||
     null;
 
-  const addressLine = [hotelDetail?.address, hotelDetail?.city, hotelDetail?.country]
+  const addressLine = hotelDetail?.fullAddress || [hotelDetail?.address, hotelDetail?.city, hotelDetail?.country]
     .filter(Boolean)
     .join(', ');
+  // Times from the hotel's own content; nothing is shown when the supplier gave none.
+  const checkInTime = hotelTime(hotelDetail?.checkinInfo?.beginTime);
+  const checkOutTime = hotelTime(hotelDetail?.checkoutInfo?.time);
 
   // Fare summary shows a single all-inclusive room rate - taxes, TCS and
   // discounts are already folded into pricing.totalRate and are not itemised.
@@ -395,7 +418,15 @@ function HotelBookPageInner() {
         if (guest.paxType === 'C' && !guest.age.trim()) {
           return `Please enter age for child in Room ${r + 1}.`;
         }
+        // PAN: required for the lead guest when the rate needs it; any PAN entered must be valid.
+        const pan = guest.pan.trim();
+        if (panRequired && isPrimary && !pan) return 'This hotel needs the lead guest’s PAN to confirm the booking.';
+        if (pan && !PAN_RE.test(pan)) return `Please enter a valid PAN for Room ${r + 1} (e.g. ABCDE1234F).`;
       }
+    }
+
+    if (detailChanges.length > 0 && !changesAccepted) {
+      return 'Please confirm the updated hotel details before continuing.';
     }
 
     return null;
@@ -464,7 +495,7 @@ function HotelBookPageInner() {
             age: g.age,
             email: g.email,
             mobile: g.mobile,
-            pan: g.pan,
+            pan: g.pan.trim(),
           })),
         };
       }),
@@ -539,7 +570,12 @@ function HotelBookPageInner() {
               <div className="min-w-0">
                 <h2 className="font-bold text-slate-800 text-lg flex items-center gap-2 flex-wrap">
                   <span className="truncate">{hotelDetail?.name || 'Hotel'}</span>
-                  {(hotelDetail?.starRating ?? 0) > 0 && <Stars count={hotelDetail!.starRating!} />}
+                  {(hotelDetail?.reviews?.[0]?.rating ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Stars rating={hotelDetail!.reviews![0].rating} />
+                      <span className="text-xs font-semibold text-gray-600">{hotelDetail!.reviews![0].rating.toFixed(1)}</span>
+                    </span>
+                  )}
                 </h2>
                 {addressLine && (
                   <p className="flex items-center gap-1 text-xs text-gray-600 mt-1">
@@ -569,7 +605,7 @@ function HotelBookPageInner() {
                   <p className="text-lg font-bold text-slate-800 leading-tight">
                     {checkInParts.month} <span>{checkInParts.day}</span>
                   </p>
-                  <p className="text-xs text-gray-600">{checkInParts.weekday}, 2:00 PM</p>
+                  <p className="text-xs text-gray-600">{checkInParts.weekday}{checkInTime ? `, ${checkInTime}` : ''}</p>
                 </div>
 
                 <div className="flex flex-col items-center pt-4">
@@ -581,7 +617,7 @@ function HotelBookPageInner() {
                   <p className="text-lg font-bold text-slate-800 leading-tight">
                     {checkOutParts.month} <span>{checkOutParts.day}</span>
                   </p>
-                  <p className="text-xs text-gray-600">{checkOutParts.weekday}, 12:00 PM</p>
+                  <p className="text-xs text-gray-600">{checkOutParts.weekday}{checkOutTime ? `, ${checkOutTime}` : ''}</p>
                 </div>
               </div>
 
@@ -693,6 +729,21 @@ function HotelBookPageInner() {
                               className="w-20 border border-gray-300 rounded px-2 py-2 text-sm"
                             />
                           )}
+                          {panRequired && showThisGuest && guestIdx === 0 && (
+                            <div className="w-full sm:pl-[72px]">
+                              <input
+                                value={guest.pan}
+                                onChange={(e) => updateGuest(roomIdx, guestIdx, { pan: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) })}
+                                placeholder={isPrimary ? 'PAN (required)' : 'PAN (optional)'}
+                                aria-label={`PAN for Room ${roomIdx + 1} lead guest`}
+                                autoComplete="off"
+                                className="w-full sm:w-56 border border-gray-300 rounded px-3 py-2 text-sm uppercase tracking-wider"
+                              />
+                              {isPrimary && (
+                                <p className="text-[11px] text-gray-500 mt-1">This hotel needs the lead guest&apos;s PAN card number to confirm the booking.</p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -782,11 +833,23 @@ function HotelBookPageInner() {
           <section className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm p-5">
             <h2 className="text-base font-bold text-(--color-foreground) mb-4">Essential Information</h2>
 
-            {pricing.boardBasis && (
+            {(pricing.boardBasis || (pricing.inclusions?.length ?? 0) > 0) && (
               <div className="mb-4">
                 <p className="text-sm font-bold text-(--color-foreground) mb-1">Inclusions</p>
-                <p className="text-sm text-slate-700">Room {1}</p>
-                <p className="text-xs text-gray-600 mt-1">{pricing.boardBasis}</p>
+                <ul className="list-disc pl-5 text-xs text-gray-700 space-y-1 marker:text-gray-400">
+                  {pricing.boardBasis && <li>{pricing.boardBasis}</li>}
+                  {(pricing.inclusions || []).map((t, i) => <li key={`inc-${i}`}>{t}</li>)}
+                </ul>
+              </div>
+            )}
+
+            {(hotelDetail?.fees?.length ?? 0) > 0 && (
+              <div className="mb-4">
+                <p className="text-sm font-bold text-(--color-foreground) mb-1">Payable at the hotel</p>
+                <p className="text-xs text-gray-500 mb-1">Not included in the amount you pay now. The hotel may charge these directly.</p>
+                <ul className="list-disc pl-5 text-xs text-gray-700 space-y-1 marker:text-gray-400">
+                  {hotelDetail!.fees!.map((f, i) => <li key={`fee-${i}`}>{f}</li>)}
+                </ul>
               </div>
             )}
 
@@ -835,10 +898,38 @@ function HotelBookPageInner() {
               </div>
             )}
 
-            {!pricing.boardBasis && !cancellationNotes.length && !checkInInstructions.length && !checkInSpecial.length && (
+            {!pricing.boardBasis && !pricing.inclusions?.length && !hotelDetail?.fees?.length && !cancellationNotes.length && !checkInInstructions.length && !checkInSpecial.length && (
               <p className="text-xs text-gray-500">No additional information provided by the hotel.</p>
             )}
           </section>
+
+          {/* Supplier lists the hotel slightly differently from the search result */}
+          {detailChanges.length > 0 && (
+            <section className="bg-amber-50 border border-amber-300 rounded-2xl p-5">
+              <h2 className="text-base font-bold text-amber-900 mb-1">Please check the hotel details</h2>
+              <p className="text-xs text-amber-900 mb-3">
+                The hotel lists these details differently from your search result. This usually just means a different spelling of the same property.
+              </p>
+              <dl className="space-y-2 text-xs">
+                {detailChanges.map((c, i) => (
+                  <div key={`chg-${i}`}>
+                    <dt className="font-semibold text-amber-900">{c.field}</dt>
+                    {c.from && <dd className="text-gray-600">Search result: {c.from}</dd>}
+                    <dd className="text-gray-900">Hotel&apos;s listing: {c.to}</dd>
+                  </div>
+                ))}
+              </dl>
+              <label className="mt-3 flex items-start gap-2 text-sm text-amber-950 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={changesAccepted}
+                  onChange={(e) => setChangesAccepted(e.target.checked)}
+                  className="mt-0.5 h-4 w-4"
+                />
+                <span>I have checked these details and want to continue with this hotel.</span>
+              </label>
+            </section>
+          )}
 
           {submitError && (
             <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-800">

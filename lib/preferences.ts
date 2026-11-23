@@ -13,10 +13,28 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v
 /** "Results per page" choices on the flight, hotel and insurance lists. */
 export const PAGE_SIZE_OPTIONS = [10, 20, 30, 50] as const;
 
+/** One shortlisted hotel, with enough to show it without a supplier search. */
+export interface ShortlistedHotel {
+  id: string;
+  name: string;
+  starRating: number;
+  /** Guest rating out of 5 when shortlisted; 0 = no reviews. */
+  rating: number;
+  address: string;
+  /** https only (the server rejects anything else). */
+  heroImage: string | null;
+  savedAt: string; // ISO
+}
+
+/** Same cap as the backend (MAX_SHORTLISTED_HOTELS). */
+export const MAX_SHORTLISTED_HOTELS = 100;
+
 export interface Preferences {
   'results.pageSize.flights': number;
   'results.pageSize.hotels': number;
   'results.pageSize.insurance': number;
+  /** Newest first. */
+  'shortlist.hotels': ShortlistedHotel[];
 }
 
 export type PreferenceKey = keyof Preferences;
@@ -26,6 +44,7 @@ export const PREFERENCE_DEFAULTS: Preferences = {
   'results.pageSize.flights': 20,
   'results.pageSize.hotels': 20,
   'results.pageSize.insurance': 10,
+  'shortlist.hotels': [],
 };
 
 async function readJson<T>(res: Response, fallback: string): Promise<T> {
