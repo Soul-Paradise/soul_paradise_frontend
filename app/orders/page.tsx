@@ -69,6 +69,9 @@ function normalizeStatus(raw: string | null | undefined): DisplayStatus {
   const s = (raw || '').toLowerCase().trim();
   if (s.includes('cancel')) return 'Cancelled';
   if (s.includes('refund')) return 'Refunded';
+  // Flights: paid, ticket being issued (and "awaiting Benzy confirmation").
+  // Not confirmed yet, so not cancellable.
+  if (s === 'ticketing' || s === 'ticketing_pending') return 'Pending';
   if (
     ['pending', 'hold', 'progress', 'processing', 'initiated', 'fail'].some(
       (k) => s.includes(k),

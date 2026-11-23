@@ -1,6 +1,7 @@
 'use client';
 
 import { useId } from 'react';
+import { CountrySelect } from './CountrySelect';
 
 import type {
   TravellerInfo,
@@ -131,6 +132,7 @@ export const PassengerForm = ({
               value={traveller.firstName}
               onChange={(e) => update('firstName', e.target.value)}
               placeholder="As per ID"
+              maxLength={40}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links)"
             />
           </div>
@@ -145,6 +147,7 @@ export const PassengerForm = ({
               value={traveller.lastName}
               onChange={(e) => update('lastName', e.target.value)}
               placeholder="As per ID"
+              maxLength={40}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links)"
             />
           </div>
@@ -257,12 +260,11 @@ export const PassengerForm = ({
               <label htmlFor={`${fieldId}-6`} className="block text-xs font-medium text-gray-700 mb-1">
                 Nationality <span className="text-red-500">*</span>
               </label>
-              <input id={`${fieldId}-6`}
-                type="text"
+              <CountrySelect
+                id={`${fieldId}-6`}
                 value={traveller.nationality || ''}
-                onChange={(e) => update('nationality', e.target.value)}
-                placeholder="e.g. Indian"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links)"
+                onChange={(code) => update('nationality', code)}
+                placeholder="Select nationality"
               />
             </div>
           )}
@@ -302,14 +304,13 @@ export const PassengerForm = ({
           {travelChecklist.passportPlaceOfIssue && (
             <div>
               <label htmlFor={`${fieldId}-9`} className="block text-xs font-medium text-gray-700 mb-1">
-                Place of Issue <span className="text-red-500">*</span>
+                Passport Issuing Country <span className="text-red-500">*</span>
               </label>
-              <input id={`${fieldId}-9`}
-                type="text"
+              <CountrySelect
+                id={`${fieldId}-9`}
                 value={traveller.passportPlaceOfIssue || ''}
-                onChange={(e) => update('passportPlaceOfIssue', e.target.value)}
-                placeholder="City of issue"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links)"
+                onChange={(code) => update('passportPlaceOfIssue', code)}
+                placeholder="Select country"
               />
             </div>
           )}
