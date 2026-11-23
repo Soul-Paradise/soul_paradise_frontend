@@ -131,6 +131,7 @@ export const PassengerForm = ({
               value={traveller.firstName}
               onChange={(e) => update('firstName', e.target.value)}
               placeholder="As per ID"
+              maxLength={40}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links)"
             />
           </div>
@@ -145,6 +146,7 @@ export const PassengerForm = ({
               value={traveller.lastName}
               onChange={(e) => update('lastName', e.target.value)}
               placeholder="As per ID"
+              maxLength={40}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links)"
             />
           </div>
