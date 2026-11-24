@@ -733,12 +733,15 @@ function HotelHero({
 function RoomCard({
   room,
   nights,
+  roomCount = 1,
   onSelect,
   isSelected,
   loadingPrice,
 }: {
   room: RoomOption;
   nights: number;
+  /** Rooms in the search: the price covers all of them. */
+  roomCount?: number;
   onSelect: (room: RoomOption) => void;
   isSelected: boolean;
   loadingPrice: boolean;
@@ -848,7 +851,10 @@ function RoomCard({
               {room.totalRate > 0 ? (
                 <>
                   <div className="text-xl font-bold text-gray-900">{fmt(room.totalRate, room.currency)}</div>
-                  <div className="text-xs text-gray-500">for {nights} night{nights !== 1 ? 's' : ''}</div>
+                  <div className="text-xs text-gray-500">
+                    {/* The price covers every room searched, for the whole stay. */}
+                    for {roomCount > 1 ? `${roomCount} rooms, ` : ''}{nights} night{nights !== 1 ? 's' : ''}
+                  </div>
                   {hasSavings && (
                     <div className="text-xs text-green-600 font-semibold mt-0.5">Save {fmt(savings, room.currency)}</div>
                   )}
@@ -1452,9 +1458,9 @@ function HotelMapSection({ hotel }: { hotel: HotelDetailInfo }) {
         </div>
       </div>
 
-      {(hotel.address || hotel.city) && (
+      {(hotel.fullAddress || hotel.address || hotel.city) && (
         <p className="text-sm text-gray-600 mb-3">
-          {[hotel.address, hotel.city, hotel.country].filter(Boolean).join(', ')}
+          {hotel.fullAddress || [hotel.address, hotel.city, hotel.country].filter(Boolean).join(', ')}
         </p>
       )}
 
@@ -1761,6 +1767,7 @@ function RoomsContent() {
                         key={`${room.recommendationId}-${room.roomId}`}
                         room={room}
                         nights={nights}
+                        roomCount={roomCount}
                         onSelect={selectRoom}
                         isSelected={selectedRoom?.recommendationId === room.recommendationId}
                         loadingPrice={pricingLoading && selectedRoom?.recommendationId === room.recommendationId}
