@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useAccordion } from '@/lib/accordion';
 import {
   getPromoCodes,
   validatePromoCode,
@@ -35,7 +36,7 @@ export const PromoCodeSection = ({
   const [manualCode, setManualCode] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useAccordion('booking-summary');
 
   const fetchPromos = useCallback(async () => {
     try {

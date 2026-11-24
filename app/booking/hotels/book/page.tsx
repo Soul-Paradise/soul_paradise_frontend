@@ -1,6 +1,8 @@
 'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useAccordion } from '@/lib/accordion';
+import { GstDetailsSection, validateGst, type GstDetails } from '@/components/FlightBookingDetails/GstDetailsSection';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authFetch } from '@/lib/api';
 import { useRequireAuth } from '@/contexts/AuthContext';
@@ -264,13 +266,13 @@ function DisclosureRow({
   initiallyOpen?: boolean;
   valueClassName?: string;
 }) {
-  const [open, setOpen] = useState(initiallyOpen);
+  const [open, setOpen] = useAccordion('fare-summary', initiallyOpen);
   const hasChildren = !!children;
   return (
     <div>
       <button
         type="button"
-        onClick={() => hasChildren && setOpen((o) => !o)}
+        onClick={() => hasChildren && setOpen(!open)}
         className={`w-full flex justify-between items-center text-sm py-1.5 ${
           hasChildren ? 'cursor-pointer hover:text-gray-900' : 'cursor-default'
         }`}
@@ -329,6 +331,7 @@ function HotelBookPageInner() {
   const hotelDetail = stash?.hotelDetail ?? null;
   const occupancy = stash?.occupancy ?? [{ adults: 1, children: 0 }];
 
+  const [gst, setGst] = useState<GstDetails>({ gstTin: '', gstCompanyName: '', gstMobile: '' });
   const [contact, setContact] = useState<ContactForm>({
     title: 'Mr',
     firstName: '',
@@ -400,6 +403,10 @@ function HotelBookPageInner() {
   function validate(): string | null {
     if (!isEmail(contact.email)) return 'Please enter a valid contact email.';
     if (!isIndianMobile(contact.mobile)) return 'Please enter a valid 10-digit contact mobile.';
+    if (pricing?.gstAllowed) {
+      const gstErr = validateGst(gst, false);
+      if (gstErr) return gstErr;
+    }
 
     const primary = guestsByRoom[0]?.[0];
     if (!primary || !primary.firstName.trim() || !primary.lastName.trim()) {
@@ -474,9 +481,10 @@ function HotelBookPageInner() {
         email: contact.email,
         countryCode: 'IN',
         mobileCountryCode: '+91',
-        gstCompanyName: '',
-        gstTin: '',
-        gstMobile: '',
+        // Sent only when the rate accepts GST and the customer added it.
+        gstCompanyName: pricing.gstAllowed ? (gst.gstCompanyName || '').trim() : '',
+        gstTin: pricing.gstAllowed ? (gst.gstTin || '').trim().toUpperCase() : '',
+        gstMobile: pricing.gstAllowed ? (gst.gstMobile || '').trim() : '',
         gstEmail: '',
       },
       rooms: guestsByRoom.map((guests, roomIdx) => {
@@ -811,6 +819,11 @@ function HotelBookPageInner() {
                 </div>
               </div>
 
+              {/* GST details - offered when the hotel's rate accepts them
+                  (Price response gstAllowed), the same block as flights. */}
+              {pricing.gstAllowed && (
+                <GstDetailsSection value={gst} onChange={(patch) => setGst((g) => ({ ...g, ...patch }))} />
+              )}
             </div>
           </section>
 

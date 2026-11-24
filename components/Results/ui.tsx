@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
+import { useAccordion } from '@/lib/accordion';
 import {
   AlertTriangle,
   ArrowRight,
@@ -204,7 +204,8 @@ export function FilterSection({
   collapsible?: boolean;
   defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  // Collapsible sections are one accordion group: opening one closes the others.
+  const [open, setOpen] = useAccordion('filters', collapsible && defaultOpen);
   const heading = <h3 className="text-sm font-bold text-(--color-foreground)">{title}</h3>;
   return (
     <section className="border-t border-(--color-tertiary-button) px-5 py-4">

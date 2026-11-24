@@ -22,8 +22,11 @@ import {
   listHotelBookings,
   listInsuranceBookings,
   cancelHotelBooking,
+  downloadHotelVoucher,
+  getHotelCancellationPreview,
   type FlightBookingSummary,
   type HotelBookingSummary,
+  type HotelCancellationPreview,
   type InsuranceBookingSummary,
 } from '@/lib/bookings-api';
 import { api, type CustomPayment, type PaymentStatus } from '@/lib/api';
@@ -188,6 +191,21 @@ function OrdersContent() {
   );
   const [cancelRemarks, setCancelRemarks] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  // The charge/refund for cancelling now, loaded when the dialog opens: the
+  // customer sees it BEFORE they can confirm.
+  const [preview, setPreview] = useState<HotelCancellationPreview | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  const openCancel = (booking: HotelBookingSummary) => {
+    setCancelTarget(booking);
+    setPreview(null);
+    setPreviewError(null);
+    getHotelCancellationPreview(booking.transactionId)
+      .then(setPreview)
+      .catch((err: unknown) =>
+        setPreviewError(err instanceof Error ? err.message : 'Could not load the cancellation charges.'),
+      );
+  };
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -228,7 +246,10 @@ function OrdersContent() {
       );
       showToast({
         title: 'Booking cancelled',
-        body: `Cancellation ID: ${result.cancellationId}`,
+        body:
+          result.refundAmount > 0
+            ? `Cancellation ID ${result.cancellationId}. Refund due: ${formatMoney(result.refundAmount, 'INR')}.`
+            : `Cancellation ID ${result.cancellationId}.`,
         type: 'success',
       });
       setCancelTarget(null);
@@ -341,7 +362,7 @@ function OrdersContent() {
                   booking={b}
                   onCancel={() => {
                     setCancelRemarks('');
-                    setCancelTarget(b);
+                    openCancel(b);
                   }}
                 />
               ))}
@@ -391,6 +412,53 @@ function OrdersContent() {
               </div>
             </div>
 
+            {/* Charges for cancelling now - shown before the customer can confirm. */}
+            <div
+              className="mt-4 rounded-xl border border-(--color-tertiary-button) bg-(--color-background) p-4 text-sm"
+              data-testid="hotel-cancel-preview"
+            >
+              {previewError ? (
+                <p className="text-(--color-danger)">{previewError}</p>
+              ) : !preview ? (
+                <p className="flex items-center gap-2 text-(--color-inactive)">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Checking cancellation charges…
+                </p>
+              ) : (
+                <>
+                  <div className="flex justify-between py-1">
+                    <span className="text-(--color-inactive)">Amount paid</span>
+                    <span className="font-semibold text-(--color-foreground)">
+                      {formatMoney(preview.totalPaid, preview.currency)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-(--color-inactive)">Cancellation charge</span>
+                    <span className="font-semibold text-(--color-danger)" data-testid="hotel-cancel-charge">
+                      {preview.cancellationCharge > 0
+                        ? `- ${formatMoney(preview.cancellationCharge, preview.currency)}`
+                        : 'Free'}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex justify-between border-t border-(--color-tertiary-button) pt-2">
+                    <span className="font-bold text-(--color-foreground)">Refund</span>
+                    <span className="font-extrabold text-(--color-success)" data-testid="hotel-cancel-refund">
+                      {formatMoney(preview.refundAmount, preview.currency)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs text-(--color-inactive)">
+                    {preview.freeCancellation
+                      ? preview.freeCancellationUntil
+                        ? `Free cancellation applies until ${new Date(preview.freeCancellationUntil).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' })}.`
+                        : 'You can cancel this booking free of charge now.'
+                      : preview.refundAmount > 0
+                        ? 'The hotel charges this amount under its cancellation policy.'
+                        : 'This booking is non-refundable at this point: no refund will be made.'}{' '}
+                    Our team will process any refund to your original payment method.
+                  </p>
+                </>
+              )}
+            </div>
+
             <label className="mt-4 block text-sm font-medium text-(--color-foreground)">
               Remarks (optional)
               <textarea
@@ -412,7 +480,8 @@ function OrdersContent() {
               </button>
               <button
                 onClick={() => void handleConfirmCancel()}
-                disabled={cancelling}
+                // Only once the charges are on screen.
+                disabled={cancelling || !preview}
                 className="flex items-center gap-2 rounded-xl bg-(--color-danger) px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
               >
                 {cancelling && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -538,6 +607,24 @@ function HotelCard({
   onCancel: () => void;
 }) {
   const cancellable = canCancel(booking.status);
+  const status = normalizeStatus(booking.status);
+  // A voucher exists once the hotel confirmed it (also kept after a cancel).
+  const hasVoucher = !!booking.transactionId && (status === 'Confirmed' || status === 'Cancelled');
+  const [downloading, setDownloading] = useState(false);
+  const download = async () => {
+    setDownloading(true);
+    try {
+      await downloadHotelVoucher(booking.transactionId, booking.bookingId);
+    } catch (err) {
+      showToast({
+        title: 'Download failed',
+        body: err instanceof Error ? err.message : 'Please try again.',
+        type: 'error',
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
   return (
     <CardShell tab="hotels">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -569,14 +656,26 @@ function HotelCard({
           <MetaRow icon={Mail}>{booking.contactEmail}</MetaRow>
         )}
       </div>
-      {cancellable && (
-        <div className="mt-4 flex justify-end border-t border-(--color-tertiary-button) pt-3">
-          <button
-            onClick={onCancel}
-            className="rounded-xl border border-(--color-danger) px-4 py-2 text-sm font-semibold text-(--color-danger) transition hover:bg-(--color-danger) hover:text-white"
-          >
-            Cancel booking
-          </button>
+      {(cancellable || hasVoucher) && (
+        <div className="mt-4 flex flex-wrap justify-end gap-3 border-t border-(--color-tertiary-button) pt-3">
+          {hasVoucher && (
+            <button
+              onClick={() => void download()}
+              disabled={downloading}
+              className="flex items-center gap-2 rounded-xl border border-(--color-tertiary-button) px-4 py-2 text-sm font-semibold text-(--color-foreground) transition hover:bg-(--color-background) disabled:opacity-60"
+            >
+              {downloading && <Loader2 className="h-4 w-4 animate-spin" />}
+              Download voucher
+            </button>
+          )}
+          {cancellable && (
+            <button
+              onClick={onCancel}
+              className="rounded-xl border border-(--color-danger) px-4 py-2 text-sm font-semibold text-(--color-danger) transition hover:bg-(--color-danger) hover:text-white"
+            >
+              Cancel booking
+            </button>
+          )}
         </div>
       )}
     </CardShell>

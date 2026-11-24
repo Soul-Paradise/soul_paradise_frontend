@@ -1,7 +1,7 @@
 'use client';
 
 import { AirlineLogo } from '@/components/AirlineLogo';
-import { useState } from 'react';
+import { useAccordion } from '@/lib/accordion';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { splitBaggage, type FlightResult } from '@/lib/flights-api';
@@ -92,7 +92,8 @@ export const FlightCard = ({
   onSelect,
 }: FlightCardProps) => {
   const router = useRouter();
-  const [showDetails, setShowDetails] = useState(false);
+  // One open card at a time across the results list.
+  const [showDetails, setShowDetails] = useAccordion('flight-results');
 
   const handleBook = () => {
     if (selectionMode) {
