@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAccordion } from '@/lib/accordion';
 import { BookButton, RESULT_CARD } from '@/components/Results/ui';
 import { useRouter } from 'next/navigation';
 import { formatCoverage, type InsuranceQuote } from '@/lib/insurance-api';
@@ -131,7 +132,8 @@ function QuoteDetails({ quote }: { quote: InsuranceQuote }) {
 
 export const InsuranceQuoteCard = ({ quote, href, days }: { quote: InsuranceQuote; href: string; days: number }) => {
   const router = useRouter();
-  const [showDetails, setShowDetails] = useState(false);
+  // One open quote at a time across the results list.
+  const [showDetails, setShowDetails] = useAccordion('insurance-results');
   const note = quote.highlights[0] ?? quote.specialHighlights[0] ?? '';
 
   return (

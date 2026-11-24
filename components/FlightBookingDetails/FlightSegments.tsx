@@ -1,7 +1,7 @@
 'use client';
 
 import { AirlineLogo } from '@/components/AirlineLogo';
-import { useState } from 'react';
+import { useAccordion } from '@/lib/accordion';
 import type { SegmentDetail } from '@/lib/flights-api';
 
 interface FlightSegmentsProps {
@@ -370,7 +370,7 @@ const LegDetailed = ({ segments, label }: LegDetailedProps) => {
 };
 
 export const FlightSegments = ({ segments }: FlightSegmentsProps) => {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useAccordion('flight-segments');
 
   // Prefer the backend-provided direction tag; otherwise infer the split.
   // Heuristic: a round-trip has first.from === last.to. The boundary between
@@ -423,7 +423,7 @@ export const FlightSegments = ({ segments }: FlightSegmentsProps) => {
       <div className="flex justify-end mt-3">
         <button
           type="button"
-          onClick={() => setExpanded((v) => !v)}
+          onClick={() => setExpanded(!expanded)}
           className="inline-flex items-center gap-1 text-[12px] font-semibold text-sky-700 hover:underline"
         >
           <svg

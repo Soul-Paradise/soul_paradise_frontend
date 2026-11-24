@@ -59,6 +59,23 @@ export interface HotelCancelResult {
   cancellationId: number;
   autoCancellation: boolean;
   status: string;
+  cancellationCharge: number;
+  refundAmount: number;
+}
+
+/** What cancelling now would cost, in the customer's prices (shown before confirming). */
+export interface HotelCancellationPreview {
+  bookingId: string;
+  transactionId: string;
+  hotelName: string | null;
+  checkInDate: string;
+  totalPaid: number;
+  cancellationCharge: number;
+  refundAmount: number;
+  freeCancellation: boolean;
+  freeCancellationUntil: string | null;
+  policy: Array<{ from: string | null; to: string | null; charge: number }>;
+  currency: string;
 }
 
 // ========== Helpers ==========
@@ -87,6 +104,30 @@ export function listInsuranceBookings(): Promise<InsuranceBookingSummary[]> {
 }
 
 // ========== Cancel (hotel) ==========
+
+export function getHotelCancellationPreview(transactionId: string): Promise<HotelCancellationPreview> {
+  return getJson(
+    `/hotels/booking/${encodeURIComponent(transactionId)}/cancellation`,
+    'Could not load the cancellation charges',
+  );
+}
+
+/** The hotel voucher PDF (the same file as the confirmation email). */
+export async function downloadHotelVoucher(transactionId: string, bookingId: string): Promise<void> {
+  const res = await authFetch(`${API_BASE}/hotels/booking/${encodeURIComponent(transactionId)}/voucher.pdf`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Failed to download the voucher' }));
+    throw new Error(err.message || 'Failed to download the voucher');
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `hotel-voucher-${bookingId}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
 export async function cancelHotelBooking(
   transactionId: string,
