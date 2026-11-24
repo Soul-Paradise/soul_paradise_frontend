@@ -1,7 +1,11 @@
 'use client';
 
-import { useState, useId } from 'react';
+import { useId } from 'react';
 import type { ContactInfo } from '@/lib/flights-api';
+import { GstDetailsSection } from './GstDetailsSection';
+
+// Kept as exports from here: existing pages import them from this module.
+export { GSTIN_PATTERN, validateGst } from './GstDetailsSection';
 
 interface ContactInfoFormProps {
   contactInfo: ContactInfo;
@@ -10,24 +14,6 @@ interface ContactInfoFormProps {
   gstApplicable?: boolean;
   /** GST details are compulsory for this fare. */
   gstMandatory?: boolean;
-}
-
-/** Indian GSTIN: 2-digit state + PAN + entity + 'Z' + checksum. */
-export const GSTIN_PATTERN = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
-
-/**
- * GST rules for the traveller step. Required when the fare demands it; when a
- * customer opts in, GSTIN and company name must both be present and valid
- * (the airline rejects partial GST details).
- */
-export function validateGst(c: ContactInfo, mandatory: boolean): string | null {
-  const tin = (c.gstTin || '').trim().toUpperCase();
-  const company = (c.gstCompanyName || '').trim();
-  if (!mandatory && !tin && !company) return null;
-  if (!tin) return 'Please enter the company GSTIN.';
-  if (!GSTIN_PATTERN.test(tin)) return 'Please enter a valid 15-character GSTIN.';
-  if (!company) return 'Please enter the company name registered for GST.';
-  return null;
 }
 
 export const ContactInfoForm = ({
@@ -41,12 +27,6 @@ export const ContactInfoForm = ({
   const update = (field: keyof ContactInfo, value: string) => {
     onChange({ ...contactInfo, [field]: value });
   };
-  const [gstOpen, setGstOpen] = useState(
-    gstMandatory || !!contactInfo.gstTin,
-  );
-  const showGstFields = gstMandatory || gstOpen;
-  const gstTin = (contactInfo.gstTin || '').toUpperCase();
-  const gstTinInvalid = !!gstTin && !GSTIN_PATTERN.test(gstTin);
 
   return (
     <div className="bg-white rounded-2xl border border-(--color-tertiary-button) shadow-sm overflow-hidden">
@@ -124,88 +104,11 @@ export const ContactInfoForm = ({
         {/* GST details - offered when the airline accepts them, required for
             fares the airline only sells against a GSTIN (e.g. SME/corporate). */}
         {(gstApplicable || gstMandatory) && (
-          <div className="border-t border-gray-100 pt-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-gray-800">
-                  GST details for business travel{' '}
-                  {gstMandatory ? (
-                    <span className="text-red-500">*</span>
-                  ) : (
-                    <span className="font-normal text-gray-500">(Optional)</span>
-                  )}
-                </p>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {gstMandatory
-                    ? 'This fare requires your company GST details.'
-                    : 'For GST credit, enter your company GST details.'}
-                </p>
-              </div>
-              {!gstMandatory && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (gstOpen) {
-                      onChange({ ...contactInfo, gstCompanyName: '', gstTin: '', gstMobile: '' });
-                    }
-                    setGstOpen(!gstOpen);
-                  }}
-                  className="text-xs font-semibold text-(--color-links) hover:underline flex-shrink-0"
-                >
-                  {gstOpen ? 'Remove' : 'Add'}
-                </button>
-              )}
-            </div>
-
-            {showGstFields && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-3">
-                <div>
-                  <label htmlFor={`${fieldId}-2`} className="block text-xs font-medium text-gray-700 mb-1">
-                    GSTIN <span className="text-red-500">*</span>
-                  </label>
-                  <input id={`${fieldId}-2`}
-                    type="text"
-                    value={gstTin}
-                    maxLength={15}
-                    onChange={(e) => update('gstTin', e.target.value.toUpperCase().replace(/\s/g, ''))}
-                    placeholder="22AAAAA0000A1Z5"
-                    aria-invalid={gstTinInvalid}
-                    className={`w-full px-3 py-2 border rounded-md text-sm uppercase focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links) ${
-                      gstTinInvalid ? 'border-red-400' : 'border-gray-300'
-                    }`}
-                  />
-                  {gstTinInvalid && (
-                    <p className="text-[11px] text-red-500 mt-1">Enter a valid 15-character GSTIN.</p>
-                  )}
-                </div>
-                <div>
-                  <label htmlFor={`${fieldId}-3`} className="block text-xs font-medium text-gray-700 mb-1">
-                    Company name <span className="text-red-500">*</span>
-                  </label>
-                  <input id={`${fieldId}-3`}
-                    type="text"
-                    value={contactInfo.gstCompanyName || ''}
-                    maxLength={100}
-                    onChange={(e) => update('gstCompanyName', e.target.value)}
-                    placeholder="Registered company name"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links)"
-                  />
-                </div>
-                <div>
-                  <label htmlFor={`${fieldId}-4`} className="block text-xs font-medium text-gray-700 mb-1">
-                    Company mobile
-                  </label>
-                  <input id={`${fieldId}-4`}
-                    type="tel"
-                    value={contactInfo.gstMobile || ''}
-                    onChange={(e) => update('gstMobile', e.target.value)}
-                    placeholder="Optional"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-(--color-links) focus:border-(--color-links)"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
+          <GstDetailsSection
+            value={contactInfo}
+            onChange={(patch) => onChange({ ...contactInfo, ...patch })}
+            mandatory={gstMandatory}
+          />
         )}
       </div>
     </div>
