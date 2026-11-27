@@ -53,6 +53,12 @@ export interface InsuranceBookingSummary {
   travellerCount: number;
   contactEmail: string | null;
   createdAt: string;
+  provider: string;
+  planName: string;
+  /** Our policy confirmation PDF can be downloaded (confirmed policies only). */
+  policyAvailable: boolean;
+  /** The insurer's own policy documents, once the insurer released them. */
+  insurerDocuments: Array<{ policyNumber: string | null; url: string }>;
 }
 
 export interface HotelCancelResult {
@@ -112,21 +118,48 @@ export function getHotelCancellationPreview(transactionId: string): Promise<Hote
   );
 }
 
-/** The hotel voucher PDF (the same file as the confirmation email). */
-export async function downloadHotelVoucher(transactionId: string, bookingId: string): Promise<void> {
-  const res = await authFetch(`${API_BASE}/hotels/booking/${encodeURIComponent(transactionId)}/voucher.pdf`);
+/** Downloads one of the customer's booking PDFs (same file as the confirmation email). */
+async function downloadPdf(path: string, fileName: string, fallbackMsg: string): Promise<void> {
+  const res = await authFetch(`${API_BASE}${path}`);
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: 'Failed to download the voucher' }));
-    throw new Error(err.message || 'Failed to download the voucher');
+    const err = await res.json().catch(() => ({ message: fallbackMsg }));
+    throw new Error(err.message || fallbackMsg);
   }
   const url = URL.createObjectURL(await res.blob());
   const a = document.createElement('a');
   a.href = url;
-  a.download = `hotel-voucher-${bookingId}.pdf`;
+  a.download = fileName;
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+/** The hotel voucher PDF (the same file as the confirmation email). */
+export function downloadHotelVoucher(transactionId: string, bookingId: string): Promise<void> {
+  return downloadPdf(
+    `/hotels/booking/${encodeURIComponent(transactionId)}/voucher.pdf`,
+    `hotel-voucher-${bookingId}.pdf`,
+    'Failed to download the voucher',
+  );
+}
+
+/** The flight e-ticket PDF (the same file as the ticket email). */
+export function downloadFlightTicket(transactionId: string, bookingId: string): Promise<void> {
+  return downloadPdf(
+    `/flights/booking/${encodeURIComponent(transactionId)}/ticket.pdf`,
+    `e-ticket-${bookingId}.pdf`,
+    'Failed to download the e-ticket',
+  );
+}
+
+/** Our travel insurance policy confirmation PDF (the same file as the policy email). */
+export function downloadInsurancePolicy(transactionId: string, bookingId: string): Promise<void> {
+  return downloadPdf(
+    `/insurance/booking/${encodeURIComponent(transactionId)}/policy.pdf`,
+    `travel-insurance-${bookingId}.pdf`,
+    'Failed to download the policy',
+  );
 }
 
 export async function cancelHotelBooking(

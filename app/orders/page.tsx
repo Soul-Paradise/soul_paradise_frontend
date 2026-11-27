@@ -15,6 +15,8 @@ import {
   Users,
   Mail,
   XCircle,
+  Download,
+  FileText,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -22,7 +24,9 @@ import {
   listHotelBookings,
   listInsuranceBookings,
   cancelHotelBooking,
+  downloadFlightTicket,
   downloadHotelVoucher,
+  downloadInsurancePolicy,
   getHotelCancellationPreview,
   type FlightBookingSummary,
   type HotelBookingSummary,
@@ -63,21 +67,38 @@ function formatMoney(amount: number, currency: string) {
   }
 }
 
-type DisplayStatus = 'Confirmed' | 'Cancelled' | 'Pending' | 'Refunded';
+type DisplayStatus = 'Confirmed' | 'Cancelled' | 'Pending' | 'Failed' | 'Refunded';
 
-// Benzy returns coded statuses (e.g. "B0"). Customers should only ever see a
-// small, plain-language set. A booking only reaches this page once it has been
-// successfully created, so an unrecognised code defaults to "Confirmed".
+/**
+ * Our own in-flight states (flights, hotels, insurance): paid, but the
+ * supplier hasn't issued the booking yet - never shown as confirmed.
+ */
+const IN_PROGRESS_STATES = new Set([
+  'pending_payment',
+  'ticketing',
+  'ticketing_pending',
+  'booking',
+  'booking_pending',
+  'processing',
+  'issuance_pending',
+  'payment_review',
+]);
+/** Paid but the supplier booking failed (refunded by our team). */
+const FAILED_STATES = new Set(['ticketing_failed', 'booking_failed', 'payment_failed']);
+
+// Customers only ever see a small, plain-language set. "Confirmed" means the
+// supplier issued the booking (ticket / hotel confirmation / policy) - every
+// one of our in-progress or failed states maps to something else, as do coded
+// supplier states that aren't final.
 function normalizeStatus(raw: string | null | undefined): DisplayStatus {
   const s = (raw || '').toLowerCase().trim();
   if (s.includes('cancel')) return 'Cancelled';
   if (s.includes('refund')) return 'Refunded';
-  // Flights: paid, ticket being issued (and "awaiting Benzy confirmation").
-  // Not confirmed yet, so not cancellable.
-  if (s === 'ticketing' || s === 'ticketing_pending') return 'Pending';
+  if (FAILED_STATES.has(s) || s.includes('fail')) return 'Failed';
+  if (IN_PROGRESS_STATES.has(s)) return 'Pending';
   if (
-    ['pending', 'hold', 'progress', 'processing', 'initiated', 'fail'].some(
-      (k) => s.includes(k),
+    ['pending', 'hold', 'progress', 'processing', 'initiated'].some((k) =>
+      s.includes(k),
     )
   ) {
     return 'Pending';
@@ -89,8 +110,42 @@ const STATUS_STYLES: Record<DisplayStatus, string> = {
   Confirmed: 'bg-green-50 text-(--color-success)',
   Cancelled: 'bg-red-50 text-(--color-danger)',
   Pending: 'bg-orange-50 text-(--color-warn)',
+  Failed: 'bg-red-50 text-(--color-danger)',
   Refunded: 'bg-blue-50 text-(--color-links)',
 };
+
+/** One download button for a booking document, with its own spinner and error toast. */
+function DownloadButton({ label, onDownload }: { label: string; onDownload: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    setBusy(true);
+    try {
+      await onDownload();
+    } catch (err) {
+      showToast({
+        title: 'Download failed',
+        body: err instanceof Error ? err.message : 'Please try again.',
+        type: 'error',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={() => void run()}
+      disabled={busy}
+      className="flex items-center gap-2 rounded-xl border border-(--color-tertiary-button) px-4 py-2 text-sm font-semibold text-(--color-foreground) transition hover:bg-(--color-background) disabled:opacity-60"
+    >
+      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+      {label}
+    </button>
+  );
+}
+
+const FAILED_NOTE =
+  "We couldn't complete this booking with the supplier. Your payment will be refunded - our team will contact you.";
 
 function StatusBadge({ status }: { status: string }) {
   const label = normalizeStatus(status);
@@ -564,6 +619,9 @@ function FlightCard({ booking }: { booking: FlightBookingSummary }) {
     : booking.transactionId
       ? `Txn ${booking.transactionId}`
       : `Booking ${booking.bookingId}`;
+  // The e-ticket exists once the airline ticketed the booking (also kept after a cancel).
+  const status = normalizeStatus(booking.status);
+  const hasTicket = !!booking.transactionId && (status === 'Confirmed' || status === 'Cancelled');
   return (
     <CardShell tab="flights">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -595,6 +653,17 @@ function FlightCard({ booking }: { booking: FlightBookingSummary }) {
           <MetaRow icon={Mail}>{booking.contactEmail}</MetaRow>
         )}
       </div>
+      {normalizeStatus(booking.status) === 'Failed' && (
+        <p className="mt-3 text-sm text-(--color-danger)">{FAILED_NOTE}</p>
+      )}
+      {hasTicket && (
+        <div className="mt-4 flex flex-wrap justify-end gap-3 border-t border-(--color-tertiary-button) pt-3">
+          <DownloadButton
+            label="Download e-ticket"
+            onDownload={() => downloadFlightTicket(booking.transactionId, booking.bookingId)}
+          />
+        </div>
+      )}
     </CardShell>
   );
 }
@@ -610,21 +679,6 @@ function HotelCard({
   const status = normalizeStatus(booking.status);
   // A voucher exists once the hotel confirmed it (also kept after a cancel).
   const hasVoucher = !!booking.transactionId && (status === 'Confirmed' || status === 'Cancelled');
-  const [downloading, setDownloading] = useState(false);
-  const download = async () => {
-    setDownloading(true);
-    try {
-      await downloadHotelVoucher(booking.transactionId, booking.bookingId);
-    } catch (err) {
-      showToast({
-        title: 'Download failed',
-        body: err instanceof Error ? err.message : 'Please try again.',
-        type: 'error',
-      });
-    } finally {
-      setDownloading(false);
-    }
-  };
   return (
     <CardShell tab="hotels">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -656,17 +710,14 @@ function HotelCard({
           <MetaRow icon={Mail}>{booking.contactEmail}</MetaRow>
         )}
       </div>
+      {status === 'Failed' && <p className="mt-3 text-sm text-(--color-danger)">{FAILED_NOTE}</p>}
       {(cancellable || hasVoucher) && (
         <div className="mt-4 flex flex-wrap justify-end gap-3 border-t border-(--color-tertiary-button) pt-3">
           {hasVoucher && (
-            <button
-              onClick={() => void download()}
-              disabled={downloading}
-              className="flex items-center gap-2 rounded-xl border border-(--color-tertiary-button) px-4 py-2 text-sm font-semibold text-(--color-foreground) transition hover:bg-(--color-background) disabled:opacity-60"
-            >
-              {downloading && <Loader2 className="h-4 w-4 animate-spin" />}
-              Download voucher
-            </button>
+            <DownloadButton
+              label="Download voucher"
+              onDownload={() => downloadHotelVoucher(booking.transactionId, booking.bookingId)}
+            />
           )}
           {cancellable && (
             <button
@@ -683,20 +734,21 @@ function HotelCard({
 }
 
 function InsuranceCard({ booking }: { booking: InsuranceBookingSummary }) {
+  const status = normalizeStatus(booking.status);
+  const confirmed = status === 'Confirmed' && booking.policyAvailable;
+  const title = booking.planName || booking.policyType || 'Travel insurance';
   return (
     <CardShell tab="insurance">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-bold text-(--color-foreground)">
-              {booking.policyType || 'Insurance policy'}
-            </h3>
+            <h3 className="text-lg font-bold text-(--color-foreground)">{title}</h3>
             <StatusBadge status={booking.status} />
           </div>
           <p className="mt-1 text-sm text-(--color-inactive)">
-            {booking.policyNumber
-              ? `Policy ${booking.policyNumber}`
-              : `Booking ${booking.bookingId}`}
+            {[booking.provider, confirmed && booking.policyNumber ? `Policy ${booking.policyNumber}` : `Booking ${booking.bookingId}`]
+              .filter(Boolean)
+              .join(' · ')}
           </p>
         </div>
         <p className="text-lg font-extrabold text-(--color-foreground)">
@@ -715,15 +767,45 @@ function InsuranceCard({ booking }: { booking: InsuranceBookingSummary }) {
           <MetaRow icon={Mail}>{booking.contactEmail}</MetaRow>
         )}
       </div>
-      {booking.transactionId && (
-        <Link
-          href={`/booking/insurance/confirmation/${encodeURIComponent(booking.transactionId)}`}
-          className="group/btn mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-(--color-links) hover:opacity-80"
-        >
-          View policy
-          <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
-        </Link>
+      {status === 'Pending' && (
+        <p className="mt-3 text-sm text-(--color-inactive)">
+          Payment received. The insurer is finalising your policy - your documents will appear here once it is issued.
+        </p>
       )}
+      {status === 'Failed' && <p className="mt-3 text-sm text-(--color-danger)">{FAILED_NOTE}</p>}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-(--color-tertiary-button) pt-3">
+        {booking.transactionId ? (
+          <Link
+            href={`/booking/insurance/confirmation/${encodeURIComponent(booking.transactionId)}`}
+            className="group/btn inline-flex items-center gap-1.5 text-sm font-semibold text-(--color-links) hover:opacity-80"
+          >
+            View policy
+            <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
+          </Link>
+        ) : (
+          <span />
+        )}
+        {confirmed && (
+          <div className="flex flex-wrap justify-end gap-3">
+            <DownloadButton
+              label="Download policy"
+              onDownload={() => downloadInsurancePolicy(booking.transactionId, booking.bookingId)}
+            />
+            {booking.insurerDocuments.map((d, i) => (
+              <a
+                key={d.url}
+                href={d.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-xl border border-(--color-tertiary-button) px-4 py-2 text-sm font-semibold text-(--color-foreground) transition hover:bg-(--color-background)"
+              >
+                <FileText className="h-4 w-4" />
+                {booking.insurerDocuments.length > 1 ? `Insurer policy ${d.policyNumber || i + 1}` : "Insurer's policy"}
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
     </CardShell>
   );
 }
