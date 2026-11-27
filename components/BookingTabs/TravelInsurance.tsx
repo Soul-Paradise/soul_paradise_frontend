@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { MapPin, CalendarDays, Search, AlertCircle, Users } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { CalendarPanel } from './CalendarPanel';
 import {
   ActionButton,
@@ -21,6 +21,8 @@ import { usePersistentSearch, notBeforeToday, useDatePrefill } from '@/lib/hooks
 import {
   getInsuranceCountries,
   getInsuranceOptions,
+  getTripInsuranceOffer,
+  saveInsurancePrefill,
   MULTITRIP_REGIONS,
   type InsuranceCountry,
   searchToParams,
@@ -285,6 +287,50 @@ export const TravelInsurance = () => {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // "Cover this trip?" (?offer=FLIGHT:<bookingId> from a confirmation page or
+  // email): pre-fill destinations, dates and travellers from that booking.
+  const searchParams = useSearchParams();
+  const offerParam = searchParams.get('offer');
+  const offerApplied = useRef<string | null>(null);
+  useEffect(() => {
+    if (!offerParam || offerApplied.current === offerParam || !countries) return;
+    const [service, ...rest] = offerParam.split(':');
+    const bookingId = rest.join(':');
+    if ((service !== 'FLIGHT' && service !== 'HOTEL') || !bookingId) return;
+    offerApplied.current = offerParam;
+    getTripInsuranceOffer(service, bookingId)
+      .then((o) => {
+        if (!o.eligible) return;
+        skipPolicyReset.current = o.policyType !== policyType;
+        setPolicyType(o.policyType);
+        setDestinations(
+          o.countryCodes.flatMap((code) => {
+            const i = countries.findIndex((c) => c.code === code);
+            return i >= 0 ? [countryLocation(countries[i], i)] : [];
+          }),
+        );
+        setStartDate(o.startDate);
+        setEndDate(o.endDate);
+        setTravellers(o.travellers.map((t, i) => ({ id: i + 1, birthdate: t.birthdate, relation: t.relation })));
+        saveInsurancePrefill({
+          travellers: o.travellers.map(({ relation, title, firstName, lastName, passportNumber }) => ({
+            relation,
+            title,
+            firstName,
+            lastName,
+            passportNumber,
+          })),
+          contact: o.contact,
+        });
+        if (o.travellers.some((t) => !t.birthdate)) {
+          setActivePanel('travellers');
+          setError('Add each traveller’s date of birth to see prices.');
+        }
+      })
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offerParam, countries]);
 
   // Destinations come from Benzy's own country list (the names the insurer expects).
   useEffect(() => {

@@ -210,6 +210,58 @@ export interface InsuranceCountry {
   popular: boolean;
 }
 
+/** "Cover this trip?" offer for a confirmed flight/hotel booking (pre-filled insurance search). */
+export type TripInsuranceOffer =
+  | { eligible: false; reason: string }
+  | {
+      eligible: true;
+      service: 'FLIGHT' | 'HOTEL';
+      bookingId: string;
+      policyType: PolicyType;
+      countryCodes: string[];
+      countryNames: string[];
+      startDate: string;
+      endDate: string;
+      travellers: Array<{
+        birthdate: string;
+        relation: Relation;
+        title: string;
+        firstName: string;
+        lastName: string;
+        passportNumber: string;
+      }>;
+      contact: { email: string; mobile: string };
+    };
+
+/** Traveller names/passports + contact from the trip, used to pre-fill the insurance booking form. */
+export interface InsurancePrefill {
+  travellers: Array<{ relation: Relation; title: string; firstName: string; lastName: string; passportNumber: string }>;
+  contact: { email: string; mobile: string };
+}
+const PREFILL_KEY = 'sp.insurance.prefill';
+
+export function saveInsurancePrefill(p: InsurancePrefill): void {
+  try {
+    sessionStorage.setItem(PREFILL_KEY, JSON.stringify(p));
+  } catch {
+    /* storage unavailable - pre-fill is a convenience only */
+  }
+}
+
+export function loadInsurancePrefill(): InsurancePrefill | null {
+  try {
+    const raw = sessionStorage.getItem(PREFILL_KEY);
+    return raw ? (JSON.parse(raw) as InsurancePrefill) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Link that opens the home insurance tab pre-filled from a booking. */
+export function tripOfferHref(service: 'FLIGHT' | 'HOTEL', bookingId: string): string {
+  return `/?tab=insurance&offer=${service}:${encodeURIComponent(bookingId)}#booking`;
+}
+
 /** Nominee relations Benzy accepts (exact spelling). */
 export const NOMINEE_RELATIONS = [
   'Spouse',
@@ -352,6 +404,13 @@ export async function getInsuranceStates(): Promise<string[]> {
   const res = await fetch(`${API_BASE}/insurance/states`);
   if (!res.ok) throw await toError(res, 'Could not load states.');
   return res.json();
+}
+
+export function getTripInsuranceOffer(service: 'FLIGHT' | 'HOTEL', bookingId: string): Promise<TripInsuranceOffer> {
+  return get(
+    `/insurance/trip-offer/${service}/${encodeURIComponent(bookingId)}`,
+    'Could not load the insurance offer.',
+  );
 }
 
 export function getQuotes(search: InsuranceSearch): Promise<QuotesResponse> {
