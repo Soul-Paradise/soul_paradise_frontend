@@ -165,6 +165,9 @@ export interface PolicyDetails {
   amountPaid: number;
   currency: string;
   policyWordingURL: string;
+  /** Our policy confirmation PDF can be downloaded (only once the policy is issued). */
+  policyAvailable: boolean;
+  /** The insurer's own policy documents (only once issued and released by the insurer). */
   documents: Array<{ policyNumber: string | null; url: string; travellerIds: number[] }>;
   contact: { name: string; email: string; mobile: string };
   travellers: Array<{
@@ -198,6 +201,27 @@ export const RELATION_LABELS: Record<Relation, string> = {
   SISTER: 'Sister',
   FRIEND: 'Friend',
 };
+
+/** A destination from Benzy's master list (name is Benzy's spelling, label is for display). */
+export interface InsuranceCountry {
+  code: string;
+  name: string;
+  label: string;
+  popular: boolean;
+}
+
+/** Nominee relations Benzy accepts (exact spelling). */
+export const NOMINEE_RELATIONS = [
+  'Spouse',
+  'Son',
+  'Daughter',
+  'Mother',
+  'Father',
+  'Brother',
+  'Sister',
+  'Grand Son',
+  'Grand Daughter',
+] as const;
 
 /** The only destinations Benzy accepts for an Annual Multi-Trip policy. */
 export const MULTITRIP_REGIONS = [
@@ -304,6 +328,29 @@ async function toError(res: Response, fallback: string): Promise<Error> {
 export async function getInsuranceOptions(): Promise<InsuranceOptions> {
   const res = await fetch(`${API_BASE}/insurance/options`);
   if (!res.ok) throw await toError(res, 'Could not load insurance options.');
+  return res.json();
+}
+
+let countriesCache: Promise<InsuranceCountry[]> | null = null;
+
+/** Destination countries from Benzy's master list (cached for the page's lifetime). */
+export function getInsuranceCountries(): Promise<InsuranceCountry[]> {
+  countriesCache ??= fetch(`${API_BASE}/insurance/countries`)
+    .then(async (res) => {
+      if (!res.ok) throw await toError(res, 'Could not load destinations.');
+      return res.json() as Promise<InsuranceCountry[]>;
+    })
+    .catch((e) => {
+      countriesCache = null; // retry next time
+      throw e;
+    });
+  return countriesCache;
+}
+
+/** Indian states, spelled as the insurer expects (Benzy getStates). */
+export async function getInsuranceStates(): Promise<string[]> {
+  const res = await fetch(`${API_BASE}/insurance/states`);
+  if (!res.ok) throw await toError(res, 'Could not load states.');
   return res.json();
 }
 

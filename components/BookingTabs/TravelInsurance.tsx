@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { MapPin, CalendarDays, Search, AlertCircle, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CalendarPanel } from './CalendarPanel';
@@ -19,8 +19,10 @@ import {
 } from './ui';
 import { usePersistentSearch, notBeforeToday, useDatePrefill } from '@/lib/hooks/useSearchPersistence';
 import {
+  getInsuranceCountries,
   getInsuranceOptions,
   MULTITRIP_REGIONS,
+  type InsuranceCountry,
   searchToParams,
   type PolicyType,
   type PolicyTypeOption,
@@ -47,15 +49,6 @@ interface InsuranceSearchSnapshot {
   endDate: string;
   tenureInMonths: number;
   travellers: Traveller[];
-}
-
-interface NominatimResult {
-  place_id: number;
-  display_name: string;
-  address?: {
-    country?: string;
-    country_code?: string;
-  };
 }
 
 // Used until GetProviderCheckList answers (and if it can't be reached); the
@@ -136,7 +129,30 @@ const TENURE_OPTIONS = [
   { value: 24, label: '24 Months' },
 ];
 
-const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
+/** Countries get positive ids (regions are negative), so isRegion() still works. */
+function countryLocation(c: InsuranceCountry, index: number): SelectedLocation {
+  return { placeId: index + 1, displayName: c.label, countryName: c.name, countryCode: c.code };
+}
+
+/** Best matches first: label starts with the query, then a word starts with it, then contains / code. */
+function matchCountries(list: InsuranceCountry[], query: string): InsuranceCountry[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return list.filter((c) => c.popular);
+  const rank = (c: InsuranceCountry) => {
+    const l = c.label.toLowerCase();
+    if (l.startsWith(q)) return 0;
+    if (l.split(/[\s,()-]+/).some((w) => w.startsWith(q))) return 1;
+    if (c.code.toLowerCase() === q) return 1;
+    if (l.includes(q) || c.name.toLowerCase().includes(q)) return 2;
+    return 9;
+  };
+  return list
+    .map((c) => ({ c, r: rank(c) }))
+    .filter((x) => x.r < 9)
+    .sort((a, b) => a.r - b.r || a.c.label.localeCompare(b.c.label))
+    .slice(0, 12)
+    .map((x) => x.c);
+}
 
 function toDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -200,8 +216,8 @@ export const TravelInsurance = () => {
   const [activePanel, setActivePanel] = useState<'destination' | 'dates' | 'tenure' | 'travellers' | null>(null);
   const [dateTab, setDateTab] = useState<'start' | 'end'>('start');
   const [locationQuery, setLocationQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [countries, setCountries] = useState<InsuranceCountry[] | null>(null);
+  const [countriesError, setCountriesError] = useState(false);
   const [policyOptions, setPolicyOptions] = useState<PolicyTypeOption[] | null>(null);
 
   // Workflow step 1 (GetProviderCheckList): which policy types are on offer.
@@ -238,7 +254,15 @@ export const TravelInsurance = () => {
         if (hasTravellers) skipPolicyReset.current = true;
         setPolicyType(s.policyType);
       }
-      if (Array.isArray(s.destinations)) setDestinations(s.destinations);
+      // Older saved searches held map places: keep one entry per country, shown by country name.
+      if (Array.isArray(s.destinations)) {
+        const seen = new Set<string>();
+        setDestinations(
+          s.destinations
+            .filter((d) => d?.countryCode && !seen.has(d.countryCode) && seen.add(d.countryCode))
+            .map((d) => (d.placeId < 0 ? d : { ...d, displayName: d.countryName })),
+        );
+      }
       setStartDate(notBeforeToday(s.startDate, todayStr()));
       setEndDate(notBeforeToday(s.endDate, tomorrowStr()));
       if (s.tenureInMonths) setTenureInMonths(s.tenureInMonths);
@@ -262,51 +286,22 @@ export const TravelInsurance = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Destinations come from Benzy's own country list (the names the insurer expects).
   useEffect(() => {
-    const q = locationQuery.trim();
-    if (q.length < 2) {
-      setSuggestions([]);
-      setSearching(false);
-      return;
-    }
-    const controller = new AbortController();
-    setSearching(true);
-    const timer = setTimeout(async () => {
-      try {
-        const url = `${NOMINATIM_URL}?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=6`;
-        const res = await fetch(url, {
-          signal: controller.signal,
-          headers: { 'Accept-Language': 'en' },
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = (await res.json()) as NominatimResult[];
-        setSuggestions(json.filter((r) => r.address?.country && r.address?.country_code));
-      } catch (err) {
-        if ((err as Error).name !== 'AbortError') setSuggestions([]);
-      } finally {
-        setSearching(false);
-      }
-    }, 350);
-    return () => {
-      controller.abort();
-      clearTimeout(timer);
-    };
-  }, [locationQuery]);
-
-  const pickLocation = useCallback((r: NominatimResult) => {
-    if (!r.address?.country || !r.address?.country_code) return;
-    const loc: SelectedLocation = {
-      placeId: r.place_id,
-      displayName: r.display_name,
-      countryName: r.address.country,
-      countryCode: r.address.country_code.toUpperCase(),
-    };
-    setDestinations((prev) =>
-      prev.find((d) => d.placeId === loc.placeId) ? prev : [...prev, loc],
-    );
-    setLocationQuery('');
-    setSuggestions([]);
+    getInsuranceCountries()
+      .then((list) => setCountries(list))
+      .catch(() => setCountriesError(true));
   }, []);
+  const suggestions = useMemo(() => (countries ? matchCountries(countries, locationQuery) : []), [countries, locationQuery]);
+
+  const pickLocation = useCallback(
+    (c: InsuranceCountry) => {
+      const loc = countryLocation(c, countries?.indexOf(c) ?? 0);
+      setDestinations((prev) => (prev.find((d) => d.countryCode === loc.countryCode) ? prev : [...prev, loc]));
+      setLocationQuery('');
+    },
+    [countries],
+  );
 
   const usedRelations = travellers.map((t) => t.relation);
   const maxTravellers = MAX_TRAVELLERS[policyType];
@@ -421,7 +416,7 @@ export const TravelInsurance = () => {
               Destination
             </FieldLabel>
             <div className={`truncate ${destinationLabel ? FIELD_VALUE : FIELD_PLACEHOLDER}`}>
-              {destinationLabel ?? (isMultiTrip ? 'Choose region' : 'Search city or country')}
+              {destinationLabel ?? (isMultiTrip ? 'Choose region' : 'Search country')}
             </div>
           </button>
 
@@ -579,7 +574,7 @@ export const TravelInsurance = () => {
                   type="text"
                   value={locationQuery}
                   onChange={(e) => setLocationQuery(e.target.value)}
-                  placeholder="Enter city or country..."
+                  placeholder="Search country..."
                   className="flex-1 outline-none text-sm text-gray-800 placeholder-gray-400"
                 />
               </div>
@@ -595,34 +590,35 @@ export const TravelInsurance = () => {
               )}
             </div>
             <div className="max-h-64 overflow-y-auto">
-              {locationQuery.trim().length < 2 ? (
-                <div className="px-4 py-3 text-sm text-gray-400">
-                  Start typing to search locations
-                </div>
-              ) : searching && suggestions.length === 0 ? (
-                <div className="px-4 py-3 text-sm text-gray-400">Searching...</div>
+              {countriesError ? (
+                <div className="px-4 py-3 text-sm text-gray-400">Could not load destinations. Please try again.</div>
+              ) : !countries ? (
+                <div className="px-4 py-3 text-sm text-gray-400">Loading destinations...</div>
               ) : suggestions.length === 0 ? (
-                <div className="px-4 py-3 text-sm text-gray-400">No results found</div>
+                <div className="px-4 py-3 text-sm text-gray-400">No matching country</div>
               ) : (
-                suggestions.map((r) => {
-                  const already = destinations.some((d) => d.placeId === r.place_id);
-                  return (
-                    <button
-                      key={r.place_id}
-                      type="button"
-                      onClick={() => pickLocation(r)}
-                      disabled={already}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-start gap-3 border-b border-gray-50 last:border-0"
-                    >
-                      <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-gray-800 truncate">{shortLocationName(r.display_name)}</div>
-                        <div className="text-xs text-gray-400 truncate">{r.display_name}</div>
-                      </div>
-                      {already && <span className="text-[10px] text-(--color-links) font-semibold flex-shrink-0">ADDED</span>}
-                    </button>
-                  );
-                })
+                <>
+                  {!locationQuery.trim() && (
+                    <div className="px-4 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-gray-400">Popular destinations</div>
+                  )}
+                  {suggestions.map((c) => {
+                    const already = destinations.some((d) => d.countryCode === c.code);
+                    return (
+                      <button
+                        key={c.code}
+                        type="button"
+                        onClick={() => pickLocation(c)}
+                        disabled={already}
+                        className="w-full text-left px-4 py-3 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 border-b border-gray-50 last:border-0"
+                      >
+                        <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <span className="min-w-0 flex-1 text-sm font-semibold text-gray-800 truncate">{c.label}</span>
+                        <span className="text-[11px] text-gray-400 flex-shrink-0">{c.code}</span>
+                        {already && <span className="text-[10px] text-(--color-links) font-semibold flex-shrink-0">ADDED</span>}
+                      </button>
+                    );
+                  })}
+                </>
               )}
             </div>
           </div>

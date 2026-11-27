@@ -37,7 +37,9 @@ function ResultContent() {
           setView('failed_booking');
           return;
         }
-        if (!s.inProgress && s.transactionId) {
+        // Only an issued policy (Benzy itinerary B0) counts as success; a
+        // pending one keeps polling (the backend re-checks Benzy meanwhile).
+        if (s.status === 'CONFIRMED' && s.transactionId) {
           stopped.current = true;
           router.replace(`/booking/insurance/confirmation/${encodeURIComponent(s.transactionId)}`);
           return;

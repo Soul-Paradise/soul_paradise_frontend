@@ -7,9 +7,11 @@ import { AlertCircle, ExternalLink, Lock } from 'lucide-react';
 import { useAuth, useRequireAuth } from '@/contexts/AuthContext';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import {
+  NOMINEE_RELATIONS,
   PriceChangedError,
   formatCoverage,
   formatInr,
+  getInsuranceStates,
   getPlanDetails,
   searchFromParams,
   startInsuranceBooking,
@@ -26,7 +28,6 @@ import { BookButton } from '@/components/Results/ui';
 import { redirectToPayment } from '@/lib/safe-redirect';
 
 const TITLES: Title[] = ['Mr', 'Mrs', 'Ms', 'Master'];
-const NOMINEE_RELATIONS = ['Spouse', 'Father', 'Mother', 'Son', 'Daughter', 'Brother', 'Sister', 'Other'];
 const PED_MASTER = 'ISPED';
 
 /** CheckBox, Radio and List questions are all answered Yes/No. */
@@ -161,6 +162,15 @@ function BookingForm({ search, plan, tui }: { search: InsuranceSearch; plan: Ins
   const [email, setEmail] = useState(user?.email ?? '');
   const [mobile, setMobile] = useState('');
   const [address, setAddress] = useState<Address>({ line1: '', line2: '', city: '', state: '', pinCode: '' });
+  // The insurer's own spelling of Indian states (Benzy getStates).
+  const [states, setStates] = useState<string[]>([]);
+  useEffect(() => {
+    getInsuranceStates()
+      .then(setStates)
+      .catch(() => setStates([]));
+  }, []);
+  /** A free-text state (e.g. from KYC) matched to the insurer's list, or '' if it isn't on it. */
+  const matchState = (raw: string) => states.find((st) => st.toUpperCase() === raw.trim().toUpperCase()) ?? '';
   const [pan, setPan] = useState('');
   const [gstin, setGstin] = useState('');
   const [kyc, setKyc] = useState<'idle' | 'checking' | 'verified' | 'action' | 'failed'>('idle');
@@ -206,7 +216,7 @@ function BookingForm({ search, plan, tui }: { search: InsuranceSearch; plan: Ins
           line1: a.line1 || res.address.line1,
           line2: a.line2 || res.address.line2,
           city: a.city || res.address.city,
-          state: a.state || res.address.state,
+          state: a.state || matchState(res.address.state),
           pinCode: a.pinCode || res.address.pinCode,
         }));
       } else if (res.status === 'ACTION_REQUIRED') {
@@ -241,9 +251,10 @@ function BookingForm({ search, plan, tui }: { search: InsuranceSearch; plan: Ins
     }
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return 'Enter a valid email address.';
     if (!/^[6-9]\d{9}$/.test(mobile)) return 'Enter a valid 10-digit mobile number.';
-    if (address.line1.trim().length < 3 || address.city.trim().length < 2 || address.state.trim().length < 2) {
+    if (address.line1.trim().length < 3 || address.city.trim().length < 2) {
       return 'Enter your full address.';
     }
+    if (!address.state) return 'Choose your state.';
     if (!/^\d{6}$/.test(address.pinCode)) return 'Enter a 6-digit PIN code.';
     if (plan.requiresKyc && kyc !== 'verified') return 'Verify your PAN for KYC before paying.';
     if (gstin && !/^[0-9A-Z]{15}$/.test(gstin)) return 'Enter a valid 15-character GSTIN, or leave it blank.';
@@ -404,7 +415,19 @@ function BookingForm({ search, plan, tui }: { search: InsuranceSearch; plan: Ins
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="State">
-                <input autoComplete="address-level1" className={inputCls} value={address.state} onChange={(e) => setAddress({ ...address, state: e.target.value })} />
+                <select
+                  autoComplete="address-level1"
+                  className={inputCls}
+                  value={address.state}
+                  onChange={(e) => setAddress({ ...address, state: e.target.value })}
+                >
+                  <option value="">{states.length ? 'Select' : 'Loading…'}</option>
+                  {states.map((st) => (
+                    <option key={st} value={st}>
+                      {st.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </option>
+                  ))}
+                </select>
               </Field>
               <Field label="PIN code">
                 <input
