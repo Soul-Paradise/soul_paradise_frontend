@@ -1,4 +1,5 @@
 'use client';
+import { TripInsuranceOfferCard } from '@/components/Insurance/TripInsuranceOffer';
 
 import { AirlineLogo } from '@/components/AirlineLogo';
 import { useEffect, useState, Suspense, useCallback } from 'react';
@@ -320,6 +321,10 @@ function ConfirmationContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {isSuccess && !isCancelled && (
+        <TripInsuranceOfferCard service="FLIGHT" bookingId={booking.transactionId || booking.bookingId} />
       )}
 
       {cancelMessage && (

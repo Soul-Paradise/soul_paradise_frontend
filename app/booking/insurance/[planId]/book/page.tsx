@@ -13,6 +13,8 @@ import {
   formatInr,
   getInsuranceStates,
   getPlanDetails,
+  loadInsurancePrefill,
+  type InsurancePrefill,
   searchFromParams,
   startInsuranceBooking,
   travellerLabel,
@@ -139,16 +141,22 @@ function HealthDeclaration({
   );
 }
 
-function emptyTraveller(t: InsuranceSearch['travellers'][number], questions: PlanQuestion[]): BookingTraveller {
+function emptyTraveller(
+  t: InsuranceSearch['travellers'][number],
+  questions: PlanQuestion[],
+  known?: InsurancePrefill['travellers'][number],
+): BookingTraveller {
   const answers: Record<string, string> = {};
   for (const q of questions) answers[answerKey(q)] = isYesNo(q) ? 'false' : '';
+  // Pre-filled from the flight/hotel booking ("Cover this trip?") when the relation still matches.
+  const prefill = known && known.relation === t.relation ? known : undefined;
   return {
-    title: 'Mr',
-    firstName: '',
-    lastName: '',
+    title: (TITLES as string[]).includes(prefill?.title ?? '') ? (prefill!.title as Title) : 'Mr',
+    firstName: prefill?.firstName ?? '',
+    lastName: prefill?.lastName ?? '',
     birthDate: t.birthdate,
     relation: t.relation,
-    passportNumber: '',
+    passportNumber: (prefill?.passportNumber ?? '').toUpperCase().replace(/[^A-Z0-9]/g, ''),
     nominee: { firstName: '', lastName: '', relation: '' },
     answers,
   };
@@ -156,11 +164,12 @@ function emptyTraveller(t: InsuranceSearch['travellers'][number], questions: Pla
 
 function BookingForm({ search, plan, tui }: { search: InsuranceSearch; plan: InsurancePlan; tui: string }) {
   const { user } = useAuth();
+  const [prefill] = useState(() => loadInsurancePrefill());
   const [travellers, setTravellers] = useState<BookingTraveller[]>(() =>
-    search.travellers.map((t) => emptyTraveller(t, plan.questions)),
+    search.travellers.map((t, i) => emptyTraveller(t, plan.questions, prefill?.travellers[i])),
   );
-  const [email, setEmail] = useState(user?.email ?? '');
-  const [mobile, setMobile] = useState('');
+  const [email, setEmail] = useState(prefill?.contact.email || user?.email || '');
+  const [mobile, setMobile] = useState(prefill?.contact.mobile?.replace(/\D/g, '').slice(-10) ?? '');
   const [address, setAddress] = useState<Address>({ line1: '', line2: '', city: '', state: '', pinCode: '' });
   // The insurer's own spelling of Indian states (Benzy getStates).
   const [states, setStates] = useState<string[]>([]);

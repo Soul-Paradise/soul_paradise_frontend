@@ -40,3 +40,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Environment files: real values never go into git - only .env.example is tracked.
+.env
+.env.*
+!.env.example
+
+# Credentials / key files
+*.pem
+*.key
+client_secret*.json
+*service-account*.json
+*-sa-key*.json

@@ -1,4 +1,5 @@
 'use client';
+import { TripInsuranceOfferCard } from '@/components/Insurance/TripInsuranceOffer';
 
 import { useState } from 'react';
 import { Download } from 'lucide-react';
@@ -177,6 +178,8 @@ export function BookingConfirmation({ voucher, onDone }: { voucher: BookingVouch
         </SecondaryButton>
       </ConfirmationHero>
       {downloadError && <p className="text-xs text-(--color-danger) text-center">{downloadError}</p>}
+
+      <TripInsuranceOfferCard service="HOTEL" bookingId={voucher.bookingId} />
 
       <ConfirmationSection title="Your stay">
         <div className="flex items-start gap-4">
