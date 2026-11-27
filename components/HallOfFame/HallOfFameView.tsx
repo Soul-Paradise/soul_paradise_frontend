@@ -4,7 +4,7 @@ import { ResilientImage } from '@/components/SiteContent/ResilientImage';
 import { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Expand, Loader2, MapPin, Quote, Star, X } from 'lucide-react';
 import { api, type Testimonial } from '@/lib/api';
-import { PageHero, SectionHeading, GRADIENTS } from '@/components/Page';
+import { PageHero, SectionHeading, SOLIDS, TEXT_SOLIDS } from '@/components/Page';
 import { PlanHolidayCta } from '@/components/Home';
 import { CmsIcon } from '@/components/SiteContent';
 import { ReviewerAvatar } from '@/components/ReviewerAvatar';
@@ -74,12 +74,12 @@ function Stats({ items, overlap }: { items: NonNullable<HallOfFameSections['stat
         {items.map(({ icon, value, label, accent }) => (
           <div key={label} className="group flex items-center gap-4 bg-(--color-peace) p-5 sm:p-6">
             <span
-              className={`hidden h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${GRADIENTS[accent]} text-white shadow-md transition-transform group-hover:scale-110 sm:flex`}
+              className={`hidden h-12 w-12 shrink-0 items-center justify-center rounded-xl ${SOLIDS[accent]} text-white shadow-md transition-transform group-hover:scale-110 sm:flex`}
             >
               <CmsIcon name={icon} className="h-6 w-6" />
             </span>
             <div>
-              <p className={`bg-gradient-to-br ${GRADIENTS[accent]} bg-clip-text text-3xl font-extrabold text-transparent sm:text-4xl`}>
+              <p className={`${TEXT_SOLIDS[accent]} text-3xl font-extrabold sm:text-4xl`}>
                 {value}
               </p>
               <p className="text-xs font-semibold text-(--color-inactive) sm:text-sm">{label}</p>
@@ -173,7 +173,7 @@ function Gallery({ heading, images }: { heading: NonNullable<HallOfFameSections[
                     className="object-cover transition-transform duration-700 group-hover:scale-110"
                     priority={index < 4}
                   />
-                  <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0 opacity-60 transition-opacity group-hover:opacity-100" />
+                  <span className="absolute inset-0 bg-black/35 opacity-60 transition-opacity group-hover:opacity-100" />
                   <span className="absolute inset-x-0 bottom-0 flex items-end justify-between p-3 text-left text-white">
                     <span>
                       {image.category && (
@@ -290,13 +290,13 @@ function Testimonials({ heading, accents }: { heading: NonNullable<HallOfFameSec
         ) : (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {testimonials.map((testimonial, i) => {
-              const accent = GRADIENTS[accents[i % accents.length]];
+              const accent = SOLIDS[accents[i % accents.length]];
               return (
                 <figure
                   key={testimonial.id}
                   className="relative flex flex-col overflow-hidden rounded-2xl bg-(--color-background) p-6 ring-1 ring-(--color-tertiary-button) transition-all duration-300 hover:-translate-y-1 hover:bg-(--color-peace) hover:shadow-xl"
                 >
-                  <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} aria-hidden="true" />
+                  <span className={`absolute inset-x-0 top-0 h-1 ${accent}`} aria-hidden="true" />
                   <Quote className="absolute right-5 top-5 h-10 w-10 text-(--color-tertiary-button)" />
                   <div className="mb-4 flex gap-0.5" role="img" aria-label={`${testimonial.rating} out of 5 stars`}>
                     {Array.from({ length: 5 }, (_, s) => (

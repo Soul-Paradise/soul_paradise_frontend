@@ -158,18 +158,13 @@ export function TravellerReviews({ heading }: { heading: HeadingWithLink }) {
   );
 }
 
-/** Same accent family as the Hall of Fame review cards. */
-const ACCENTS = [
-  'from-blue-500 to-indigo-600',
-  'from-emerald-500 to-teal-600',
-  'from-orange-500 to-red-500',
-  'from-purple-500 to-violet-600',
-];
+/** Same solid accent family as the Hall of Fame review cards (no gradients). */
+const ACCENTS = ['bg-blue-600', 'bg-emerald-600', 'bg-orange-500', 'bg-purple-600'];
 
 function ReviewCard({ review, accent }: { review: Testimonial; accent: string }) {
   return (
     <figure className="relative flex w-[280px] shrink-0 flex-col overflow-hidden rounded-2xl bg-(--color-peace) p-6 shadow-sm ring-1 ring-(--color-tertiary-button) transition-all hover:-translate-y-1 hover:shadow-xl sm:w-[340px]">
-      <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} aria-hidden="true" />
+      <span className={`absolute inset-x-0 top-0 h-1 ${accent}`} aria-hidden="true" />
       <Quote className="absolute right-5 top-5 h-8 w-8 text-(--color-tertiary-button)" />
       <div className="mb-3 flex gap-0.5" role="img" aria-label={`${review.rating} out of 5 stars`}>
         {Array.from({ length: 5 }, (_, i) => (

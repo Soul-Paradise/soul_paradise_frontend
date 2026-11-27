@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 /**
  * Round reviewer avatar: the photo from the admin panel's media library, or
- * the reviewer's initials on the card's accent gradient when there is no
+ * the reviewer's initials on the card's accent colour when there is no
  * photo or it fails to load (never a broken image).
  */
 export function ReviewerAvatar({
@@ -15,7 +15,7 @@ export function ReviewerAvatar({
 }: {
   name: string;
   photoUrl?: string | null;
-  /** Tailwind gradient stops, e.g. "from-blue-500 to-indigo-600". */
+  /** Tailwind background class of the card's accent, e.g. "bg-blue-600". */
   accent: string;
   className?: string;
 }) {
@@ -40,7 +40,7 @@ export function ReviewerAvatar({
     );
   }
   return (
-    <span className={`flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${accent} font-bold text-white ${className}`}>
+    <span className={`flex shrink-0 items-center justify-center rounded-full ${accent} font-bold text-white ${className}`}>
       {initials}
     </span>
   );
