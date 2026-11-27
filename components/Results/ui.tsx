@@ -289,7 +289,7 @@ export function BookButton({
   /** Full width (summary-card CTAs). */
   block?: boolean;
 }) {
-  const className = `group inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-r from-(--color-accent-light) to-(--color-accent) px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-orange-500/25 transition-all hover:-translate-y-0.5 hover:from-(--color-accent) hover:to-(--color-accent-hover) hover:shadow-lg disabled:pointer-events-none disabled:translate-y-0 disabled:opacity-60 ${block ? 'w-full py-3' : ''}`;
+  const className = `group inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-(--color-accent) px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-orange-500/25 transition-all hover:-translate-y-0.5 hover:bg-(--color-accent-hover) hover:shadow-lg disabled:pointer-events-none disabled:translate-y-0 disabled:opacity-60 ${block ? 'w-full py-3' : ''}`;
   const content = (
     <>
       {children}
