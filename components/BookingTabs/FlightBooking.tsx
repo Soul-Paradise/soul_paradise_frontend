@@ -324,7 +324,7 @@ export const FlightBooking = () => {
         <div className="grid grid-cols-2 sm:flex sm:items-stretch divide-y divide-gray-200 sm:divide-y-0">
           {/* Leg number */}
           <div className="hidden sm:flex items-center justify-center w-11 flex-shrink-0 border-r border-gray-200">
-            <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-xs font-bold flex items-center justify-center shadow-sm">
+            <span className="w-7 h-7 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center justify-center shadow-sm">
               {i + 1}
             </span>
           </div>
@@ -413,7 +413,7 @@ export const FlightBooking = () => {
             <button
               type="button"
               onClick={swapLocations}
-              className="absolute right-4 sm:right-[-18px] bottom-[-18px] sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 z-20 w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-md ring-4 ring-white transition-all transform hover:rotate-180"
+              className="absolute right-4 sm:right-[-18px] bottom-[-18px] sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 z-20 w-9 h-9 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center shadow-md ring-4 ring-white transition-all transform hover:rotate-180"
               aria-label="Swap locations"
             >
               <svg

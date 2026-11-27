@@ -870,7 +870,7 @@ function RoomCard({
               className={`mt-3 px-4 py-2.5 text-sm font-bold rounded-full transition-all w-full ${
                 isSelected
                   ? 'bg-(--color-links) hover:bg-(--color-secondary-button) text-white'
-                  : 'bg-gradient-to-r from-(--color-accent-light) to-(--color-accent) hover:from-(--color-accent) hover:to-(--color-accent-hover) text-white shadow-md shadow-orange-500/25'
+                  : 'bg-(--color-accent) hover:bg-(--color-accent-hover) text-white shadow-md shadow-orange-500/25'
               } disabled:opacity-60`}
             >
               {loadingPrice && isSelected ? (

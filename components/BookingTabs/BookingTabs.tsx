@@ -15,10 +15,10 @@ const isTabType = (v: string | null): v is TabType =>
 
 /** Each tab has its own accent, from the same palette as the rest of the site. */
 const tabs: { id: TabType; label: string; icon: React.ReactNode; accent: string }[] = [
-  { id: 'flights', label: 'Flights', icon: <Plane className="w-[18px] h-[18px]" />, accent: 'from-blue-500 to-indigo-600' },
-  { id: 'hotel', label: 'Hotels', icon: <Hotel className="w-[18px] h-[18px]" />, accent: 'from-emerald-500 to-teal-600' },
-  { id: 'insurance', label: 'Insurance', icon: <ShieldCheck className="w-[18px] h-[18px]" />, accent: 'from-purple-500 to-violet-600' },
-  { id: 'payment', label: 'Custom Payment', icon: <CreditCard className="w-[18px] h-[18px]" />, accent: 'from-orange-500 to-red-500' },
+  { id: 'flights', label: 'Flights', icon: <Plane className="w-[18px] h-[18px]" />, accent: 'bg-blue-600' },
+  { id: 'hotel', label: 'Hotels', icon: <Hotel className="w-[18px] h-[18px]" />, accent: 'bg-emerald-600' },
+  { id: 'insurance', label: 'Insurance', icon: <ShieldCheck className="w-[18px] h-[18px]" />, accent: 'bg-purple-600' },
+  { id: 'payment', label: 'Custom Payment', icon: <CreditCard className="w-[18px] h-[18px]" />, accent: 'bg-orange-500' },
 ];
 
 const BookingTabsInner = () => {
@@ -57,7 +57,7 @@ const BookingTabsInner = () => {
                     aria-hidden="true"
                     className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all ${
                       active
-                        ? `bg-gradient-to-br ${tab.accent} text-white shadow-md`
+                        ? `${tab.accent} text-white shadow-md`
                         : 'bg-slate-100 text-gray-500 group-hover:bg-slate-200'
                     }`}
                   >
@@ -65,7 +65,7 @@ const BookingTabsInner = () => {
                   </span>
                   <span className="text-sm font-bold">{tab.label}</span>
                   {active && (
-                    <span className={`absolute bottom-0 left-2 right-2 h-[3px] rounded-t-full bg-gradient-to-r ${tab.accent}`} />
+                    <span className={`absolute bottom-0 left-2 right-2 h-[3px] rounded-t-full ${tab.accent}`} />
                   )}
                 </button>
               );

@@ -12,6 +12,31 @@ export const GRADIENTS = {
   slate: 'from-slate-600 to-slate-800',
 } as const;
 
+/**
+ * Flat (no-gradient) versions of the same accents - the client asked for solid
+ * colours on buttons and testimonials. Literal class names so Tailwind keeps them.
+ */
+export const SOLIDS = {
+  blue: 'bg-blue-600',
+  green: 'bg-emerald-600',
+  orange: 'bg-orange-500',
+  purple: 'bg-purple-600',
+  teal: 'bg-teal-600',
+  pink: 'bg-pink-600',
+  slate: 'bg-slate-700',
+} as const;
+
+/** Text colour of each accent (replaces gradient-clipped text). */
+export const TEXT_SOLIDS = {
+  blue: 'text-blue-600',
+  green: 'text-emerald-600',
+  orange: 'text-orange-500',
+  purple: 'text-purple-600',
+  teal: 'text-teal-600',
+  pink: 'text-pink-600',
+  slate: 'text-slate-700',
+} as const;
+
 export type Accent = keyof typeof GRADIENTS;
 
 /** Cycle through accents for lists, so neighbours never share a colour. */
